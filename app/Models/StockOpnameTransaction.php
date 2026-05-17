@@ -22,6 +22,10 @@ class StockOpnameTransaction extends Model
         'location_id',
         'opname_date',
         'status',
+        'validation_status',
+        'validator_id',
+        'validated_at',
+        'rejection_note',
         'note',
         'photo_id',
         'created_by',
@@ -31,6 +35,7 @@ class StockOpnameTransaction extends Model
     {
         return [
             'opname_date' => 'date',
+            'validated_at' => 'datetime',
         ];
     }
 
@@ -47,5 +52,10 @@ class StockOpnameTransaction extends Model
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function validator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'validator_id');
     }
 }
