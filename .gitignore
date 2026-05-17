@@ -42,3 +42,10 @@ yarn-error.log
 
 /storage/logs/*
 !/storage/logs/.gitignore
+# Flutter mobile
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/build/
+mobile/.packages
+mobile/pubspec.lock
