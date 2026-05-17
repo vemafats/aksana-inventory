@@ -41,6 +41,11 @@ class StockInTransaction extends Model
         return $this->hasMany(StockInItem::class);
     }
 
+    public function items(): HasMany
+    {
+        return $this->stockInItems();
+    }
+
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
