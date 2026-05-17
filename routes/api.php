@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CatalogController;
+use App\Http\Controllers\Api\CatalogQrCodeController;
+use App\Http\Controllers\Api\PhotoController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login'])
@@ -12,5 +14,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('/me', [AuthController::class, 'me']);
 
     Route::get('/catalogs/by-barcode/{barcode}', [CatalogController::class, 'findByBarcode']);
+    Route::post('/catalogs/print-labels', [CatalogQrCodeController::class, 'printLabel']);
+    Route::get('/catalogs/{item}/qrcode', [CatalogQrCodeController::class, 'show']);
     Route::apiResource('catalogs', CatalogController::class)->only(['index', 'show', 'store', 'update']);
+
+    Route::post('/photos', [PhotoController::class, 'store']);
+    Route::get('/photos/{photo}', [PhotoController::class, 'show']);
 });
