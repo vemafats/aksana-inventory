@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\CatalogQrCodeController;
 use App\Http\Controllers\Api\PhotoController;
 use App\Http\Controllers\Api\StockController;
 use App\Http\Controllers\Api\StockInController;
+use App\Http\Controllers\Api\TransferController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login'])
@@ -29,4 +30,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('/stock-in', [StockInController::class, 'store']);
     Route::get('/stock-in', [StockInController::class, 'index']);
     Route::get('/stock-in/{transaction}', [StockInController::class, 'show']);
+
+    Route::post('/transfers', [TransferController::class, 'store']);
+    Route::get('/transfers', [TransferController::class, 'index']);
+    Route::get('/transfers/{transfer}', [TransferController::class, 'show']);
 });
