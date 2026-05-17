@@ -3,9 +3,11 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CatalogController;
 use App\Http\Controllers\Api\CatalogQrCodeController;
+use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\PhotoController;
 use App\Http\Controllers\Api\StockController;
 use App\Http\Controllers\Api\StockInController;
+use App\Http\Controllers\Api\StockOpnameController;
 use App\Http\Controllers\Api\TransferController;
 use Illuminate\Support\Facades\Route;
 
@@ -34,4 +36,15 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('/transfers', [TransferController::class, 'store']);
     Route::get('/transfers', [TransferController::class, 'index']);
     Route::get('/transfers/{transfer}', [TransferController::class, 'show']);
+
+    Route::get('/stock-opnames/active', [StockOpnameController::class, 'getActive']);
+    Route::post('/stock-opnames', [StockOpnameController::class, 'store']);
+    Route::get('/stock-opnames', [StockOpnameController::class, 'index']);
+    Route::get('/stock-opnames/{opname}', [StockOpnameController::class, 'show']);
+    Route::post('/stock-opnames/{opname}/items', [StockOpnameController::class, 'addItem']);
+    Route::post('/stock-opnames/{opname}/submit', [StockOpnameController::class, 'submit']);
+    Route::post('/stock-opnames/{opname}/validate', [StockOpnameController::class, 'validate']);
+    Route::post('/stock-opnames/{opname}/reject', [StockOpnameController::class, 'reject']);
+
+    Route::post('/locations/{location}/close', [LocationController::class, 'close']);
 });
