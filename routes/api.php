@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\CatalogController;
 use App\Http\Controllers\Api\CatalogQrCodeController;
 use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\PhotoController;
+use App\Http\Controllers\Api\SalesController;
 use App\Http\Controllers\Api\StockController;
 use App\Http\Controllers\Api\StockInController;
 use App\Http\Controllers\Api\StockOpnameController;
@@ -47,4 +48,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('/stock-opnames/{opname}/reject', [StockOpnameController::class, 'reject']);
 
     Route::post('/locations/{location}/close', [LocationController::class, 'close']);
+
+    Route::post('/sales', [SalesController::class, 'store']);
+    Route::get('/sales', [SalesController::class, 'index']);
+    Route::get('/sales/{transaction}', [SalesController::class, 'show']);
 });
