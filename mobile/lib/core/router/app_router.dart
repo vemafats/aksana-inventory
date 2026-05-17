@@ -2,19 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../auth/auth_provider.dart';
+// import '../auth/auth_provider.dart'; // TODO: re-enable with redirect
 import '../widgets/main_scaffold.dart';
 import '../../features/auth/presentation/login_screen.dart';
+import '../../features/scan/presentation/scan_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
-  final auth = ref.watch(authProvider);
+  // final auth = ref.watch(authProvider); // TODO: re-enable with redirect
   return GoRouter(
     initialLocation: '/scan',
     redirect: (context, state) {
-      final loggedIn = auth.isAuthenticated;
-      final goingLogin = state.matchedLocation == '/login';
-      if (!loggedIn && !goingLogin) return '/login';
-      if (loggedIn && goingLogin) return '/scan';
+      // TODO: re-enable auth redirect after backend connection
+      // final loggedIn = auth.isAuthenticated;
+      // final goingLogin = state.matchedLocation == '/login';
+      // if (!loggedIn && !goingLogin) return '/login';
+      // if (loggedIn && goingLogin) return '/scan';
       return null;
     },
     routes: [
@@ -25,8 +27,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       ShellRoute(
         builder: (_, __, child) => MainScaffold(child: child),
         routes: [
-          GoRoute(path: '/scan',
-            builder: (_, __) => const _Placeholder('SCAN · M5-T3')),
+          GoRoute(
+            path: '/scan',
+            builder: (_, __) => const ScanScreen(),
+          ),
           GoRoute(path: '/sales',
             builder: (_, __) => const _Placeholder('JUAL · M5-T5')),
           GoRoute(path: '/stock',
