@@ -12,6 +12,7 @@ Route::post('/login', [AuthController::class, 'login'])
 Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
+    Route::post('/verify-password', [AuthController::class, 'verifyPassword']);
 
     Route::get('/catalogs/by-barcode/{barcode}', [CatalogController::class, 'findByBarcode']);
     Route::post('/catalogs/print-labels', [CatalogQrCodeController::class, 'printLabel']);

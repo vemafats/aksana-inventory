@@ -70,8 +70,9 @@ class CatalogService
             'sku' => $sku,
             'barcode' => $barcode,
             'item_name' => $itemName,
+            'catalog_photo_path' => $this->normalizePhotoPath($data['catalog_photo_path'] ?? null),
             'description' => $data['description'] ?? null,
-            'is_active' => true,
+            'is_active' => $data['is_active'] ?? true,
         ]);
     }
 
@@ -87,6 +88,15 @@ class CatalogService
         $item->save();
 
         return $item->refresh();
+    }
+
+    private function normalizePhotoPath(mixed $path): ?string
+    {
+        if (is_array($path)) {
+            return $path[0] ?? null;
+        }
+
+        return is_string($path) && $path !== '' ? $path : null;
     }
 
     private function skuSegment(string $value): string

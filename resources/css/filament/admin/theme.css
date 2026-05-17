@@ -1,0 +1,32 @@
+@import '../../../../vendor/filament/filament/resources/css/theme.css';
+
+@config 'tailwind.config.js';
+
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+    --font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+.fi-body {
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+.aksana-mono,
+.fi-ta-text-item.aksana-mono {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+.fi-ta-header-cell-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #49586b;
+}
+
+.fi-btn-color-primary {
+    --c-400: 222 47% 4%;
+    --c-500: 222 47% 4%;
+    --c-600: 222 47% 4%;
+}

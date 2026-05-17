@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Models\Employee;
 use App\Models\User;
+use App\Services\PasswordVerificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -57,6 +59,39 @@ class AuthController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Logout berhasil',
+        ]);
+    }
+
+    public function verifyPassword(Request $request, PasswordVerificationService $passwordVerificationService): JsonResponse
+    {
+        $request->validate([
+            'password' => ['required', 'string'],
+        ]);
+
+        $user = $request->user();
+
+        if ($user->role !== UserRole::OWNER) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akses ditolak',
+            ], 403);
+        }
+
+        if (! $passwordVerificationService->verifyPassword($user, $request->string('password')->toString())) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Password tidak sesuai',
+            ], 422);
+        }
+
+        $tokenData = $passwordVerificationService->generateCostViewToken($user);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'cost_view_token' => $tokenData['token'],
+                'expires_at' => $tokenData['expires_at'],
+            ],
         ]);
     }
 

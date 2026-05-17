@@ -30,7 +30,7 @@ class AdminPanelProvider extends PanelProvider
             ->authGuard('web')
             ->authPasswordBroker('users')
             ->colors([
-                'primary' => Color::Amber,
+                'primary' => Color::hex('#070D1E'),
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
