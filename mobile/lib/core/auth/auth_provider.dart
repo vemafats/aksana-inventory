@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/api_client.dart';
 
@@ -67,10 +68,30 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: 'Email atau password salah',
+        errorMessage: _loginErrorMessage(e),
       );
       return false;
     }
+  }
+
+  String _loginErrorMessage(Object e) {
+    if (e is DioException) {
+      if (e.response?.statusCode == 401) {
+        return 'Email atau password salah';
+      }
+      if (_isNetworkError(e)) {
+        return 'Tidak dapat terhubung ke server. '
+            'Periksa koneksi internet Anda.';
+      }
+    }
+    return 'Terjadi kesalahan. Coba lagi.';
+  }
+
+  bool _isNetworkError(DioException e) {
+    return e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.sendTimeout ||
+        e.type == DioExceptionType.receiveTimeout ||
+        e.type == DioExceptionType.connectionError;
   }
 
   Future<void> logout() async {

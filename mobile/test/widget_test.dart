@@ -3,15 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aksana_mobile/main.dart';
 
 void main() {
-  testWidgets('shows login when unauthenticated', (WidgetTester tester) async {
+  testWidgets('shows login screen when unauthenticated', (WidgetTester tester) async {
     await tester.pumpWidget(
       const ProviderScope(child: AksanaApp()),
     );
     await tester.pumpAndSettle();
 
-    expect(
-      find.text('Login — akan diimplementasi di M5-T2'),
-      findsOneWidget,
-    );
+    expect(find.text('Masuk'), findsOneWidget);
+    expect(find.text('MASUK'), findsOneWidget);
   });
 }
