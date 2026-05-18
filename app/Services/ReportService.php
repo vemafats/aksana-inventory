@@ -15,6 +15,7 @@ use App\Models\StockBalance;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class ReportService
 {
@@ -194,8 +195,335 @@ class ReportService
                     ->join('sales_transactions', 'sales_items.sales_transaction_id', '=', 'sales_transactions.id')
                     ->max('sales_transactions.transaction_date'),
                 'qty_remaining' => (int) $item->qty_remaining,
-        ])
+            ])
             ->values();
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return array{
+     *   total_sales: float,
+     *   total_cogs: float,
+     *   gross_profit: float,
+     *   gross_margin_pct: float,
+     *   transaction_count: int,
+     *   period: array{from: string, to: string}
+     * }
+     */
+    public function grossProfit(User $user, array $filters = []): array
+    {
+        [$dateFrom, $dateTo] = $this->resolveDateRange($filters);
+
+        $transactionQuery = $this->salesTransactionQuery($filters, $user)
+            ->whereDate('transaction_date', '>=', $dateFrom)
+            ->whereDate('transaction_date', '<=', $dateTo);
+
+        $totalSales = (float) (clone $transactionQuery)->sum('grand_total');
+        $transactionCount = (clone $transactionQuery)->count();
+
+        $cogsQuery = SalesItem::query()
+            ->join('sales_transactions', 'sales_items.sales_transaction_id', '=', 'sales_transactions.id');
+
+        $this->applySalesTransactionFilters($cogsQuery, $filters, $user, 'sales_transactions');
+        $cogsQuery
+            ->whereDate('sales_transactions.transaction_date', '>=', $dateFrom)
+            ->whereDate('sales_transactions.transaction_date', '<=', $dateTo);
+
+        $totalCogs = (float) $cogsQuery->sum(DB::raw('sales_items.supplier_cost_snapshot * sales_items.qty'));
+
+        $grossProfit = $totalSales - $totalCogs;
+        $grossMarginPct = $totalSales > 0
+            ? round(($grossProfit / $totalSales) * 100, 2)
+            : 0.0;
+
+        return [
+            'total_sales' => round($totalSales, 2),
+            'total_cogs' => round($totalCogs, 2),
+            'gross_profit' => round($grossProfit, 2),
+            'gross_margin_pct' => $grossMarginPct,
+            'transaction_count' => $transactionCount,
+            'period' => [
+                'from' => $dateFrom,
+                'to' => $dateTo,
+            ],
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     */
+    public function bestSellingProducts(User $user, array $filters = []): Collection
+    {
+        [$dateFrom, $dateTo] = $this->resolveDateRange($filters);
+        $limit = max(1, (int) ($filters['limit'] ?? 10));
+
+        $query = SalesItem::query()
+            ->join('sales_transactions', 'sales_items.sales_transaction_id', '=', 'sales_transactions.id')
+            ->join('items', 'sales_items.item_id', '=', 'items.id')
+            ->select(
+                'items.id as item_id',
+                'items.item_name',
+                'items.sku',
+                'items.barcode',
+                DB::raw('SUM(sales_items.qty) as total_qty_sold'),
+                DB::raw('SUM(sales_items.total_after_discount) as total_revenue'),
+            )
+            ->whereDate('sales_transactions.transaction_date', '>=', $dateFrom)
+            ->whereDate('sales_transactions.transaction_date', '<=', $dateTo)
+            ->groupBy('items.id', 'items.item_name', 'items.sku', 'items.barcode')
+            ->orderByDesc('total_qty_sold');
+
+        $this->applySalesTransactionFilters($query, $filters, $user, 'sales_transactions');
+
+        $rows = $query->limit($limit)->get();
+        $totalRevenue = (float) $rows->sum('total_revenue');
+
+        return $rows->values()->map(function ($row, int $index) use ($totalRevenue) {
+            $revenue = (float) $row->total_revenue;
+
+            return [
+                'rank' => $index + 1,
+                'item_id' => $row->item_id,
+                'item_name' => $row->item_name,
+                'sku' => $row->sku,
+                'barcode' => $row->barcode,
+                'total_qty_sold' => (int) $row->total_qty_sold,
+                'total_revenue' => round($revenue, 2),
+                'volume_pct' => $totalRevenue > 0
+                    ? round(($revenue / $totalRevenue) * 100, 2)
+                    : 0.0,
+            ];
+        });
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     */
+    public function salesByLocation(User $user, array $filters = []): Collection
+    {
+        [$dateFrom, $dateTo] = $this->resolveDateRange($filters);
+
+        $query = SalesTransaction::query()
+            ->join('locations', 'sales_transactions.location_id', '=', 'locations.id')
+            ->select(
+                'locations.id as location_id',
+                'locations.location_name',
+                'locations.location_type',
+                DB::raw('SUM(sales_transactions.grand_total) as total_sales'),
+                DB::raw('COUNT(sales_transactions.id) as transaction_count'),
+            )
+            ->whereDate('sales_transactions.transaction_date', '>=', $dateFrom)
+            ->whereDate('sales_transactions.transaction_date', '<=', $dateTo)
+            ->groupBy('locations.id', 'locations.location_name', 'locations.location_type')
+            ->orderByDesc('total_sales');
+
+        $this->applySalesTransactionFilters($query, $filters, $user);
+
+        $rows = $query->get();
+        $grandTotal = (float) $rows->sum('total_sales');
+
+        return $rows->map(function ($row) use ($dateFrom, $dateTo, $grandTotal) {
+            $itemsSold = (int) SalesItem::query()
+                ->join('sales_transactions', 'sales_items.sales_transaction_id', '=', 'sales_transactions.id')
+                ->where('sales_transactions.location_id', $row->location_id)
+                ->whereDate('sales_transactions.transaction_date', '>=', $dateFrom)
+                ->whereDate('sales_transactions.transaction_date', '<=', $dateTo)
+                ->sum('sales_items.qty');
+
+            $totalSales = (float) $row->total_sales;
+
+            return [
+                'location_id' => $row->location_id,
+                'location_name' => $row->location_name,
+                'location_type' => $row->location_type instanceof LocationType
+                    ? $row->location_type->value
+                    : (string) $row->location_type,
+                'total_sales' => round($totalSales, 2),
+                'transaction_count' => (int) $row->transaction_count,
+                'items_sold' => $itemsSold,
+                'sales_pct' => $grandTotal > 0
+                    ? round(($totalSales / $grandTotal) * 100, 2)
+                    : 0.0,
+            ];
+        })->values();
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     */
+    public function salesByEmployee(User $user, array $filters = []): Collection
+    {
+        [$dateFrom, $dateTo] = $this->resolveDateRange($filters);
+
+        $query = SalesTransaction::query()
+            ->join('employees', 'sales_transactions.employee_id', '=', 'employees.id')
+            ->select(
+                'employees.id as employee_id',
+                'employees.name as employee_name',
+                DB::raw('SUM(sales_transactions.grand_total) as total_sales'),
+                DB::raw('COUNT(sales_transactions.id) as transaction_count'),
+            )
+            ->whereDate('sales_transactions.transaction_date', '>=', $dateFrom)
+            ->whereDate('sales_transactions.transaction_date', '<=', $dateTo)
+            ->groupBy('employees.id', 'employees.name')
+            ->orderByDesc('total_sales');
+
+        $this->applySalesTransactionFilters($query, $filters, $user);
+
+        return $query->get()->map(function ($row) {
+            $totalSales = (float) $row->total_sales;
+            $transactionCount = (int) $row->transaction_count;
+
+            return [
+                'employee_id' => $row->employee_id,
+                'employee_name' => $row->employee_name,
+                'total_sales' => round($totalSales, 2),
+                'transaction_count' => $transactionCount,
+                'avg_basket' => $transactionCount > 0
+                    ? round($totalSales / $transactionCount, 2)
+                    : 0.0,
+            ];
+        })->values();
+    }
+
+    /**
+     * @return array{
+     *   todays_net_sales: float,
+     *   todays_transactions: int,
+     *   items_sold_today: int,
+     *   avg_basket_today: float,
+     *   vs_yesterday_pct: float,
+     *   seven_day_trend: list<array{date: string, total_sales: float}>,
+     *   top_sku_today: array{sku: string, item_name: string, qty_sold: int}|null,
+     *   low_stock_count: int
+     * }
+     */
+    public function mobileSummary(User $user): array
+    {
+        $locationIds = $this->resolveAccessibleLocationIds($user);
+        $today = now()->toDateString();
+        $yesterday = now()->subDay()->toDateString();
+
+        $todayQuery = SalesTransaction::query()->whereDate('transaction_date', $today);
+        $this->applyLocationFilter($todayQuery, $locationIds);
+
+        $todaysNetSales = (float) (clone $todayQuery)->sum('grand_total');
+        $todaysTransactions = (clone $todayQuery)->count();
+
+        $itemsSoldToday = (int) SalesItem::query()
+            ->whereHas('salesTransaction', function (Builder $query) use ($today, $locationIds): void {
+                $query->whereDate('transaction_date', $today);
+                $this->applyLocationFilter($query, $locationIds);
+            })
+            ->sum('qty');
+
+        $avgBasketToday = $todaysTransactions > 0
+            ? round($todaysNetSales / $todaysTransactions, 2)
+            : 0.0;
+
+        $yesterdayQuery = SalesTransaction::query()->whereDate('transaction_date', $yesterday);
+        $this->applyLocationFilter($yesterdayQuery, $locationIds);
+        $yesterdaySales = (float) $yesterdayQuery->sum('grand_total');
+
+        $vsYesterdayPct = $yesterdaySales > 0
+            ? round((($todaysNetSales - $yesterdaySales) / $yesterdaySales) * 100, 1)
+            : 0.0;
+
+        $sevenDayTrend = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $date = now()->subDays($i)->toDateString();
+            $dayQuery = SalesTransaction::query()->whereDate('transaction_date', $date);
+            $this->applyLocationFilter($dayQuery, $locationIds);
+            $sevenDayTrend[] = [
+                'date' => $date,
+                'total_sales' => (float) $dayQuery->sum('grand_total'),
+            ];
+        }
+
+        $topSkuQuery = SalesItem::query()
+            ->select(
+                'items.sku',
+                'items.item_name',
+                DB::raw('SUM(sales_items.qty) as qty_sold'),
+            )
+            ->join('items', 'sales_items.item_id', '=', 'items.id')
+            ->join('sales_transactions', 'sales_items.sales_transaction_id', '=', 'sales_transactions.id')
+            ->whereDate('sales_transactions.transaction_date', $today)
+            ->groupBy('items.sku', 'items.item_name')
+            ->orderByDesc('qty_sold');
+
+        $this->applyLocationFilter($topSkuQuery, $locationIds, 'sales_transactions.location_id');
+
+        $topSkuRow = $topSkuQuery->first();
+
+        return [
+            'todays_net_sales' => round($todaysNetSales, 2),
+            'todays_transactions' => $todaysTransactions,
+            'items_sold_today' => $itemsSoldToday,
+            'avg_basket_today' => $avgBasketToday,
+            'vs_yesterday_pct' => $vsYesterdayPct,
+            'seven_day_trend' => $sevenDayTrend,
+            'top_sku_today' => $topSkuRow ? [
+                'sku' => $topSkuRow->sku,
+                'item_name' => $topSkuRow->item_name,
+                'qty_sold' => (int) $topSkuRow->qty_sold,
+            ] : null,
+            'low_stock_count' => $this->countLowStockItems($locationIds),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return array{0: string, 1: string}
+     */
+    private function resolveDateRange(array $filters): array
+    {
+        $dateFrom = ! empty($filters['date_from'])
+            ? (string) $filters['date_from']
+            : now()->startOfMonth()->toDateString();
+
+        $dateTo = ! empty($filters['date_to'])
+            ? (string) $filters['date_to']
+            : now()->toDateString();
+
+        return [$dateFrom, $dateTo];
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     */
+    private function salesTransactionQuery(array $filters, User $user): Builder
+    {
+        $query = SalesTransaction::query();
+        $this->applySalesTransactionFilters($query, $filters, $user);
+
+        return $query;
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     */
+    private function applySalesTransactionFilters(
+        Builder $query,
+        array $filters,
+        User $user,
+        string $tablePrefix = 'sales_transactions',
+    ): void {
+        $locationIds = $this->resolveAccessibleLocationIds($user);
+
+        if (! empty($filters['location_id'])) {
+            $locationId = (string) $filters['location_id'];
+
+            if ($locationIds !== null && ! in_array($locationId, $locationIds, true)) {
+                $query->whereRaw('1 = 0');
+
+                return;
+            }
+
+            $query->where("{$tablePrefix}.location_id", $locationId);
+        } else {
+            $this->applyLocationFilter($query, $locationIds, "{$tablePrefix}.location_id");
+        }
     }
 
     /**

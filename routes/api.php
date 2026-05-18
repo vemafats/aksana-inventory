@@ -58,6 +58,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('total-capital', [ReportController::class, 'totalCapital']);
         Route::get('low-stock-items', [ReportController::class, 'lowStockItems']);
         Route::get('slow-moving-items', [ReportController::class, 'slowMovingItems']);
+        Route::get('gross-profit', [ReportController::class, 'grossProfit']);
+        Route::get('best-selling-products', [ReportController::class, 'bestSellingProducts']);
+        Route::get('sales-by-location', [ReportController::class, 'salesByLocation']);
+        Route::get('sales-by-employee', [ReportController::class, 'salesByEmployee']);
         Route::get('mobile-summary', [ReportController::class, 'mobileSummary']);
     });
 
