@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\LocationType;
 use App\Http\Controllers\Controller;
 use App\Models\Location;
 use App\Services\LocationCloseService;
@@ -14,6 +15,23 @@ class LocationController extends Controller
     public function __construct(
         private readonly LocationCloseService $locationCloseService,
     ) {}
+
+    public function centralWarehouse(): JsonResponse
+    {
+        $warehouse = Location::query()
+            ->where('location_type', LocationType::CENTRAL_WAREHOUSE->value)
+            ->where('status', 'active')
+            ->orderBy('created_at')
+            ->firstOrFail();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id' => $warehouse->id,
+                'location_name' => $warehouse->location_name,
+            ],
+        ]);
+    }
 
     public function close(Location $location): JsonResponse
     {

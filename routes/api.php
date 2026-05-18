@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\CatalogController;
 use App\Http\Controllers\Api\CatalogQrCodeController;
 use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\PhotoController;
+use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\SalesController;
 use App\Http\Controllers\Api\StockController;
 use App\Http\Controllers\Api\StockInController;
@@ -47,7 +48,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('/stock-opnames/{opname}/validate', [StockOpnameController::class, 'validate']);
     Route::post('/stock-opnames/{opname}/reject', [StockOpnameController::class, 'reject']);
 
+    Route::get('/locations/central-warehouse', [LocationController::class, 'centralWarehouse']);
     Route::post('/locations/{location}/close', [LocationController::class, 'close']);
+
+    Route::get('/reports/mobile-summary', [ReportController::class, 'mobileSummary']);
 
     Route::post('/sales', [SalesController::class, 'store']);
     Route::get('/sales', [SalesController::class, 'index']);
