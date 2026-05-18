@@ -14,7 +14,9 @@ import '../../../core/widgets/screen_header.dart';
 import 'scan_provider.dart';
 
 class ScanScreen extends ConsumerStatefulWidget {
-  const ScanScreen({super.key});
+  final bool selectionMode;
+
+  const ScanScreen({super.key, this.selectionMode = false});
 
   @override
   ConsumerState<ScanScreen> createState() => _ScanScreenState();
@@ -25,6 +27,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
   MobileScannerController? _scannerController;
   late AnimationController _scanLineController;
   bool _scanLocked = false;
+  final _manualBarcodeController = TextEditingController();
 
   @override
   void initState() {
@@ -46,6 +49,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
   void dispose() {
     _scanLineController.dispose();
     _scannerController?.dispose();
+    _manualBarcodeController.dispose();
     super.dispose();
   }
 
@@ -88,6 +92,8 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
             backgroundColor: AppColors.danger,
           ),
         );
+      } else if (widget.selectionMode) {
+        context.pop(item);
       } else {
         ref.read(scanResultProvider.notifier).state = item;
       }
@@ -127,15 +133,27 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      appBar: widget.selectionMode
+          ? AppBar(
+              backgroundColor: AppColors.background,
+              leading: IconButton(
+                icon: const Icon(Icons.close, color: AppColors.voidBlack),
+                onPressed: () => context.pop(),
+              ),
+            )
+          : null,
       body: SafeArea(
+        top: !widget.selectionMode,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               ScreenHeader(
-                backLabel: _locationBackLabel(auth.user),
-                title: 'Quick Scan',
+                backLabel: widget.selectionMode
+                    ? 'PILIH ITEM'
+                    : _locationBackLabel(auth.user),
+                title: widget.selectionMode ? 'Scan Item' : 'Quick Scan',
               ),
               const SizedBox(height: 20),
               _CameraView(
@@ -144,7 +162,46 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
                 scannerController: _scannerController,
                 onBarcode: _onBarcodeDetected,
               ),
-              if (scanResult != null) ...[
+              if (widget.selectionMode && kIsWeb) ...[
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _manualBarcodeController,
+                        style: AppTextStyles.mono,
+                        decoration: InputDecoration(
+                          hintText: 'Masukkan barcode',
+                          hintStyle: AppTextStyles.monoMuted,
+                          filled: true,
+                          fillColor: AppColors.card,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide:
+                                const BorderSide(color: AppColors.border),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: isLoading
+                            ? null
+                            : () => _onBarcodeDetected(
+                                  _manualBarcodeController.text,
+                                ),
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size(72, 48),
+                        ),
+                        child: const Text('CARI'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              if (!widget.selectionMode && scanResult != null) ...[
                 const SizedBox(height: 16),
                 _ResultCard(item: scanResult),
               ],
