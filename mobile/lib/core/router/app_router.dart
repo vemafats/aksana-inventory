@@ -1,6 +1,6 @@
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-// import '../auth/auth_provider.dart'; // TODO: re-enable with redirect
+import '../auth/auth_provider.dart';
 import '../widgets/main_scaffold.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/scan/presentation/scan_screen.dart';
@@ -13,10 +13,14 @@ import '../../features/return_stock/presentation/return_stock_screen.dart';
 import '../../features/reports/presentation/reports_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
+  final auth = ref.watch(authProvider);
   return GoRouter(
     initialLocation: '/scan',
     redirect: (context, state) {
-      // TODO: re-enable auth redirect after backend connection
+      final loggedIn = auth.isAuthenticated;
+      final goingLogin = state.matchedLocation == '/login';
+      if (!loggedIn && !goingLogin) return '/login';
+      if (loggedIn && goingLogin) return '/scan';
       return null;
     },
     routes: [
