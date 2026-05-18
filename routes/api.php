@@ -51,7 +51,15 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('/locations/central-warehouse', [LocationController::class, 'centralWarehouse']);
     Route::post('/locations/{location}/close', [LocationController::class, 'close']);
 
-    Route::get('/reports/mobile-summary', [ReportController::class, 'mobileSummary']);
+    Route::prefix('reports')->group(function (): void {
+        Route::get('dashboard-summary', [ReportController::class, 'dashboardSummary']);
+        Route::get('warehouse-stock', [ReportController::class, 'warehouseStock']);
+        Route::get('location-stock', [ReportController::class, 'locationStock']);
+        Route::get('total-capital', [ReportController::class, 'totalCapital']);
+        Route::get('low-stock-items', [ReportController::class, 'lowStockItems']);
+        Route::get('slow-moving-items', [ReportController::class, 'slowMovingItems']);
+        Route::get('mobile-summary', [ReportController::class, 'mobileSummary']);
+    });
 
     Route::post('/sales', [SalesController::class, 'store']);
     Route::get('/sales', [SalesController::class, 'index']);
