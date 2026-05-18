@@ -11,6 +11,7 @@ import '../../../core/auth/auth_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/screen_header.dart';
+import '../../sales/presentation/sales_provider.dart';
 import 'scan_provider.dart';
 
 class ScanScreen extends ConsumerStatefulWidget {
@@ -203,7 +204,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
               ],
               if (!widget.selectionMode && scanResult != null) ...[
                 const SizedBox(height: 16),
-                _ResultCard(item: scanResult),
+                _ResultCard(item: scanResult, ref: ref),
               ],
             ],
           ),
@@ -423,8 +424,9 @@ class _AnimatedScanLine extends StatelessWidget {
 
 class _ResultCard extends StatelessWidget {
   final Map<String, dynamic> item;
+  final WidgetRef ref;
 
-  const _ResultCard({required this.item});
+  const _ResultCard({required this.item, required this.ref});
 
   String get _name => item['item_name']?.toString() ?? '—';
   String get _sku => item['sku']?.toString() ?? '—';
@@ -501,7 +503,10 @@ class _ResultCard extends StatelessWidget {
                 child: SizedBox(
                   height: 44,
                   child: ElevatedButton(
-                    onPressed: () => context.go('/sales'),
+                    onPressed: () {
+                      ref.read(salesCartProvider.notifier).addItem(item);
+                      context.go('/sales');
+                    },
                     style: ElevatedButton.styleFrom(
                       minimumSize: const Size(0, 44),
                     ),

@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../widgets/main_scaffold.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/scan/presentation/scan_screen.dart';
+import '../../features/sales/presentation/sales_screen.dart';
 import '../../features/stock_in/presentation/stock_in_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -37,7 +38,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/sales',
-            builder: (_, __) => const _Placeholder('JUAL · M5-T5'),
+            builder: (_, __) => const SalesScreen(),
           ),
           GoRoute(
             path: '/stock',
