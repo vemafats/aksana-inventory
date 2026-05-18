@@ -118,6 +118,18 @@ class ReportService
         ];
     }
 
+    public function lowStockBalancesQuery(User $user): Builder
+    {
+        $query = StockBalance::query()
+            ->where('stock_status', StockStatus::AVAILABLE->value)
+            ->where('qty', '<=', 1)
+            ->with(['item', 'location']);
+
+        $this->applyLocationFilter($query, $this->resolveAccessibleLocationIds($user));
+
+        return $query;
+    }
+
     public function lowStockItems(User $user): Collection
     {
         $locationIds = $this->resolveAccessibleLocationIds($user);

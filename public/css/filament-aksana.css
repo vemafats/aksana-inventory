@@ -1,15 +1,4 @@
-/**
- * Aksana Filament theme — "Surgical Steel & Glass"
- * Build: npm install && npm run build
- * Fallback (no build): public/css/filament-aksana.css via renderHook
- */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;700&display=swap');
-
-@import '../../../../vendor/filament/filament/resources/css/theme.css';
-
-@config 'tailwind.config.js';
-
-:root {
+﻿:root {
     --aksana-bg: #edf1f3;
     --aksana-void: #070d1e;
     --aksana-card: #ffffff;
@@ -22,7 +11,7 @@
     --font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
 }
 
-/* Page background — Surgical Steel */
+/* Page background â€” Surgical Steel */
 .fi-main,
 .fi-body {
     background-color: var(--aksana-bg) !important;
@@ -33,7 +22,7 @@
     background-color: var(--aksana-bg) !important;
 }
 
-/* Sidebar — glass card */
+/* Sidebar â€” glass card */
 .fi-sidebar {
     background-color: var(--aksana-card) !important;
     border-right: 1px solid var(--aksana-border) !important;
