@@ -13,8 +13,10 @@ use App\Models\SalesItem;
 use App\Models\SalesTransaction;
 use App\Models\StockBalance;
 use App\Models\User;
+use App\Support\StockReportCache;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class ReportService
@@ -31,31 +33,39 @@ class ReportService
      */
     public function dashboardSummary(User $user): array
     {
-        $locationIds = $this->resolveAccessibleLocationIds($user);
+        $cacheKey = StockReportCache::dashboardCacheKey($user->id, $user->role);
 
-        $stockQuery = StockBalance::query();
-        $this->applyLocationFilter($stockQuery, $locationIds);
+        return Cache::remember(
+            $cacheKey,
+            now()->addMinutes(5),
+            function () use ($user): array {
+                $locationIds = $this->resolveAccessibleLocationIds($user);
 
-        $totalUnitStock = (int) (clone $stockQuery)->sum('qty');
+                $stockQuery = StockBalance::query();
+                $this->applyLocationFilter($stockQuery, $locationIds);
 
-        $activeLocationsQuery = Location::query()
-            ->where('status', LocationStatus::ACTIVE->value);
-        $this->applyLocationFilter($activeLocationsQuery, $locationIds, 'id');
+                $totalUnitStock = (int) (clone $stockQuery)->sum('qty');
 
-        $lowStockCount = $this->countLowStockItems($locationIds);
+                $activeLocationsQuery = Location::query()
+                    ->where('status', LocationStatus::ACTIVE->value);
+                $this->applyLocationFilter($activeLocationsQuery, $locationIds, 'id');
 
-        $salesQuery = SalesTransaction::query()
-            ->whereDate('transaction_date', now()->toDateString());
-        $this->applyLocationFilter($salesQuery, $locationIds);
+                $lowStockCount = $this->countLowStockItems($locationIds);
 
-        return [
-            'total_sku' => Item::query()->where('is_active', true)->count(),
-            'total_unit_stock' => $totalUnitStock,
-            'active_locations' => $activeLocationsQuery->count(),
-            'low_stock_count' => $lowStockCount,
-            'todays_sales' => (float) (clone $salesQuery)->sum('grand_total'),
-            'todays_transactions' => (clone $salesQuery)->count(),
-        ];
+                $salesQuery = SalesTransaction::query()
+                    ->whereDate('transaction_date', now()->toDateString());
+                $this->applyLocationFilter($salesQuery, $locationIds);
+
+                return [
+                    'total_sku' => Item::query()->where('is_active', true)->count(),
+                    'total_unit_stock' => $totalUnitStock,
+                    'active_locations' => $activeLocationsQuery->count(),
+                    'low_stock_count' => $lowStockCount,
+                    'todays_sales' => (float) (clone $salesQuery)->sum('grand_total'),
+                    'todays_transactions' => (clone $salesQuery)->count(),
+                ];
+            },
+        );
     }
 
     /**
@@ -132,43 +142,52 @@ class ReportService
 
     public function lowStockItems(User $user): Collection
     {
-        $locationIds = $this->resolveAccessibleLocationIds($user);
+        $cacheKey = StockReportCache::lowStockCacheKey($user->role);
 
-        $itemIds = $this->lowStockItemIdsQuery($locationIds)->pluck('item_id');
+        return Cache::remember(
+            $cacheKey,
+            now()->addMinutes(2),
+            function () use ($user): Collection {
+                $locationIds = $this->resolveAccessibleLocationIds($user);
 
-        if ($itemIds->isEmpty()) {
-            return collect();
-        }
+                $itemIds = $this->lowStockItemIdsQuery($locationIds)->pluck('item_id');
 
-        return Item::query()
-            ->whereIn('id', $itemIds)
-            ->orderBy('item_name')
-            ->get()
-            ->map(function (Item $item) use ($locationIds) {
-                $breakdownQuery = StockBalance::query()
-                    ->where('item_id', $item->id)
-                    ->where('stock_status', StockStatus::AVAILABLE->value)
-                    ->where('qty', '>', 0)
-                    ->with('location:id,location_name,location_code');
+                if ($itemIds->isEmpty()) {
+                    return collect();
+                }
 
-                $this->applyLocationFilter($breakdownQuery, $locationIds);
+                return Item::query()
+                    ->whereIn('id', $itemIds)
+                    ->orderBy('item_name')
+                    ->get()
+                    ->map(function (Item $item) use ($locationIds) {
+                        $breakdownQuery = StockBalance::query()
+                            ->select(['id', 'item_id', 'location_id', 'stock_status', 'qty'])
+                            ->where('item_id', $item->id)
+                            ->where('stock_status', StockStatus::AVAILABLE->value)
+                            ->where('qty', '>', 0)
+                            ->with('location:id,location_name,location_code');
 
-                $locations = $breakdownQuery->get()->map(fn (StockBalance $balance) => [
-                    'location_id' => $balance->location_id,
-                    'location_name' => $balance->location->location_name,
-                    'qty_available' => $balance->qty,
-                ])->values()->all();
+                        $this->applyLocationFilter($breakdownQuery, $locationIds);
 
-                $totalAvailable = (int) collect($locations)->sum('qty_available');
+                        $locations = $breakdownQuery->get()->map(fn (StockBalance $balance) => [
+                            'location_id' => $balance->location_id,
+                            'location_name' => $balance->location->location_name,
+                            'qty_available' => $balance->qty,
+                        ])->values()->all();
 
-                return [
-                    'item_id' => $item->id,
-                    'item_name' => $item->item_name,
-                    'sku' => $item->sku,
-                    'total_available' => $totalAvailable,
-                    'locations' => $locations,
-                ];
-            });
+                        $totalAvailable = (int) collect($locations)->sum('qty_available');
+
+                        return [
+                            'item_id' => $item->id,
+                            'item_name' => $item->item_name,
+                            'sku' => $item->sku,
+                            'total_available' => $totalAvailable,
+                            'locations' => $locations,
+                        ];
+                    });
+            },
+        );
     }
 
     public function slowMovingItems(int $days = 60): Collection
@@ -544,6 +563,7 @@ class ReportService
     private function buildGroupedStockCollection(string $locationId, array $filters): Collection
     {
         $query = StockBalance::query()
+            ->select(['id', 'item_id', 'location_id', 'stock_status', 'qty'])
             ->where('location_id', $locationId)
             ->whereHas('item', function (Builder $itemQuery) use ($filters): void {
                 $itemQuery->where('is_active', true);
@@ -565,10 +585,23 @@ class ReportService
                 }
             })
             ->with([
-                'item.category',
-                'item.brand',
-                'item.color',
-                'item.size',
+                'item' => fn ($query) => $query->select([
+                    'id',
+                    'category_id',
+                    'brand_id',
+                    'model_id',
+                    'color_id',
+                    'size_id',
+                    'sku',
+                    'barcode',
+                    'item_name',
+                    'is_active',
+                ]),
+                'item.category:id,name,code',
+                'item.brand:id,name',
+                'item.color:id,name,code',
+                'item.size:id,name,size_type',
+                'location:id,location_name,location_code,location_type',
             ]);
 
         return $query->get()

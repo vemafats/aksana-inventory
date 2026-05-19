@@ -20,13 +20,36 @@ class CatalogController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Item::query()
+            ->select([
+                'id',
+                'category_id',
+                'brand_id',
+                'model_id',
+                'color_id',
+                'size_id',
+                'sku',
+                'barcode',
+                'item_name',
+                'catalog_photo_path',
+                'latest_base_selling_price',
+                'description',
+                'is_active',
+                'created_at',
+            ])
             ->with([
                 'category',
                 'brand',
                 'productModel',
                 'color',
                 'size',
-                'stockBalances.location',
+                'stockBalances' => fn ($query) => $query->select([
+                    'id',
+                    'item_id',
+                    'location_id',
+                    'stock_status',
+                    'qty',
+                ]),
+                'stockBalances.location:id,location_name,location_code,location_type',
             ]);
 
         if ($request->filled('category_id')) {

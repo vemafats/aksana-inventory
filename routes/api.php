@@ -29,7 +29,10 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function (): void {
     Route::post('/photos', [PhotoController::class, 'store']);
     Route::get('/photos/{photo}', [PhotoController::class, 'show']);
 
+    Route::get('/stocks', [StockController::class, 'index']);
     Route::get('/stocks/warehouse', [StockController::class, 'warehouse']);
+    Route::get('/stocks/location/{locationId}', [StockController::class, 'locationStock']);
+    Route::get('/stocks/item/{itemId}', [StockController::class, 'itemStock']);
 
     Route::post('/stock-in', [StockInController::class, 'store']);
     Route::get('/stock-in', [StockInController::class, 'index']);

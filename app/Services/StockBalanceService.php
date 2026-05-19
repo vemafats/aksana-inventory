@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\StockStatus;
 use App\Exceptions\InsufficientStockException;
 use App\Models\StockBalance;
+use App\Support\StockReportCache;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
 
@@ -136,12 +137,16 @@ class StockBalanceService
                 );
             }
 
-            return StockBalance::query()->create([
+            $balance = StockBalance::query()->create([
                 'item_id' => $itemId,
                 'location_id' => $locationId,
                 'stock_status' => $status,
                 'qty' => $qtyChange,
             ]);
+
+            StockReportCache::invalidate();
+
+            return $balance;
         }
 
         $newQty = $balance->qty + $qtyChange;
@@ -157,6 +162,8 @@ class StockBalanceService
         }
 
         $balance->update(['qty' => $newQty]);
+
+        StockReportCache::invalidate();
 
         return $balance->refresh();
     }
