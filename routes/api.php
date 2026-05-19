@@ -14,9 +14,9 @@ use App\Http\Controllers\Api\TransferController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login'])
-    ->middleware('throttle:5,1');
+    ->middleware('throttle:login');
 
-Route::middleware('auth:sanctum')->group(function (): void {
+Route::middleware(['auth:sanctum', 'throttle:api'])->group(function (): void {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/verify-password', [AuthController::class, 'verifyPassword']);

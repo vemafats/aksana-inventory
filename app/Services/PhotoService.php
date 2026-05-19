@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Photo;
 use App\Models\User;
+use finfo;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -17,7 +18,8 @@ class PhotoService
 
     private const MAX_STORED_BYTES = 1024 * 1024;
 
-    private const ALLOWED_MIMES = ['image/jpeg', 'image/jpg', 'image/png'];
+    /** @var list<string> */
+    private const ALLOWED_MIMES = ['image/jpeg', 'image/png'];
 
     public function uploadPhoto(
         UploadedFile $file,
@@ -29,12 +31,7 @@ class PhotoService
 
         $timestamp = now();
         $watermarkText = 'Aksana · '.$timestamp->format('d M Y H:i');
-        $filename = sprintf(
-            '%s_%s_%s.jpg',
-            Str::slug($relatedType, '_'),
-            $relatedId,
-            $timestamp->format('YmdHis')
-        );
+        $filename = Str::uuid()->toString().'.jpg';
         $directory = "photos/{$relatedType}";
         $relativePath = "{$directory}/{$filename}";
 
@@ -43,6 +40,7 @@ class PhotoService
         $fullPath = Storage::disk('public')->path($relativePath);
 
         $image = $this->imageManager()->read($file->getPathname());
+        $image = $this->stripExifMetadata($image);
         $this->saveCompressedImage($image, $fullPath);
         $this->applyWatermark($fullPath, $watermarkText);
 
@@ -67,8 +65,10 @@ class PhotoService
             throw new \InvalidArgumentException('Ukuran foto maksimal 5MB.');
         }
 
-        $mime = $file->getMimeType();
-        if (! in_array($mime, self::ALLOWED_MIMES, true)) {
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $detectedMime = $finfo->file($file->getPathname());
+
+        if ($detectedMime === false || ! in_array($detectedMime, self::ALLOWED_MIMES, true)) {
             throw new \InvalidArgumentException('Format foto harus JPG atau PNG.');
         }
     }
@@ -76,6 +76,11 @@ class PhotoService
     private function imageManager(): ImageManager
     {
         return new ImageManager(new GdDriver);
+    }
+
+    private function stripExifMetadata(ImageInterface $image): ImageInterface
+    {
+        return $this->imageManager()->read($image->toJpeg(quality: 90)->toString());
     }
 
     private function saveCompressedImage(ImageInterface $image, string $fullPath): void
