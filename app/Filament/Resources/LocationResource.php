@@ -18,7 +18,7 @@ class LocationResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-map-pin';
 
-    protected static ?string $navigationGroup = 'SDM & Lokasi';
+    protected static bool $shouldRegisterNavigation = false;
 
     protected static ?string $modelLabel = 'Lokasi';
 

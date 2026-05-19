@@ -152,6 +152,28 @@ class StockMovementService
         ]);
     }
 
+    public function createForReturn(
+        TransferTransaction $transaction,
+        TransferItem $transferItem,
+        StockStatus $toStatus,
+        int $qty,
+        User $createdBy,
+    ): StockMovement {
+        return $this->createMovement([
+            'movement_type' => MovementType::RETURN_TO_WAREHOUSE,
+            'item_id' => $transferItem->item_id,
+            'qty' => $qty,
+            'from_location_id' => $transaction->from_location_id,
+            'to_location_id' => $transaction->to_location_id,
+            'from_stock_status' => StockStatus::AVAILABLE->value,
+            'to_stock_status' => $toStatus->value,
+            'reference_type' => 'transfer',
+            'reference_id' => $transaction->id,
+            'note' => $transferItem->note,
+            'created_by' => $createdBy->id,
+        ]);
+    }
+
     public function createForOpnameAdjustment(
         StockOpnameTransaction $transaction,
         StockOpnameItem $opnameItem,

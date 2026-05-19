@@ -25,9 +25,7 @@ class PenjualanPage extends Page implements HasTable
 
     protected static ?string $navigationLabel = 'Penjualan';
 
-    protected static ?string $navigationGroup = 'Menu';
-
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 6;
 
     protected static ?string $title = 'Penjualan';
 

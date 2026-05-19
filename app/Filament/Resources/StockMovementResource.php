@@ -28,7 +28,7 @@ class StockMovementResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Riwayat Pergerakan';
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 3;
 
     public static function canCreate(): bool
     {

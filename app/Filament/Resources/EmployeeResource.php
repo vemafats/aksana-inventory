@@ -16,7 +16,7 @@ class EmployeeResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-user-group';
 
-    protected static ?string $navigationGroup = 'SDM & Lokasi';
+    protected static bool $shouldRegisterNavigation = false;
 
     protected static ?string $modelLabel = 'Karyawan';
 

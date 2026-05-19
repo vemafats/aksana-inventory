@@ -16,7 +16,7 @@ class ColorResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-swatch';
 
-    protected static ?string $navigationGroup = 'Master Data';
+    protected static bool $shouldRegisterNavigation = false;
 
     protected static ?string $modelLabel = 'Warna';
 

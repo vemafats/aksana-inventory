@@ -524,7 +524,90 @@ TERVALIDASI badge: green pill
 
 ---
 
-## 13. Cara Pakai Lengkap di Prompt Cursor (Filament)
+## 14. Setting Page
+
+### Sub-tabs
+```
+[👤 Users] [🛡 Roles] [🔑 Menu Access]
+Active: near-black filled, white text, rounded-md
+Inactive: white bg, muted text, border
+```
+
+### Tab 1: Users — Split Layout (2/3 + 1/3)
+```
+LEFT: "Daftar User · {n} akun"  [Cari user...]  [+ USER near-black]
+
+Table columns:
+[avatar 32px initials near-black] USERNAME(mono muted) | NAMA LENGKAP(semibold)
+ROLE badge: owner=#070D1E, admin=#1660ED, admin_gudang=#0F6E56,
+            pic_bazar=#29A85A, sales=#49586B — all white text pill
+STATUS: ● green "Aktif" / ● grey "Nonaktif"
+LAST LOGIN: "X menit lalu" (Carbon diffForHumans)
+AKSI: pencil icon btn + trash icon btn (28x28 grey bg)
+
+RIGHT: "Edit User" panel (shows when user selected)
+- Avatar 48px initials + name bold + "USR-XXX" code muted
+- Fields: USERNAME (👤 icon), EMAIL (✉ icon),
+  ROLE (select), PASSWORD BARU (🔒 icon, optional)
+- STATUS AKUN: toggle (green=AKTIF)
+- [SIMPAN PERUBAHAN] near-black full width
+- [RESET] outline button
+```
+
+### Tab 2: Roles
+```
+"Role · 5 role"  [+ ROLE]
+
+2-column card grid:
+Each card: shield icon (28x28) + role name bold + user count small
+           description text muted
+           edit + trash icon buttons top right
+
+5 roles:
+Owner       → "Akses penuh ke seluruh modul & pengaturan sistem."
+Admin       → "Kelola master data, katalog, stok & laporan."
+Admin Gudang → "Kelola stok masuk, distribusi & stok opname."
+PIC Bazar   → "Kelola penjualan harian & cek stok cabang."
+Sales       → "Input transaksi jual & cek stok lokasi."
+```
+
+### Tab 3: Menu Access — Split Layout (240px + fill)
+```
+LEFT: "PILIH ROLE" (10px uppercase muted)
+List of 5 roles with shield icon + user count badge
+Active: near-black bg white text rounded-md
+
+RIGHT: "Hak Akses Menu — {Role}"  [SIMPAN near-black]
+
+Permission matrix table:
+MENU          | VIEW | CREATE | EDIT | DELETE
+Dashboard     | ☑    | ☑      | ☑    | ☑
+Master Data   | ☑    | ☑      | ☑    | ☑
+Katalog       | ☑    | ☑      | ☑    | ☑
+Stok          | ☑    | ☑      | ☑    | ☑
+Distribusi    | ☑    | ☑      | ☑    | ☑
+Penjualan     | ☑    | ☑      | ☑    | ☑
+Stok Opname   | ☑    | ☑      | ☑    | ☑
+Laporan       | ☑    | ☑      | ☑    | ☑
+Setting       | ☑    | ☑      | ☑    | ✗
+
+Checkbox style:
+Checked: near-black square + white checkmark
+Unchecked: grey border square
+Footer: "Centang untuk mengizinkan akses · klik SIMPAN untuk menerapkan."
+        "9 menu × 4 permission" right
+
+PERMISSIONS stored in settings table as JSON:
+setting_key: 'role_permissions'
+```
+
+### System Status Bar (sidebar bottom)
+```
+<div style="background:#070D1E; border-radius:8px; padding:12px">
+  SYSTEM (10px uppercase white/40)
+  ● node_01_online (green pulse dot + 11px mono white)
+</div>
+```
 
 Untuk setiap task Filament, tambahkan referensi sesuai halaman:
 

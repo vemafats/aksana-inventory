@@ -16,7 +16,7 @@ class ProductModelResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-cube';
 
-    protected static ?string $navigationGroup = 'Master Data';
+    protected static bool $shouldRegisterNavigation = false;
 
     protected static ?string $modelLabel = 'Model Produk';
 

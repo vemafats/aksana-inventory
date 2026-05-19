@@ -25,7 +25,7 @@ class StockResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Stok';
 
-    protected static ?int $navigationSort = 3;
+    protected static bool $shouldRegisterNavigation = false;
 
     public static function canCreate(): bool
     {
