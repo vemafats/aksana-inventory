@@ -63,6 +63,7 @@ class StokPage extends Page
         $this->categoryCount = Category::query()->where('is_active', true)->count();
         $this->lowStockCount = StockBalance::query()
             ->where('stock_status', 'available')
+            ->selectRaw('item_id, SUM(qty) as total_qty')
             ->groupBy('item_id')
             ->havingRaw('SUM(qty) <= 1')
             ->get()

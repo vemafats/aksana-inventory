@@ -697,7 +697,7 @@ class ReportService
      */
     private function countLowStockItems(?array $locationIds): int
     {
-        return $this->lowStockItemIdsQuery($locationIds)->count();
+        return $this->lowStockItemIdsQuery($locationIds)->get()->count();
     }
 
     /**
@@ -706,12 +706,12 @@ class ReportService
     private function lowStockItemIdsQuery(?array $locationIds): Builder
     {
         $query = StockBalance::query()
-            ->select('item_id')
             ->where('stock_status', StockStatus::AVAILABLE->value);
 
         $this->applyLocationFilter($query, $locationIds);
 
         return $query
+            ->selectRaw('item_id, SUM(qty) as total_qty')
             ->groupBy('item_id')
             ->havingRaw('SUM(qty) <= 1');
     }
