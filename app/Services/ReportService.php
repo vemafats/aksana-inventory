@@ -53,8 +53,8 @@ class ReportService
 
                 $lowStockCount = $this->countLowStockItems($locationIds);
 
-                $salesQuery = SalesTransaction::query()
-                    ->whereDate('transaction_date', $this->reportDateForDaysAgo());
+                $salesQuery = SalesTransaction::query();
+                $this->whereReportDate($salesQuery, 'transaction_date', $this->reportDateForDaysAgo());
                 $this->applyLocationFilter($salesQuery, $locationIds);
 
                 return [
@@ -246,9 +246,9 @@ class ReportService
     {
         [$dateFrom, $dateTo] = $this->resolveDateRange($filters);
 
-        $transactionQuery = $this->salesTransactionQuery($filters, $user)
-            ->whereDate('transaction_date', '>=', $dateFrom)
-            ->whereDate('transaction_date', '<=', $dateTo);
+        $transactionQuery = $this->salesTransactionQuery($filters, $user);
+        $this->whereReportDateFrom($transactionQuery, 'transaction_date', $dateFrom);
+        $this->whereReportDateTo($transactionQuery, 'transaction_date', $dateTo);
 
         $totalSales = (float) (clone $transactionQuery)->sum('grand_total');
         $transactionCount = (clone $transactionQuery)->count();
@@ -257,9 +257,8 @@ class ReportService
             ->join('sales_transactions', 'sales_items.sales_transaction_id', '=', 'sales_transactions.id');
 
         $this->applySalesTransactionFilters($cogsQuery, $filters, $user, 'sales_transactions');
-        $cogsQuery
-            ->whereDate('sales_transactions.transaction_date', '>=', $dateFrom)
-            ->whereDate('sales_transactions.transaction_date', '<=', $dateTo);
+        $this->whereReportDateFrom($cogsQuery, 'sales_transactions.transaction_date', $dateFrom);
+        $this->whereReportDateTo($cogsQuery, 'sales_transactions.transaction_date', $dateTo);
 
         $totalCogs = (float) $cogsQuery->sum(DB::raw('sales_items.supplier_cost_snapshot * sales_items.qty'));
 
@@ -300,10 +299,11 @@ class ReportService
                 DB::raw('SUM(sales_items.qty) as total_qty_sold'),
                 DB::raw('SUM(sales_items.total_after_discount) as total_revenue'),
             )
-            ->whereDate('sales_transactions.transaction_date', '>=', $dateFrom)
-            ->whereDate('sales_transactions.transaction_date', '<=', $dateTo)
             ->groupBy('items.id', 'items.item_name', 'items.sku', 'items.barcode')
             ->orderByDesc('total_qty_sold');
+
+        $this->whereReportDateFrom($query, 'sales_transactions.transaction_date', $dateFrom);
+        $this->whereReportDateTo($query, 'sales_transactions.transaction_date', $dateTo);
 
         $this->applySalesTransactionFilters($query, $filters, $user, 'sales_transactions');
 
@@ -344,10 +344,11 @@ class ReportService
                 DB::raw('SUM(sales_transactions.grand_total) as total_sales'),
                 DB::raw('COUNT(sales_transactions.id) as transaction_count'),
             )
-            ->whereDate('sales_transactions.transaction_date', '>=', $dateFrom)
-            ->whereDate('sales_transactions.transaction_date', '<=', $dateTo)
             ->groupBy('locations.id', 'locations.location_name', 'locations.location_type')
             ->orderByDesc('total_sales');
+
+        $this->whereReportDateFrom($query, 'sales_transactions.transaction_date', $dateFrom);
+        $this->whereReportDateTo($query, 'sales_transactions.transaction_date', $dateTo);
 
         $this->applySalesTransactionFilters($query, $filters, $user);
 
@@ -355,12 +356,12 @@ class ReportService
         $grandTotal = (float) $rows->sum('total_sales');
 
         return $rows->map(function ($row) use ($dateFrom, $dateTo, $grandTotal) {
-            $itemsSold = (int) SalesItem::query()
+            $itemsSoldQuery = SalesItem::query()
                 ->join('sales_transactions', 'sales_items.sales_transaction_id', '=', 'sales_transactions.id')
-                ->where('sales_transactions.location_id', $row->location_id)
-                ->whereDate('sales_transactions.transaction_date', '>=', $dateFrom)
-                ->whereDate('sales_transactions.transaction_date', '<=', $dateTo)
-                ->sum('sales_items.qty');
+                ->where('sales_transactions.location_id', $row->location_id);
+            $this->whereReportDateFrom($itemsSoldQuery, 'sales_transactions.transaction_date', $dateFrom);
+            $this->whereReportDateTo($itemsSoldQuery, 'sales_transactions.transaction_date', $dateTo);
+            $itemsSold = (int) $itemsSoldQuery->sum('sales_items.qty');
 
             $totalSales = (float) $row->total_sales;
 
@@ -395,10 +396,11 @@ class ReportService
                 DB::raw('SUM(sales_transactions.grand_total) as total_sales'),
                 DB::raw('COUNT(sales_transactions.id) as transaction_count'),
             )
-            ->whereDate('sales_transactions.transaction_date', '>=', $dateFrom)
-            ->whereDate('sales_transactions.transaction_date', '<=', $dateTo)
             ->groupBy('employees.id', 'employees.name')
             ->orderByDesc('total_sales');
+
+        $this->whereReportDateFrom($query, 'sales_transactions.transaction_date', $dateFrom);
+        $this->whereReportDateTo($query, 'sales_transactions.transaction_date', $dateTo);
 
         $this->applySalesTransactionFilters($query, $filters, $user);
 
@@ -436,7 +438,8 @@ class ReportService
         $today = $this->reportDateForDaysAgo();
         $yesterday = $this->reportDateForDaysAgo(1);
 
-        $todayQuery = SalesTransaction::query()->whereDate('transaction_date', $today);
+        $todayQuery = SalesTransaction::query();
+        $this->whereReportDate($todayQuery, 'transaction_date', $today);
         $this->applyLocationFilter($todayQuery, $locationIds);
 
         $todaysNetSales = (float) (clone $todayQuery)->sum('grand_total');
@@ -444,7 +447,7 @@ class ReportService
 
         $itemsSoldToday = (int) SalesItem::query()
             ->whereHas('salesTransaction', function (Builder $query) use ($today, $locationIds): void {
-                $query->whereDate('transaction_date', $today);
+                $this->whereReportDate($query, 'transaction_date', $today);
                 $this->applyLocationFilter($query, $locationIds);
             })
             ->sum('qty');
@@ -453,7 +456,8 @@ class ReportService
             ? round($todaysNetSales / $todaysTransactions, 2)
             : 0.0;
 
-        $yesterdayQuery = SalesTransaction::query()->whereDate('transaction_date', $yesterday);
+        $yesterdayQuery = SalesTransaction::query();
+        $this->whereReportDate($yesterdayQuery, 'transaction_date', $yesterday);
         $this->applyLocationFilter($yesterdayQuery, $locationIds);
         $yesterdaySales = (float) $yesterdayQuery->sum('grand_total');
 
@@ -464,7 +468,8 @@ class ReportService
         $sevenDayTrend = [];
         for ($i = 6; $i >= 0; $i--) {
             $date = $this->reportDateForDaysAgo($i);
-            $dayQuery = SalesTransaction::query()->whereDate('transaction_date', $date);
+            $dayQuery = SalesTransaction::query();
+            $this->whereReportDate($dayQuery, 'transaction_date', $date);
             $this->applyLocationFilter($dayQuery, $locationIds);
             $sevenDayTrend[] = [
                 'date' => $date,
@@ -480,9 +485,10 @@ class ReportService
             )
             ->join('items', 'sales_items.item_id', '=', 'items.id')
             ->join('sales_transactions', 'sales_items.sales_transaction_id', '=', 'sales_transactions.id')
-            ->whereDate('sales_transactions.transaction_date', $today)
             ->groupBy('items.sku', 'items.item_name')
             ->orderByDesc('qty_sold');
+
+        $this->whereReportDate($topSkuQuery, 'sales_transactions.transaction_date', $today);
 
         $this->applyLocationFilter($topSkuQuery, $locationIds, 'sales_transactions.location_id');
 
@@ -514,6 +520,47 @@ class ReportService
         return Carbon::today($this->reportTimezone())
             ->subDays($daysAgo)
             ->toDateString();
+    }
+
+    private function whereReportDate(Builder $query, string $column, string $date): Builder
+    {
+        if ($this->usesPostgresDateTimezone()) {
+            return $query->whereRaw(
+                "DATE({$column} AT TIME ZONE ?) = ?",
+                [$this->reportTimezone(), $date],
+            );
+        }
+
+        return $query->whereDate($column, $date);
+    }
+
+    private function whereReportDateFrom(Builder $query, string $column, string $date): Builder
+    {
+        if ($this->usesPostgresDateTimezone()) {
+            return $query->whereRaw(
+                "DATE({$column} AT TIME ZONE ?) >= ?",
+                [$this->reportTimezone(), $date],
+            );
+        }
+
+        return $query->whereDate($column, '>=', $date);
+    }
+
+    private function whereReportDateTo(Builder $query, string $column, string $date): Builder
+    {
+        if ($this->usesPostgresDateTimezone()) {
+            return $query->whereRaw(
+                "DATE({$column} AT TIME ZONE ?) <= ?",
+                [$this->reportTimezone(), $date],
+            );
+        }
+
+        return $query->whereDate($column, '<=', $date);
+    }
+
+    private function usesPostgresDateTimezone(): bool
+    {
+        return DB::connection()->getDriverName() === 'pgsql';
     }
 
     /**
