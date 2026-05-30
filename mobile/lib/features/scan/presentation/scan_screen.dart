@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -40,8 +40,9 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
 
     if (!kIsWeb) {
       _scannerController = MobileScannerController(
-        detectionSpeed: DetectionSpeed.normal,
+        detectionSpeed: DetectionSpeed.noDuplicates,
         facing: CameraFacing.back,
+        formats: const [BarcodeFormat.qrCode],
       );
     }
   }
@@ -68,16 +69,70 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
     return 'TERMINAL_04';
   }
 
+  String? _extractBarcodeValue(BarcodeCapture capture) {
+    for (final barcode in capture.barcodes) {
+      final value = barcode.rawValue ?? barcode.displayValue;
+      if (value != null && value.trim().isNotEmpty) {
+        return value.trim();
+      }
+    }
+    return null;
+  }
+
+  void _handleBarcodeCapture(BarcodeCapture capture) {
+    debugPrint(
+      '[Scan] onDetect fired — ${capture.barcodes.length} barcode(s)',
+    );
+
+    for (final barcode in capture.barcodes) {
+      debugPrint(
+        '[Scan] format=${barcode.format} '
+        'raw=${barcode.rawValue} display=${barcode.displayValue}',
+      );
+    }
+
+    final value = _extractBarcodeValue(capture);
+    if (value == null) {
+      debugPrint('[Scan] No usable barcode value in capture');
+      return;
+    }
+
+    debugPrint('[Scan] Using barcode value: $value');
+    _onBarcodeDetected(value);
+  }
+
   Future<void> _onBarcodeDetected(String barcode) async {
-    if (_scanLocked || ref.read(isLoadingProvider)) return;
+    if (_scanLocked || ref.read(isLoadingProvider)) {
+      debugPrint('[Scan] Ignored duplicate detect while busy');
+      return;
+    }
+
+    final apiClient = ref.read(apiClientProvider);
+    final token = await apiClient.getToken();
+    if (token == null || token.isEmpty) {
+      debugPrint('[Scan] No auth token — redirecting to login');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Sesi berakhir. Silakan login kembali.'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+        context.go('/login');
+      }
+      return;
+    }
 
     _scanLocked = true;
     ref.read(scanResultProvider.notifier).state = null;
     ref.read(scanErrorProvider.notifier).state = null;
     ref.read(isLoadingProvider.notifier).state = true;
 
+    await _scannerController?.stop();
+    debugPrint('[Scan] Looking up barcode via API: $barcode');
+
     try {
-      final dio = ref.read(apiClientProvider).dio;
+      final dio = apiClient.dio;
       final item = await ref
           .read(scanServiceProvider)
           .findByBarcode(barcode.trim(), dio);
@@ -85,41 +140,68 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
       if (!mounted) return;
 
       if (item == null) {
+        debugPrint('[Scan] API returned 404 — barcode not found');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text(
-              'Barcode tidak ditemukan. Buat katalog dulu di web admin.',
-            ),
+            content: Text('Barcode tidak ditemukan'),
             backgroundColor: AppColors.danger,
           ),
         );
       } else if (widget.selectionMode) {
+        debugPrint('[Scan] Selection mode — returning item: ${item['item_name']}');
         context.pop(item);
       } else {
+        debugPrint('[Scan] Success — showing result card: ${item['item_name']}');
         ref.read(scanResultProvider.notifier).state = item;
       }
-    } on DioException {
-      if (mounted) {
+    } on DioException catch (e) {
+      debugPrint(
+        '[Scan] DioException status=${e.response?.statusCode} '
+        'message=${e.message} data=${e.response?.data}',
+      );
+
+      if (!mounted) return;
+
+      if (e.response?.statusCode == 401) {
+        await apiClient.clearToken();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text(
-              'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.',
-            ),
+            content: Text('Sesi berakhir. Silakan login kembali.'),
             backgroundColor: AppColors.danger,
           ),
         );
+        context.go('/login');
+        return;
       }
-    } catch (_) {
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.response?.data is Map &&
+                    (e.response!.data as Map)['message'] != null
+                ? (e.response!.data as Map)['message'].toString()
+                : 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.',
+          ),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+    } catch (e, stack) {
+      debugPrint('[Scan] Unexpected error: $e\n$stack');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Terjadi kesalahan. Coba lagi.'),
+          SnackBar(
+            content: Text('Terjadi kesalahan: $e'),
             backgroundColor: AppColors.danger,
           ),
         );
       }
     } finally {
       ref.read(isLoadingProvider.notifier).state = false;
+
+      if (mounted && !widget.selectionMode) {
+        await _scannerController?.start();
+      }
+
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted) _scanLocked = false;
       });
@@ -147,66 +229,68 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
         top: !widget.selectionMode,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              ScreenHeader(
-                backLabel: widget.selectionMode
-                    ? 'PILIH ITEM'
-                    : _locationBackLabel(auth.user),
-                title: widget.selectionMode ? 'Scan Item' : 'Quick Scan',
-              ),
-              const SizedBox(height: 20),
-              _CameraView(
-                isLoading: isLoading,
-                scanLineAnimation: _scanLineController,
-                scannerController: _scannerController,
-                onBarcode: _onBarcodeDetected,
-              ),
-              if (widget.selectionMode && kIsWeb) ...[
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _manualBarcodeController,
-                        style: AppTextStyles.mono,
-                        decoration: InputDecoration(
-                          hintText: 'Masukkan barcode',
-                          hintStyle: AppTextStyles.monoMuted,
-                          filled: true,
-                          fillColor: AppColors.card,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide:
-                                const BorderSide(color: AppColors.border),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ScreenHeader(
+                  backLabel: widget.selectionMode
+                      ? 'PILIH ITEM'
+                      : _locationBackLabel(auth.user),
+                  title: widget.selectionMode ? 'Scan Item' : 'Quick Scan',
+                ),
+                const SizedBox(height: 20),
+                _CameraView(
+                  isLoading: isLoading,
+                  scanLineAnimation: _scanLineController,
+                  scannerController: _scannerController,
+                  onCapture: _handleBarcodeCapture,
+                ),
+                if (widget.selectionMode && kIsWeb) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _manualBarcodeController,
+                          style: AppTextStyles.mono,
+                          decoration: InputDecoration(
+                            hintText: 'Masukkan barcode',
+                            hintStyle: AppTextStyles.monoMuted,
+                            filled: true,
+                            fillColor: AppColors.card,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide:
+                                  const BorderSide(color: AppColors.border),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    SizedBox(
-                      height: 48,
-                      child: ElevatedButton(
-                        onPressed: isLoading
-                            ? null
-                            : () => _onBarcodeDetected(
-                                  _manualBarcodeController.text,
-                                ),
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size(72, 48),
+                      const SizedBox(width: 8),
+                      SizedBox(
+                        height: 48,
+                        child: ElevatedButton(
+                          onPressed: isLoading
+                              ? null
+                              : () => _onBarcodeDetected(
+                                    _manualBarcodeController.text,
+                                  ),
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(72, 48),
+                          ),
+                          child: const Text('CARI'),
                         ),
-                        child: const Text('CARI'),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
+                if (!widget.selectionMode && scanResult != null) ...[
+                  const SizedBox(height: 16),
+                  _ResultCard(item: scanResult, ref: ref),
+                ],
               ],
-              if (!widget.selectionMode && scanResult != null) ...[
-                const SizedBox(height: 16),
-                _ResultCard(item: scanResult, ref: ref),
-              ],
-            ],
+            ),
           ),
         ),
       ),
@@ -218,13 +302,13 @@ class _CameraView extends StatelessWidget {
   final bool isLoading;
   final AnimationController scanLineAnimation;
   final MobileScannerController? scannerController;
-  final ValueChanged<String> onBarcode;
+  final ValueChanged<BarcodeCapture> onCapture;
 
   const _CameraView({
     required this.isLoading,
     required this.scanLineAnimation,
     required this.scannerController,
-    required this.onBarcode,
+    required this.onCapture,
   });
 
   @override
@@ -242,15 +326,8 @@ class _CameraView extends StatelessWidget {
             else
               MobileScanner(
                 controller: scannerController,
-                onDetect: (capture) {
-                  for (final barcode in capture.barcodes) {
-                    final value = barcode.rawValue;
-                    if (value != null && value.isNotEmpty) {
-                      onBarcode(value);
-                      return;
-                    }
-                  }
-                },
+                fit: BoxFit.cover,
+                onDetect: onCapture,
               ),
             const _CameraOverlay(),
             _AnimatedScanLine(animation: scanLineAnimation),
@@ -429,7 +506,7 @@ class _ResultCard extends StatelessWidget {
   const _ResultCard({required this.item, required this.ref});
 
   String get _name => item['item_name']?.toString() ?? '—';
-  String get _sku => item['sku']?.toString() ?? '—';
+  String get _barcode => item['barcode']?.toString() ?? '—';
 
   int get _qty {
     final summary = item['stock_summary'];
@@ -443,20 +520,6 @@ class _ResultCard extends StatelessWidget {
     final raw = item['bazar_selling_price'] ?? item['latest_base_selling_price'];
     if (raw == null) return '—';
     final price = (raw as num).toDouble();
-    if (price >= 1000000) {
-      return NumberFormat.compactCurrency(
-        locale: 'id_ID',
-        symbol: 'Rp ',
-        decimalDigits: 1,
-      ).format(price);
-    }
-    if (price >= 1000) {
-      final k = price / 1000;
-      final text = k == k.roundToDouble()
-          ? k.toInt().toString()
-          : k.toStringAsFixed(1);
-      return 'Rp ${text}k';
-    }
     return NumberFormat.currency(
       locale: 'id_ID',
       symbol: 'Rp ',
@@ -482,7 +545,10 @@ class _ResultCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   _name,
-                  style: AppTextStyles.cardTitle.copyWith(fontSize: 14),
+                  style: AppTextStyles.cardTitle.copyWith(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -493,7 +559,7 @@ class _ResultCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'SKU $_sku · STOK: ${AppColors.formatQty(_qty)}',
+            'SKU $_barcode · STOK: ${AppColors.formatQty(_qty)}',
             style: AppTextStyles.monoMuted,
           ),
           const SizedBox(height: 14),
@@ -520,11 +586,7 @@ class _ResultCard extends StatelessWidget {
                   height: 44,
                   child: OutlinedButton(
                     onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Detail — akan diimplementasi'),
-                        ),
-                      );
+                      context.push('/stock/check', extra: item);
                     },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.voidBlack,
