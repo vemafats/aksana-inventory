@@ -81,22 +81,16 @@
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         @forelse($stockItems ?? [] as $item)
-                        @php
-                            $locationQtyMap = collect($item->per_location ?? [])->keyBy('location_id');
-                            $rowTotal = (int) ($item->total_available ?? 0);
-                        @endphp
                         <tr class="hover:bg-gray-50">
                             <td class="px-4 py-3 font-medium sticky left-0 bg-white">{{ $item->item_name }}</td>
                             <td class="px-4 py-3 font-mono text-xs text-gray-500">{{ $item->barcode }}</td>
                             @foreach($allLocations ?? [] as $location)
-                            @php
-                                $locQty = (int) ($locationQtyMap->get($location->id)['qty'] ?? 0);
-                            @endphp
+                            @php($locQty = $this->locationQtyFor($item, $location->id))
                             <td class="px-3 py-3 text-right font-mono text-xs {{ $locQty > 0 ? 'font-bold text-gray-900' : 'text-gray-300' }}">
                                 {{ $locQty > 0 ? $locQty : '—' }}
                             </td>
                             @endforeach
-                            <td class="px-4 py-3 text-right font-mono font-bold">{{ $rowTotal }}</td>
+                            <td class="px-4 py-3 text-right font-mono font-bold">{{ (int) ($item->total_available ?? 0) }}</td>
                             <td class="px-4 py-3 text-center">
                                 @if(($item->total_available ?? 0) == 0)
                                     <span class="px-2 py-1 text-xs font-bold rounded-full bg-red-100 text-red-600">HABIS</span>
@@ -270,37 +264,6 @@
                 </div>
                 @endif
             </div>
-
-            <div class="flex items-center justify-between pt-4 border-t border-gray-200 mt-4">
-                <div class="text-sm text-gray-500 font-mono">
-                    Total: {{ $this->getTotalQty() }} unit ·
-                    Nilai: Rp {{ number_format($this->getTotalModal(), 0, ',', '.') }}
-                </div>
-                <div class="flex gap-3">
-                    <button type="button" wire:click="resetStockInForm"
-                        class="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">
-                        BATAL
-                    </button>
-                    <button type="button" wire:click="submitStockIn"
-                        wire:loading.attr="disabled"
-                        class="px-6 py-2 text-sm font-bold uppercase tracking-wide bg-gray-900 text-white rounded-lg hover:opacity-90 disabled:opacity-50">
-                        <span wire:loading.remove wire:target="submitStockIn">SIMPAN STOK MASUK</span>
-                        <span wire:loading wire:target="submitStockIn">MENYIMPAN...</span>
-                    </button>
-                </div>
-            </div>
-
-            @if($stockInSuccess)
-            <div class="p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm mt-4">
-                ✓ {{ $stockInSuccess }}
-            </div>
-            @endif
-
-            @if($stockInError)
-            <div class="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm mt-4">
-                ✗ {{ $stockInError }}
-            </div>
-            @endif
         </div>
 
         {{-- Right panel: Riwayat Penambahan Stok --}}
@@ -370,10 +333,8 @@
             </div>
 
             @if($editingStockInId && $this->canEditStockInPrice())
-            @php
-                $editingTransaction = collect($recentStockIns ?? [])->firstWhere('id', $editingStockInId);
-                $editingItem = $editingTransaction?->stockInItems?->firstWhere('id', $editingStockInItemId);
-            @endphp
+            @php($editingTransaction = $this->getEditingStockInTransaction())
+            @php($editingItem = $this->getEditingStockInItem())
             <div class="rounded-lg border border-gray-200 p-4 space-y-3 bg-gray-50/50">
                 <div class="flex items-center justify-between">
                     <h4 class="text-xs font-bold uppercase tracking-wide text-gray-700">Edit Harga Barang Masuk</h4>
@@ -443,6 +404,44 @@
             @endif
         </div>
     </div>
+
+    <p class="text-sm text-gray-500 font-mono">
+        Total: {{ $this->getTotalQty() }} unit ·
+        Nilai: Rp {{ number_format($this->getTotalModal(), 0, ',', '.') }}
+    </p>
+
+    <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
+        <button
+            wire:click="resetStockInForm"
+            type="button"
+            class="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors">
+            BATAL
+        </button>
+        <button
+            wire:click="submitStockIn"
+            wire:loading.attr="disabled"
+            type="button"
+            class="px-6 py-2 text-sm font-bold uppercase tracking-wide bg-gray-900 text-white rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity">
+            <span wire:loading.remove wire:target="submitStockIn">
+                ✓ SIMPAN STOK MASUK
+            </span>
+            <span wire:loading wire:target="submitStockIn" class="flex items-center gap-2">
+                MENYIMPAN...
+            </span>
+        </button>
+    </div>
+
+    @if($stockInSuccess)
+    <div class="p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm mt-4">
+        ✓ {{ $stockInSuccess }}
+    </div>
+    @endif
+
+    @if($stockInError)
+    <div class="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm mt-4">
+        ✗ {{ $stockInError }}
+    </div>
+    @endif
     @endif
 
     {{-- RIWAYAT PERGERAKAN --}}
@@ -465,34 +464,13 @@
             </thead>
             <tbody class="divide-y divide-gray-100">
                 @forelse($recentMovements ?? [] as $movement)
-                @php
-                    $movementType = $movement->movement_type instanceof \BackedEnum
-                        ? $movement->movement_type->value
-                        : (string) $movement->movement_type;
-                    $typeColors = [
-                        'stock_in_available' => 'bg-green-100 text-green-700',
-                        'stock_in_damaged' => 'bg-orange-100 text-orange-700',
-                        'transfer_available' => 'bg-blue-100 text-blue-700',
-                        'sale' => 'bg-red-100 text-red-700',
-                        'return_to_warehouse' => 'bg-yellow-100 text-yellow-700',
-                    ];
-                    $typeLabels = [
-                        'stock_in_available' => 'MASUK',
-                        'stock_in_damaged' => 'MASUK RUSAK',
-                        'transfer_available' => 'DISTRIBUSI',
-                        'sale' => 'KELUAR',
-                        'return_to_warehouse' => 'RETUR',
-                    ];
-                    $color = $typeColors[$movementType] ?? 'bg-gray-100 text-gray-600';
-                    $label = $typeLabels[$movementType] ?? strtoupper($movementType);
-                    $isInbound = in_array($movementType, ['stock_in_available', 'stock_in_damaged', 'return_to_warehouse'], true);
-                @endphp
+                @php($movementMeta = $this->movementTypeMeta($movement))
                 <tr class="hover:bg-gray-50">
                     <td class="px-4 py-3 text-xs text-gray-500 font-mono">
                         {{ $movement->created_at?->format('d M Y · H:i') }}
                     </td>
                     <td class="px-4 py-3">
-                        <span class="px-2 py-1 text-xs font-bold rounded {{ $color }}">{{ $label }}</span>
+                        <span class="px-2 py-1 text-xs font-bold rounded {{ $movementMeta['color'] }}">{{ $movementMeta['label'] }}</span>
                     </td>
                     <td class="px-4 py-3">
                         <p class="font-medium text-xs">{{ $movement->item->item_name ?? '-' }}</p>
@@ -500,8 +478,8 @@
                     </td>
                     <td class="px-4 py-3 text-xs text-gray-500">{{ $movement->fromLocation->location_name ?? 'Supplier' }}</td>
                     <td class="px-4 py-3 text-xs text-gray-500">{{ $movement->toLocation->location_name ?? 'Penjualan' }}</td>
-                    <td class="px-4 py-3 text-right font-mono font-bold {{ $isInbound ? 'text-green-600' : 'text-gray-700' }}">
-                        {{ $isInbound ? '+' : '-' }}{{ $movement->qty }}
+                    <td class="px-4 py-3 text-right font-mono font-bold {{ $movementMeta['isInbound'] ? 'text-green-600' : 'text-gray-700' }}">
+                        {{ $movementMeta['isInbound'] ? '+' : '-' }}{{ $movement->qty }}
                     </td>
                 </tr>
                 @empty
@@ -584,12 +562,7 @@
                         Rp {{ number_format($item->latest_base_selling_price) }}
                     </td>
                     <td class="px-4 py-3 text-right text-xs font-bold text-green-600">
-                        @php
-                        $margin = $item->latest_supplier_cost > 0
-                            ? round((($item->latest_base_selling_price - $item->latest_supplier_cost) / $item->latest_supplier_cost) * 100)
-                            : 0;
-                        @endphp
-                        ↗ {{ $margin }}%
+                        ↗ {{ $this->itemMarginPercent($item) }}%
                     </td>
                 </tr>
                 @empty

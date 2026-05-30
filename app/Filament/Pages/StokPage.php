@@ -414,6 +414,8 @@ class StokPage extends Page
         $this->editStockInError = '';
         $this->editStockInSuccess = '';
 
+        $transaction->stockInItems->each->makeVisible(['supplier_cost']);
+
         $targetItem = $transaction->stockInItems->first(
             fn (StockInItem $row): bool => (float) $row->supplier_cost <= 0
         ) ?? $transaction->stockInItems->first();
@@ -424,13 +426,94 @@ class StokPage extends Page
             return;
         }
 
-        $targetItem->makeVisible(['supplier_cost']);
         $this->editingStockInItemId = $targetItem->id;
         $this->editSupplierCost = (float) $targetItem->supplier_cost;
-        $this->editMarginType = $targetItem->base_margin_type ?? 'percentage';
+        $this->editMarginType = (string) ($targetItem->base_margin_type ?? 'percentage');
         $this->editMarginValue = (float) ($targetItem->base_margin_value ?? 0);
         $this->editQcNote = $targetItem->qc_note ?? '';
         $this->recalculateEditPrice();
+    }
+
+    public function getEditingStockInTransaction(): ?StockInTransaction
+    {
+        if ($this->editingStockInId === null) {
+            return null;
+        }
+
+        return StockInTransaction::query()
+            ->with(['stockInItems.item'])
+            ->find($this->editingStockInId);
+    }
+
+    public function getEditingStockInItem(): ?StockInItem
+    {
+        if ($this->editingStockInItemId === null) {
+            return null;
+        }
+
+        $item = StockInItem::query()
+            ->with('item')
+            ->find($this->editingStockInItemId);
+
+        $item?->makeVisible(['supplier_cost']);
+
+        return $item;
+    }
+
+    /**
+     * @return array{color: string, label: string, isInbound: bool}
+     */
+    public function movementTypeMeta(StockMovement $movement): array
+    {
+        $movementType = $movement->movement_type instanceof \BackedEnum
+            ? $movement->movement_type->value
+            : (string) $movement->movement_type;
+
+        $typeColors = [
+            'stock_in_available' => 'bg-green-100 text-green-700',
+            'stock_in_damaged' => 'bg-orange-100 text-orange-700',
+            'transfer_available' => 'bg-blue-100 text-blue-700',
+            'sale' => 'bg-red-100 text-red-700',
+            'return_to_warehouse' => 'bg-yellow-100 text-yellow-700',
+        ];
+
+        $typeLabels = [
+            'stock_in_available' => 'MASUK',
+            'stock_in_damaged' => 'MASUK RUSAK',
+            'transfer_available' => 'DISTRIBUSI',
+            'sale' => 'KELUAR',
+            'return_to_warehouse' => 'RETUR',
+        ];
+
+        return [
+            'color' => $typeColors[$movementType] ?? 'bg-gray-100 text-gray-600',
+            'label' => $typeLabels[$movementType] ?? strtoupper($movementType),
+            'isInbound' => in_array($movementType, ['stock_in_available', 'stock_in_damaged', 'return_to_warehouse'], true),
+        ];
+    }
+
+    public function itemMarginPercent(Item $item): int
+    {
+        $item->makeVisible(['latest_supplier_cost']);
+
+        if ((float) $item->latest_supplier_cost <= 0) {
+            return 0;
+        }
+
+        return (int) round((($item->latest_base_selling_price - $item->latest_supplier_cost) / $item->latest_supplier_cost) * 100);
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<string, array{location_id: mixed, location_name: mixed, qty: int}>
+     */
+    public function locationQtyMap(Item $item): \Illuminate\Support\Collection
+    {
+        return collect($item->per_location ?? [])->keyBy('location_id');
+    }
+
+    public function locationQtyFor(Item $item, string $locationId): int
+    {
+        return (int) ($this->locationQtyMap($item)->get($locationId)['qty'] ?? 0);
     }
 
     public function updatedEditSupplierCost(): void
@@ -508,6 +591,8 @@ class StokPage extends Page
         if (! $transaction->relationLoaded('stockInItems')) {
             $transaction->load('stockInItems');
         }
+
+        $transaction->stockInItems->each->makeVisible(['supplier_cost']);
 
         return $transaction->stockInItems->contains(
             fn (StockInItem $row): bool => (float) $row->supplier_cost <= 0
