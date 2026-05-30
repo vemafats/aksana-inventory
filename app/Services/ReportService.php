@@ -14,6 +14,7 @@ use App\Models\SalesTransaction;
 use App\Models\StockBalance;
 use App\Models\User;
 use App\Support\StockReportCache;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -53,7 +54,7 @@ class ReportService
                 $lowStockCount = $this->countLowStockItems($locationIds);
 
                 $salesQuery = SalesTransaction::query()
-                    ->whereDate('transaction_date', now()->toDateString());
+                    ->whereDate('transaction_date', $this->reportDateForDaysAgo());
                 $this->applyLocationFilter($salesQuery, $locationIds);
 
                 return [
@@ -432,8 +433,8 @@ class ReportService
     public function mobileSummary(User $user): array
     {
         $locationIds = $this->resolveAccessibleLocationIds($user);
-        $today = now()->toDateString();
-        $yesterday = now()->subDay()->toDateString();
+        $today = $this->reportDateForDaysAgo();
+        $yesterday = $this->reportDateForDaysAgo(1);
 
         $todayQuery = SalesTransaction::query()->whereDate('transaction_date', $today);
         $this->applyLocationFilter($todayQuery, $locationIds);
@@ -462,7 +463,7 @@ class ReportService
 
         $sevenDayTrend = [];
         for ($i = 6; $i >= 0; $i--) {
-            $date = now()->subDays($i)->toDateString();
+            $date = $this->reportDateForDaysAgo($i);
             $dayQuery = SalesTransaction::query()->whereDate('transaction_date', $date);
             $this->applyLocationFilter($dayQuery, $locationIds);
             $sevenDayTrend[] = [
@@ -503,6 +504,18 @@ class ReportService
         ];
     }
 
+    private function reportTimezone(): string
+    {
+        return config('app.timezone', 'Asia/Jakarta');
+    }
+
+    private function reportDateForDaysAgo(int $daysAgo = 0): string
+    {
+        return Carbon::today($this->reportTimezone())
+            ->subDays($daysAgo)
+            ->toDateString();
+    }
+
     /**
      * @param  array<string, mixed>  $filters
      * @return array{0: string, 1: string}
@@ -511,11 +524,11 @@ class ReportService
     {
         $dateFrom = ! empty($filters['date_from'])
             ? (string) $filters['date_from']
-            : now()->startOfMonth()->toDateString();
+            : Carbon::today($this->reportTimezone())->startOfMonth()->toDateString();
 
         $dateTo = ! empty($filters['date_to'])
             ? (string) $filters['date_to']
-            : now()->toDateString();
+            : $this->reportDateForDaysAgo();
 
         return [$dateFrom, $dateTo];
     }
