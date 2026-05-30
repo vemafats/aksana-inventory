@@ -133,7 +133,7 @@
                                 <td>
                                     <span class="inline-flex items-center gap-1">
                                         <x-heroicon-m-user class="h-4 w-4 text-gray-400" />
-                                        {{ $trx->employee?->name }}
+                                        {{ $trx->salesUser?->name }}
                                     </span>
                                 </td>
                                 <td class="aksana-mono">{{ $trx->salesItems->sum('qty') }}</td>

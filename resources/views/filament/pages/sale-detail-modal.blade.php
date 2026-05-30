@@ -14,7 +14,7 @@
         </div>
         <div>
             <p class="text-xs uppercase tracking-wide text-gray-500">Kasir</p>
-            <p>{{ $transaction->employee?->name }}</p>
+            <p>{{ $transaction->salesUser?->name }}</p>
         </div>
         <div>
             <p class="text-xs uppercase tracking-wide text-gray-500">Total</p>

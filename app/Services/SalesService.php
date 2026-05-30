@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Enums\LocationStatus;
 use App\Enums\StockStatus;
-use App\Models\Employee;
 use App\Models\Item;
 use App\Models\Location;
 use App\Models\LocationAssignment;
@@ -61,10 +60,10 @@ class SalesService
         return $location;
     }
 
-    public function validateEmployeeAssignment(string $employeeId, string $locationId): void
+    public function validateUserAssignment(string $userId, string $locationId): void
     {
         $assigned = LocationAssignment::query()
-            ->where('employee_id', $employeeId)
+            ->where('user_id', $userId)
             ->where('location_id', $locationId)
             ->where('is_active', true)
             ->exists();
@@ -116,13 +115,10 @@ class SalesService
     public function createTransaction(array $data, User $createdBy): SalesTransaction
     {
         $location = $this->validateLocation($data['location_id']);
-        $employeeId = $this->resolveEmployeeId($data, $createdBy);
-        $data['employee_id'] = $employeeId;
+        $salesUserId = $this->resolveSalesUserId($data, $createdBy);
+        $data['user_id'] = $salesUserId;
 
-        if ($employeeId !== null) {
-            $this->validateEmployeeAssignment($employeeId, $location->id);
-        }
-
+        $this->validateUserAssignment($salesUserId, $location->id);
         $this->validateStock($data['items'], $location->id);
 
         return DB::transaction(function () use ($data, $createdBy, $location): SalesTransaction {
@@ -167,7 +163,7 @@ class SalesService
             return $transaction->fresh([
                 'salesItems.item',
                 'location',
-                'employee',
+                'salesUser',
                 'createdBy',
             ]);
         });
@@ -234,19 +230,13 @@ class SalesService
     /**
      * @param  array<string, mixed>  $data
      */
-    private function resolveEmployeeId(array $data, User $createdBy): ?string
+    private function resolveSalesUserId(array $data, User $createdBy): string
     {
-        if (! empty($data['employee_id'])) {
-            return $data['employee_id'];
+        if (! empty($data['user_id'])) {
+            return $data['user_id'];
         }
 
-        return Employee::query()
-            ->where('is_active', true)
-            ->where(function ($query) use ($createdBy): void {
-                $query->where('name', $createdBy->name)
-                    ->orWhere('email', $createdBy->email);
-            })
-            ->value('id');
+        return $createdBy->id;
     }
 
     /**
@@ -265,7 +255,7 @@ class SalesService
                 return SalesTransaction::query()->create([
                     'sales_number' => $this->generateSalesNumber(),
                     'location_id' => $data['location_id'],
-                    'employee_id' => $data['employee_id'],
+                    'user_id' => $data['user_id'],
                     'transaction_date' => $data['transaction_date'],
                     'subtotal_amount' => $transactionTotals['subtotal_amount'],
                     'item_discount_amount' => $transactionTotals['item_discount_amount'],

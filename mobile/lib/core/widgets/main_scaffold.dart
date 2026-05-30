@@ -13,6 +13,7 @@ class MainScaffold extends StatelessWidget {
     if (loc.startsWith('/sales'))  return 1;
     if (loc.startsWith('/stock'))  return 2;
     if (loc.startsWith('/reports')) return 3;
+    if (loc.startsWith('/profile')) return 4;
     return 0;
   }
 
@@ -46,6 +47,9 @@ class MainScaffold extends StatelessWidget {
                 _Tab(icon: Icons.show_chart_rounded,
                     label: 'STAT',  index: 3, current: idx,
                     onTap: () => context.go('/reports')),
+                _Tab(icon: Icons.person_outline_rounded,
+                    label: 'AKUN',  index: 4, current: idx,
+                    onTap: () => context.go('/profile')),
               ],
             ),
           ),

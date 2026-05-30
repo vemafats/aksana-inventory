@@ -23,6 +23,7 @@ class SalesTransaction extends Model
         'sales_number',
         'location_id',
         'employee_id',
+        'user_id',
         'transaction_date',
         'subtotal_amount',
         'item_discount_amount',
@@ -62,6 +63,12 @@ class SalesTransaction extends Model
         return $this->belongsTo(Location::class);
     }
 
+    public function salesUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /** @deprecated Use salesUser() — employees table is deprecated */
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);

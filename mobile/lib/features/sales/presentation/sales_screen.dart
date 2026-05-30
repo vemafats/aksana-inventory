@@ -6,103 +6,31 @@ import '../../../core/auth/auth_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/screen_header.dart';
+import 'location_selector.dart';
 import 'sales_provider.dart';
-import 'widgets/cart_item_row.dart';
+import 'widgets/cart_item_row.dart' show CartItemRow, formatSalesPrice;
 
 class SalesScreen extends ConsumerWidget {
   const SalesScreen({super.key});
 
-  String _locationLabel(WidgetRef ref) {
-    final auth = ref.watch(authProvider);
-    final name = auth.locationName ?? auth.user?['location_name']?.toString();
-    if (name != null && name.isNotEmpty) {
-      return name.trim().toUpperCase();
-    }
-    return 'LOKASI';
-  }
-
-  Future<String?> _pickLocation(BuildContext context, WidgetRef ref) async {
-    final service = ref.read(salesServiceProvider);
-    final dio = ref.read(apiClientProvider).dio;
-    List<Map<String, dynamic>> locations;
-    try {
-      locations = await service.fetchLocations(dio);
-    } catch (_) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Gagal memuat daftar lokasi'),
-            backgroundColor: AppColors.danger,
-          ),
-        );
-      }
-      return null;
-    }
-
-    if (!context.mounted) return null;
-    if (locations.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Tidak ada lokasi penjualan aktif'),
-          backgroundColor: AppColors.warning,
-        ),
-      );
-      return null;
-    }
-
-    return showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: AppColors.card,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                'Pilih Lokasi Penjualan',
-                style: AppTextStyles.cardTitle.copyWith(fontSize: 16),
-              ),
-            ),
-            ...locations.map((loc) {
-              final id = loc['id']?.toString() ?? '';
-              final name =
-                  loc['location_name']?.toString() ?? loc['name']?.toString() ?? '—';
-              return ListTile(
-                title: Text(name),
-                onTap: () {
-                  ref
-                      .read(salesCartProvider.notifier)
-                      .setSelectedLocation(id, name);
-                  Navigator.pop(ctx, id);
-                },
-              );
-            }),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
+  String _locationHeaderLabel(WidgetRef ref) {
+    final name = resolveLocationName(ref);
+    if (name == 'Belum dipilih') return 'LOKASI';
+    return name.trim().toUpperCase();
   }
 
   Future<void> _checkout(BuildContext context, WidgetRef ref) async {
-    final auth = ref.read(authProvider);
-
-    var locationId = auth.locationId ?? ref.read(salesCartProvider).selectedLocationId;
+    var locationId = resolveLocationId(ref);
 
     if (locationId == null || locationId.isEmpty) {
-      locationId = await _pickLocation(context, ref);
+      await showLocationSelector(context, ref);
+      locationId = resolveLocationId(ref);
       if (locationId == null || !context.mounted) return;
     }
 
     final success = await ref.read(salesCartProvider.notifier).checkout(
           ref.read(apiClientProvider).dio,
           locationId: locationId,
-          employeeId: auth.employeeId,
         );
 
     if (!context.mounted) return;
@@ -116,7 +44,9 @@ class SalesScreen extends ConsumerWidget {
       );
     } else {
       final error = ref.read(salesCartProvider).errorMessage;
-      if (error != null) {
+      if (error != null && isInsufficientStockError(error)) {
+        await showInsufficientStockSheet(context, ref);
+      } else if (error != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(error),
@@ -134,6 +64,7 @@ class SalesScreen extends ConsumerWidget {
     final subtotal = notifier.subtotal;
     final grandTotal = notifier.grandTotal;
     final isEmpty = cart.items.isEmpty;
+    final locationLabel = _locationHeaderLabel(ref);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -143,9 +74,27 @@ class SalesScreen extends ConsumerWidget {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: ScreenHeader(
-                backLabel: _locationLabel(ref),
-                title: 'Transaksi Jual',
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ScreenHeader(
+                      backLabel: locationLabel,
+                      title: 'Transaksi Jual',
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: () => showLocationSelector(context, ref),
+                    icon: const Icon(Icons.swap_horiz, size: 16),
+                    label: Text(
+                      'Ganti',
+                      style: AppTextStyles.cardSubtitle.copyWith(
+                        fontSize: 12,
+                        color: AppColors.voidBlack,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 16),

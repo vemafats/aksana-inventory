@@ -3,14 +3,13 @@
     use App\Filament\Resources\BrandResource;
     use App\Filament\Resources\CategoryResource;
     use App\Filament\Resources\ColorResource;
-    use App\Filament\Resources\EmployeeResource;
+    use App\Filament\Resources\UserResource;
     use App\Filament\Resources\LocationResource;
     use App\Filament\Resources\ProductModelResource;
     use App\Filament\Resources\SizeResource;
     use App\Models\Brand;
     use App\Models\Category;
     use App\Models\Color;
-    use App\Models\Employee;
     use App\Models\Location;
     use App\Models\ProductModel;
     use App\Models\Size;
@@ -34,7 +33,7 @@
         @elseif ($selectedTab === 'sizes')
             <a href="{{ SizeResource::getUrl('create') }}" class="aksana-tab aksana-tab-active text-[10px]">+ TAMBAH UKURAN</a>
         @elseif ($selectedTab === 'employees')
-            <a href="{{ EmployeeResource::getUrl('create') }}" class="aksana-tab aksana-tab-active text-[10px]">+ TAMBAH KARYAWAN</a>
+            <a href="{{ UserResource::getUrl('create') }}" class="aksana-tab aksana-tab-active text-[10px]">+ TAMBAH KARYAWAN</a>
         @elseif ($selectedTab === 'locations')
             <a href="{{ LocationResource::getUrl('create') }}" class="aksana-tab aksana-tab-active text-[10px]">+ TAMBAH LOKASI</a>
         @endif
@@ -253,8 +252,8 @@
                     </table>
                 @elseif ($selectedTab === 'employees')
                     @php
-                        $rows = Employee::query()
-                            ->when($like, fn ($q) => $q->where(fn ($q) => $q->where('name', 'like', $like)->orWhere('employee_code', 'like', $like)))
+                        $rows = User::query()
+                            ->when($like, fn ($q) => $q->where(fn ($q) => $q->where('name', 'like', $like)->orWhere('nik', 'like', $like)->orWhere('email', 'like', $like)))
                             ->orderBy('name')
                             ->get();
                     @endphp
@@ -268,18 +267,13 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse ($rows as $employee)
-                                @php
-                                    $linkedUser = $employee->email
-                                        ? User::query()->where('email', $employee->email)->first()
-                                        : null;
-                                @endphp
+                            @forelse ($rows as $staff)
                                 <tr>
-                                    <td class="aksana-mono">{{ $employee->employee_code }}</td>
-                                    <td class="font-semibold">{{ $employee->name }}</td>
-                                    <td>{{ $linkedUser?->role->label() ?? '—' }}</td>
+                                    <td class="aksana-mono">{{ $staff->nik ?? '—' }}</td>
+                                    <td class="font-semibold">{{ $staff->name }}</td>
+                                    <td>{{ $staff->role->label() }}</td>
                                     <td>
-                                        <a href="{{ EmployeeResource::getUrl('edit', ['record' => $employee]) }}" class="text-xs font-semibold text-[var(--aksana-void)]">Edit</a>
+                                        <a href="{{ UserResource::getUrl('edit', ['record' => $staff]) }}" class="text-xs font-semibold text-[var(--aksana-void)]">Edit</a>
                                     </td>
                                 </tr>
                             @empty

@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
-use App\Models\Employee;
 use App\Models\User;
 use App\Services\PasswordVerificationService;
 use Illuminate\Http\JsonResponse;
@@ -97,24 +96,11 @@ class AuthController extends Controller
 
     public function me(Request $request): JsonResponse
     {
-        $user = $request->user();
+        $user = $request->user()->load([
+            'activeLocationAssignment.location:id,location_name,location_type,status',
+        ]);
 
-        $employee = Employee::query()
-            ->where('is_active', true)
-            ->where(function ($query) use ($user): void {
-                $query->where('name', $user->name)
-                    ->orWhere('email', $user->email);
-            })
-            ->first();
-
-        $assignments = $employee
-            ? $employee->locationAssignments()
-                ->where('is_active', true)
-                ->with('location:id,location_name,location_type,status')
-                ->get()
-            : collect();
-
-        $primary = $assignments->first();
+        $primary = $user->activeLocationAssignment;
 
         return response()->json([
             'success' => true,
@@ -123,9 +109,9 @@ class AuthController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'role' => $user->role->value,
+                'nik' => $user->nik,
+                'position' => $user->position,
                 'is_active' => $user->is_active,
-                'employee_id' => $employee?->id,
-                'employee_name' => $employee?->name,
                 'location_id' => $primary?->location_id,
                 'location_name' => $primary?->location?->location_name,
                 'assigned_locations' => $this->getAssignedLocations($user),
@@ -143,6 +129,8 @@ class AuthController extends Controller
             'name' => $user->name,
             'email' => $user->email,
             'role' => $user->role->value,
+            'nik' => $user->nik,
+            'position' => $user->position,
             'is_active' => $user->is_active,
         ];
     }
@@ -152,19 +140,7 @@ class AuthController extends Controller
      */
     private function getAssignedLocations(User $user): array
     {
-        $employee = Employee::query()
-            ->where('is_active', true)
-            ->where(function ($query) use ($user): void {
-                $query->where('name', $user->name)
-                    ->orWhere('email', $user->email);
-            })
-            ->first();
-
-        if (! $employee) {
-            return [];
-        }
-
-        return $employee->locationAssignments()
+        return $user->locationAssignments()
             ->where('is_active', true)
             ->with('location:id,location_name')
             ->get()

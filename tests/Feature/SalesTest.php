@@ -9,7 +9,6 @@ use App\Enums\StockStatus;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Color;
-use App\Models\Employee;
 use App\Models\Item;
 use App\Models\Location;
 use App\Models\ProductModel;
@@ -342,11 +341,8 @@ class SalesTest extends TestCase
         float $transactionDiscountValue = 0,
         string $paymentMethod = 'cash',
     ): array {
-        $employee = Employee::query()->where('employee_code', 'EMP002')->firstOrFail();
-
         return [
             'location_id' => $locationId,
-            'employee_id' => $employee->id,
             'transaction_date' => now()->toDateTimeString(),
             'payment_method' => $paymentMethod,
             'transaction_discount_type' => $transactionDiscountType,

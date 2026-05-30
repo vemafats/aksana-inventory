@@ -11,6 +11,7 @@ import '../../features/stock_check/presentation/stock_menu_screen.dart';
 import '../../features/stock_opname/presentation/stock_opname_screen.dart';
 import '../../features/return_stock/presentation/return_stock_screen.dart';
 import '../../features/reports/presentation/reports_screen.dart';
+import '../../features/profile/presentation/profile_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final auth = ref.watch(authProvider);
@@ -72,6 +73,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/reports',
             builder: (_, __) => const ReportsScreen(),
+          ),
+          GoRoute(
+            path: '/profile',
+            builder: (_, __) => const ProfileScreen(),
           ),
         ],
       ),

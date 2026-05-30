@@ -5,7 +5,7 @@ namespace App\Filament\Pages;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Color;
-use App\Models\Employee;
+use App\Models\User;
 use App\Models\Location;
 use App\Models\ProductModel;
 use App\Models\Size;
@@ -61,7 +61,7 @@ class MasterDataPage extends Page
             'models' => ProductModel::query()->count(),
             'colors' => Color::query()->count(),
             'sizes' => Size::query()->count(),
-            'employees' => Employee::query()->count(),
+            'employees' => User::query()->count(),
             'locations' => Location::query()->count(),
             default => 0,
         };

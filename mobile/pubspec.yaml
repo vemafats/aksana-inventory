@@ -1,7 +1,7 @@
 name: aksana_mobile
 description: Aksana Inventory — Mobile App for field operations
 publish_to: 'none'
-version: 1.0.6+7
+version: 1.0.9+10
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

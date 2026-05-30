@@ -99,7 +99,7 @@ class DistribusiService
                 $pic = LocationAssignment::query()
                     ->where('location_id', $location->id)
                     ->where('is_active', true)
-                    ->with('employee')
+                    ->with('user')
                     ->first();
 
                 return [
@@ -109,7 +109,7 @@ class DistribusiService
                     'location_type_label' => $location->location_type->label(),
                     'start_date' => $location->start_date?->format('d M Y'),
                     'end_date' => $location->end_date?->format('d M Y'),
-                    'pic_name' => $pic?->employee?->name ?? '—',
+                    'pic_name' => $pic?->user?->name ?? '—',
                     'dikirim' => $dikirim,
                     'terjual' => $terjual,
                     'sisa' => $sisa,
@@ -253,11 +253,11 @@ class DistribusiService
         $assignment = LocationAssignment::query()
             ->where('location_id', $locationId)
             ->where('is_active', true)
-            ->with('employee')
+            ->with('user')
             ->orderByRaw("CASE WHEN role = 'pic_bazar' THEN 0 ELSE 1 END")
             ->first();
 
-        return $assignment?->employee?->name;
+        return $assignment?->user?->name;
     }
 
     /**

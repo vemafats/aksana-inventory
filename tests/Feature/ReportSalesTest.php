@@ -185,13 +185,17 @@ class ReportSalesTest extends TestCase
      */
     private function createSale(Location $location, string $employeeCode, array $items): void
     {
-        Sanctum::actingAs(User::query()->where('email', 'picbazar@aksana.id')->firstOrFail());
+        $email = match ($employeeCode) {
+            'EMP002' => 'picbazar@aksana.id',
+            'EMP003' => 'sales@aksana.id',
+            'EMP004' => 'maya@aksana.id',
+            default => 'picbazar@aksana.id',
+        };
 
-        $employee = Employee::query()->where('employee_code', $employeeCode)->firstOrFail();
+        Sanctum::actingAs(User::query()->where('email', $email)->firstOrFail());
 
         $this->postJson('/api/sales', [
             'location_id' => $location->id,
-            'employee_id' => $employee->id,
             'transaction_date' => now()->toDateTimeString(),
             'payment_method' => 'cash',
             'transaction_discount_type' => 'none',

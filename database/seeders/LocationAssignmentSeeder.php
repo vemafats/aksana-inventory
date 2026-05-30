@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Employee;
 use App\Models\Location;
 use App\Models\LocationAssignment;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
@@ -43,19 +44,30 @@ class LocationAssignmentSeeder extends Seeder
                 continue;
             }
 
-            LocationAssignment::firstOrCreate(
-                [
-                    'location_id' => $location->id,
-                    'employee_id' => $employee->id,
-                    'role' => $assignment['role'],
-                ],
-                [
-                    'id' => (string) Str::uuid(),
-                    'start_date' => null,
-                    'end_date' => null,
-                    'is_active' => true,
-                ]
-            );
+            $user = User::query()
+                ->where(function ($query) use ($employee): void {
+                    $query->where('email', $employee->email)
+                        ->orWhere('name', $employee->name);
+                })
+                ->first();
+
+            $record = LocationAssignment::firstOrNew([
+                'location_id' => $location->id,
+                'employee_id' => $employee->id,
+            ]);
+
+            if (! $record->exists) {
+                $record->id = (string) Str::uuid();
+            }
+
+            $record->fill([
+                'user_id' => $user?->id,
+                'role' => $assignment['role'],
+                'start_date' => null,
+                'end_date' => null,
+                'is_active' => true,
+            ]);
+            $record->save();
         }
     }
 }

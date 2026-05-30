@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\UserRole;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -31,6 +32,8 @@ class User extends Authenticatable implements FilamentUser
         'email',
         'password',
         'role',
+        'nik',
+        'position',
         'is_active',
     ];
 
@@ -48,9 +51,21 @@ class User extends Authenticatable implements FilamentUser
         ];
     }
 
-    public function employee(): HasOne
+    public function locationAssignments(): HasMany
     {
-        return $this->hasOne(Employee::class, 'name', 'name');
+        return $this->hasMany(LocationAssignment::class, 'user_id');
+    }
+
+    public function activeLocationAssignment(): HasOne
+    {
+        return $this->hasOne(LocationAssignment::class, 'user_id')
+            ->where('is_active', true)
+            ->with('location');
+    }
+
+    protected function activeLocation(): Attribute
+    {
+        return Attribute::get(fn () => $this->activeLocationAssignment?->location);
     }
 
     public function stockMovements(): HasMany

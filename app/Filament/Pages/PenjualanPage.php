@@ -122,7 +122,7 @@ class PenjualanPage extends Page implements HasTable
     public function getRecentTransactions(): Collection
     {
         return SalesTransaction::query()
-            ->with(['location', 'employee', 'salesItems'])
+            ->with(['location', 'salesUser', 'salesItems'])
             ->latest('transaction_date')
             ->limit(5)
             ->get();
@@ -141,7 +141,7 @@ class PenjualanPage extends Page implements HasTable
     {
         return $table
             ->query(fn (): Builder => SalesTransaction::query()
-                ->with(['location', 'employee', 'salesItems'])
+                ->with(['location', 'salesUser', 'salesItems'])
                 ->when(
                     $this->historyDate,
                     fn (Builder $query) => $query->whereDate('transaction_date', $this->historyDate),
@@ -160,7 +160,7 @@ class PenjualanPage extends Page implements HasTable
                 Tables\Columns\TextColumn::make('location.location_name')
                     ->label('Lokasi')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('employee.name')
+                Tables\Columns\TextColumn::make('salesUser.name')
                     ->label('Kasir')
                     ->icon('heroicon-m-user'),
                 Tables\Columns\TextColumn::make('items_count')
@@ -188,7 +188,7 @@ class PenjualanPage extends Page implements HasTable
                     ->label('Detail')
                     ->modalHeading(fn (SalesTransaction $record): string => $record->sales_number)
                     ->modalContent(fn (SalesTransaction $record) => view('filament.pages.sale-detail-modal', [
-                        'transaction' => $record->load(['location', 'employee', 'salesItems.item']),
+                        'transaction' => $record->load(['location', 'salesUser', 'salesItems.item']),
                     ])),
             ])
             ->defaultSort('transaction_date', 'desc')

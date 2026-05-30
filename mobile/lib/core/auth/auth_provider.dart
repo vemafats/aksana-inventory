@@ -12,8 +12,6 @@ class AuthState {
   final String? errorMessage;
   final String? locationId;
   final String? locationName;
-  final String? employeeId;
-  final String? employeeName;
 
   const AuthState({
     this.isAuthenticated = false,
@@ -23,13 +21,14 @@ class AuthState {
     this.errorMessage,
     this.locationId,
     this.locationName,
-    this.employeeId,
-    this.employeeName,
   });
 
   String? get role => user?['role'] as String?;
   String? get name => user?['name'] as String?;
+  String? get email => user?['email'] as String?;
   String? get userId => user?['id'] as String?;
+  String? get nik => user?['nik'] as String?;
+  String? get position => user?['position'] as String?;
 
   AuthState copyWith({
     bool? isAuthenticated,
@@ -39,8 +38,6 @@ class AuthState {
     String? errorMessage,
     String? locationId,
     String? locationName,
-    String? employeeId,
-    String? employeeName,
   }) => AuthState(
     isAuthenticated: isAuthenticated ?? this.isAuthenticated,
     token: token ?? this.token,
@@ -49,8 +46,6 @@ class AuthState {
     errorMessage: errorMessage,
     locationId: locationId ?? this.locationId,
     locationName: locationName ?? this.locationName,
-    employeeId: employeeId ?? this.employeeId,
-    employeeName: employeeName ?? this.employeeName,
   );
 }
 
@@ -79,8 +74,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
         isAuthenticated: true,
         locationId: profile['location_id']?.toString(),
         locationName: profile['location_name']?.toString(),
-        employeeId: profile['employee_id']?.toString(),
-        employeeName: profile['employee_name']?.toString(),
       );
     } catch (_) {}
   }
@@ -127,6 +120,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
         e.type == DioExceptionType.sendTimeout ||
         e.type == DioExceptionType.receiveTimeout ||
         e.type == DioExceptionType.connectionError;
+  }
+
+  void setActiveLocation(String? id, String? name) {
+    state = state.copyWith(locationId: id, locationName: name);
   }
 
   Future<void> logout() async {

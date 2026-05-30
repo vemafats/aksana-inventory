@@ -156,7 +156,6 @@ class SalesCartNotifier extends StateNotifier<SalesCartState> {
   Future<bool> checkout(
     Dio dio, {
     required String locationId,
-    String? employeeId,
   }) async {
     if (state.items.isEmpty) return false;
 
@@ -182,9 +181,6 @@ class SalesCartNotifier extends StateNotifier<SalesCartState> {
             )
             .toList(),
       };
-      if (employeeId != null && employeeId.isNotEmpty) {
-        payload['employee_id'] = employeeId;
-      }
 
       await _service.createTransaction(payload, dio);
       state = const SalesCartState(isSuccess: true);

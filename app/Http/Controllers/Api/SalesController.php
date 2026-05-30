@@ -40,15 +40,19 @@ class SalesController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = SalesTransaction::query()
-            ->with(['location', 'employee', 'createdBy'])
+            ->with(['location', 'salesUser', 'createdBy'])
             ->orderByDesc('transaction_date');
 
         if ($request->filled('location_id')) {
             $query->where('location_id', $request->string('location_id'));
         }
 
+        if ($request->filled('user_id')) {
+            $query->where('user_id', $request->string('user_id'));
+        }
+
         if ($request->filled('employee_id')) {
-            $query->where('employee_id', $request->string('employee_id'));
+            $query->where('user_id', $request->string('employee_id'));
         }
 
         if ($request->filled('date_from')) {
@@ -79,7 +83,7 @@ class SalesController extends Controller
             'salesItems.item.color',
             'salesItems.item.size',
             'location',
-            'employee',
+            'salesUser',
             'createdBy',
         ]);
 

@@ -18,6 +18,7 @@ class LocationAssignment extends Model
 
     protected $fillable = [
         'location_id',
+        'user_id',
         'employee_id',
         'role',
         'start_date',
@@ -39,6 +40,12 @@ class LocationAssignment extends Model
         return $this->belongsTo(Location::class);
     }
 
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /** @deprecated Use user() — employees table is deprecated */
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);

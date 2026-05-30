@@ -6,7 +6,6 @@ use App\Enums\LocationStatus;
 use App\Enums\LocationType;
 use App\Enums\StockStatus;
 use App\Enums\UserRole;
-use App\Models\Employee;
 use App\Models\Item;
 use App\Models\Location;
 use App\Models\SalesItem;
@@ -389,14 +388,14 @@ class ReportService
         [$dateFrom, $dateTo] = $this->resolveDateRange($filters);
 
         $query = SalesTransaction::query()
-            ->join('employees', 'sales_transactions.employee_id', '=', 'employees.id')
+            ->join('users', 'sales_transactions.user_id', '=', 'users.id')
             ->select(
-                'employees.id as employee_id',
-                'employees.name as employee_name',
+                'users.id as employee_id',
+                'users.name as employee_name',
                 DB::raw('SUM(sales_transactions.grand_total) as total_sales'),
                 DB::raw('COUNT(sales_transactions.id) as transaction_count'),
             )
-            ->groupBy('employees.id', 'employees.name')
+            ->groupBy('users.id', 'users.name')
             ->orderByDesc('total_sales');
 
         $this->whereReportDateFrom($query, 'sales_transactions.transaction_date', $dateFrom);
@@ -711,15 +710,7 @@ class ReportService
      */
     private function getAssignedLocationIds(User $user): array
     {
-        $employee = Employee::query()
-            ->where('name', $user->name)
-            ->first();
-
-        if (! $employee) {
-            return [];
-        }
-
-        return $employee->locationAssignments()
+        return $user->locationAssignments()
             ->where('is_active', true)
             ->pluck('location_id')
             ->all();

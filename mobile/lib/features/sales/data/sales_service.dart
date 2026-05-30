@@ -11,16 +11,6 @@ class SalesService {
         .toList();
   }
 
-  Future<List<Map<String, dynamic>>> fetchEmployees(Dio dio) async {
-    final res = await dio.get('/employees');
-    final data = res.data['data'];
-    if (data is! List) return [];
-    return data
-        .whereType<Map>()
-        .map((e) => Map<String, dynamic>.from(e))
-        .toList();
-  }
-
   Future<Map<String, dynamic>> createTransaction(
     Map<String, dynamic> data,
     Dio dio,
