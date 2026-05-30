@@ -114,6 +114,8 @@ class AuthController extends Controller
                 'is_active' => $user->is_active,
                 'location_id' => $primary?->location_id,
                 'location_name' => $primary?->location?->location_name,
+                'location_type' => $primary?->location?->location_type?->value
+                    ?? $primary?->location?->location_type,
                 'assigned_locations' => $this->getAssignedLocations($user),
             ],
         ]);

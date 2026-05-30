@@ -35,7 +35,7 @@ class DistribusiService
             ->where('transfer_date', '>=', now()->subDays(30)->toDateString())
             ->count();
 
-        $itemDalamPerjalanan = (int) TransferItem::query()
+        $itemAktif = (int) TransferItem::query()
             ->whereHas('transferTransaction', function ($query) use ($warehouseId): void {
                 $query->where('status', 'completed')
                     ->where('from_location_id', $warehouseId)
@@ -61,7 +61,7 @@ class DistribusiService
 
         return [
             'transfer_aktif' => $transferAktif,
-            'item_dalam_perjalanan' => $itemDalamPerjalanan,
+            'item_aktif' => $itemAktif,
             'menunggu_retur' => $menungguRetur,
             'retur_damaged' => $returDamaged,
         ];
@@ -159,7 +159,7 @@ class DistribusiService
 
         if ($transfer->fromLocation?->isCentral()
             && $transfer->transfer_date?->gte(now()->subDays(3))) {
-            return ['label' => 'DALAM PERJALANAN', 'color' => 'info'];
+            return ['label' => 'AKTIF', 'color' => 'info', 'badge_class' => 'border border-accent/40 bg-accent/15 text-accent'];
         }
 
         return ['label' => 'DITERIMA', 'color' => 'success'];

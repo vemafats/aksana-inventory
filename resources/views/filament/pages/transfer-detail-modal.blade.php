@@ -19,7 +19,10 @@
         <div>
             <p class="text-xs uppercase tracking-wide text-[#49586B]">Status</p>
             @php $status = $distribusi->transferDisplayStatus($transfer); @endphp
-            <span class="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase">{{ $status['label'] }}</span>
+            <span @class([
+                'rounded-full px-2 py-0.5 text-[9px] font-bold uppercase',
+                $status['badge_class'] ?? 'border border-[#D1DAE5] bg-[#DDE4EC]/60 text-[#49586B]',
+            ])>{{ $status['label'] }}</span>
         </div>
     </div>
 

@@ -13,7 +13,7 @@
         'ringkasan' => ['label' => 'RINGKASAN', 'icon' => 'heroicon-o-chart-bar'],
         'tambah-stok' => ['label' => '+ TAMBAH STOK', 'icon' => 'heroicon-o-plus'],
         'riwayat-pergerakan' => ['label' => 'RIWAYAT PERGERAKAN', 'icon' => 'heroicon-o-arrow-path'],
-        'harga-jual' => ['label' => 'HARGA JUAL', 'icon' => 'heroicon-o-tag'],
+        'harga-jual' => ['label' => 'HARGA JUAL DASAR', 'icon' => 'heroicon-o-tag'],
     ] as $key => $tab)
     <button
         wire:click="selectTab('{{ $key }}')"
@@ -179,7 +179,7 @@
     </div>
     @endif
 
-    {{-- HARGA JUAL --}}
+    {{-- HARGA JUAL DASAR --}}
     @if($activeTab === 'harga-jual')
     <div class="space-y-3">
         <div class="flex items-center justify-between">
@@ -233,7 +233,7 @@
                     @if($showCost)
                     <th class="px-4 py-2 text-right text-xs font-bold uppercase tracking-wide text-gray-400">MODAL</th>
                     @endif
-                    <th class="px-4 py-2 text-right text-xs font-bold uppercase tracking-wide text-gray-400">HARGA JUAL</th>
+                    <th class="px-4 py-2 text-right text-xs font-bold uppercase tracking-wide text-gray-400">HARGA JUAL DASAR</th>
                     <th class="px-4 py-2 text-right text-xs font-bold uppercase tracking-wide text-gray-400">MARGIN</th>
                 </tr>
             </thead>

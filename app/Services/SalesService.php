@@ -6,7 +6,6 @@ use App\Enums\LocationStatus;
 use App\Enums\StockStatus;
 use App\Models\Item;
 use App\Models\Location;
-use App\Models\LocationAssignment;
 use App\Models\SalesItem;
 use App\Models\SalesTransaction;
 use App\Models\TransferItem;
@@ -60,19 +59,6 @@ class SalesService
         return $location;
     }
 
-    public function validateUserAssignment(string $userId, string $locationId): void
-    {
-        $assigned = LocationAssignment::query()
-            ->where('user_id', $userId)
-            ->where('location_id', $locationId)
-            ->where('is_active', true)
-            ->exists();
-
-        if (! $assigned) {
-            throw new InvalidArgumentException('Karyawan tidak terdaftar di lokasi ini.');
-        }
-    }
-
     /**
      * @param  list<array{item_id: string, qty: int}>  $items
      */
@@ -118,7 +104,6 @@ class SalesService
         $salesUserId = $this->resolveSalesUserId($data, $createdBy);
         $data['user_id'] = $salesUserId;
 
-        $this->validateUserAssignment($salesUserId, $location->id);
         $this->validateStock($data['items'], $location->id);
 
         return DB::transaction(function () use ($data, $createdBy, $location): SalesTransaction {

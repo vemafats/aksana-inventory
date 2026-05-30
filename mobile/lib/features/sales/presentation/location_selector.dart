@@ -50,7 +50,11 @@ void applyLocationSelection(WidgetRef ref, Map<String, dynamic> loc) {
       '—';
   ref.read(selectedLocationProvider.notifier).state = loc;
   ref.read(salesCartProvider.notifier).setSelectedLocation(id, name);
-  ref.read(authProvider.notifier).setActiveLocation(id, name);
+  ref.read(authProvider.notifier).setActiveLocation(
+        id,
+        name,
+        type: loc['location_type']?.toString(),
+      );
 }
 
 bool isInsufficientStockError(String? message) {

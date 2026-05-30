@@ -7,7 +7,7 @@
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4 mb-6">
         @foreach ([
             ['label' => 'Transfer Aktif', 'value' => number_format($stats['transfer_aktif']), 'sub' => 'outlet & bazar berjalan', 'warn' => false],
-            ['label' => 'Item Dalam Perjalanan', 'value' => number_format($stats['item_dalam_perjalanan']), 'sub' => 'unit menuju lokasi', 'warn' => false],
+            ['label' => 'Item Aktif', 'value' => number_format($stats['item_aktif']), 'sub' => 'unit di lokasi penjualan', 'warn' => false],
             ['label' => 'Menunggu Retur', 'value' => number_format($stats['menunggu_retur']), 'sub' => 'lokasi menjelang berakhir', 'warn' => $stats['menunggu_retur'] > 0],
             ['label' => 'Retur Damaged (30D)', 'value' => number_format($stats['retur_damaged']), 'sub' => 'perlu inspeksi', 'warn' => $stats['retur_damaged'] > 0, 'danger' => true],
         ] as $card)

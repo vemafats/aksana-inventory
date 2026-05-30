@@ -44,20 +44,6 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
     super.dispose();
   }
 
-  String _locationBackLabel(Map<String, dynamic>? user) {
-    final locations = user?['assigned_locations'];
-    if (locations is List && locations.isNotEmpty) {
-      final first = locations.first;
-      if (first is Map) {
-        final name = first['name'] ?? first['location_name'];
-        if (name != null) {
-          return name.toString().trim().replaceAll(' ', '_').toUpperCase();
-        }
-      }
-    }
-    return widget.selectionMode ? 'PILIH ITEM' : 'TERMINAL_04';
-  }
-
   String? _extractBarcode(BarcodeCapture capture) {
     for (final barcode in capture.barcodes) {
       final value = barcode.rawValue ?? barcode.displayValue;
@@ -195,7 +181,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 ScreenHeader(
-                  backLabel: _locationBackLabel(auth.user),
+                  backLabel: auth.locationName ?? 'TERMINAL',
                   title: widget.selectionMode ? 'Scan Item' : 'Quick Scan',
                 ),
                 const SizedBox(height: 16),

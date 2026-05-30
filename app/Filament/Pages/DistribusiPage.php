@@ -13,6 +13,8 @@ use Filament\Forms;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Enums\FontFamily;
@@ -285,7 +287,16 @@ class DistribusiPage extends Page implements HasForms, HasTable
                     ->label('Status')
                     ->badge()
                     ->state(fn (TransferTransaction $record): string => $distribusi->transferDisplayStatus($record)['label'])
-                    ->color(fn (TransferTransaction $record): string => $distribusi->transferDisplayStatus($record)['color']),
+                    ->color(fn (TransferTransaction $record): string => $distribusi->transferDisplayStatus($record)['color'])
+                    ->extraAttributes(function (TransferTransaction $record) use ($distribusi): array {
+                        $status = $distribusi->transferDisplayStatus($record);
+
+                        if (($status['badge_class'] ?? null) === null) {
+                            return [];
+                        }
+
+                        return ['class' => $status['badge_class']];
+                    }),
             ])
             ->actions([
                 Tables\Actions\Action::make('detail')
@@ -349,27 +360,67 @@ class DistribusiPage extends Page implements HasForms, HasTable
                                 ->label('Item')
                                 ->options(Item::query()->where('is_active', true)->orderBy('item_name')->pluck('item_name', 'id'))
                                 ->searchable()
-                                ->required(),
+                                ->required()
+                                ->live()
+                                ->afterStateUpdated(function (?string $state, Set $set): void {
+                                    if ($state === null) {
+                                        return;
+                                    }
+
+                                    $item = Item::query()->find($state);
+
+                                    if ($item === null) {
+                                        return;
+                                    }
+
+                                    $set('bazar_adjust_type', BazarAdjustType::NONE->value);
+                                    $set('bazar_adjust_value', 0);
+                                    $set('bazar_selling_price', (float) $item->latest_base_selling_price);
+                                }),
                             Forms\Components\TextInput::make('qty')
                                 ->label('Qty')
                                 ->numeric()
                                 ->minValue(1)
                                 ->required(),
+                            Forms\Components\Placeholder::make('base_selling_price_display')
+                                ->label('Harga Jual Dasar')
+                                ->content(function (Get $get): string {
+                                    $itemId = $get('item_id');
+
+                                    if ($itemId === null) {
+                                        return '—';
+                                    }
+
+                                    $item = Item::query()->find($itemId);
+
+                                    if ($item === null) {
+                                        return '—';
+                                    }
+
+                                    return 'Rp '.number_format((float) $item->latest_base_selling_price, 0, ',', '.');
+                                })
+                                ->columnSpanFull(),
                             Forms\Components\Select::make('bazar_adjust_type')
-                                ->label('Penyesuaian Harga')
+                                ->label('Tipe Penyesuaian')
                                 ->options(collect(BazarAdjustType::cases())->mapWithKeys(
                                     fn (BazarAdjustType $type) => [$type->value => $type->label()],
                                 ))
-                                ->default('manual')
-                                ->required(),
+                                ->default(BazarAdjustType::NONE->value)
+                                ->required()
+                                ->live()
+                                ->afterStateUpdated(fn (Set $set, Get $get) => self::syncLocationSellingPrice($set, $get)),
                             Forms\Components\TextInput::make('bazar_adjust_value')
-                                ->label('Nilai Penyesuaian')
+                                ->label('Nilai Penyesuaian (Rp/%)')
                                 ->numeric()
-                                ->default(0),
+                                ->default(0)
+                                ->live(onBlur: true)
+                                ->afterStateUpdated(fn (Set $set, Get $get) => self::syncLocationSellingPrice($set, $get)),
                             Forms\Components\TextInput::make('bazar_selling_price')
-                                ->label('Harga Jual Bazar')
+                                ->label('Harga Jual Lokasi')
                                 ->numeric()
-                                ->required(),
+                                ->required()
+                                ->disabled(fn (Get $get): bool => ($get('bazar_adjust_type') ?? BazarAdjustType::NONE->value) !== BazarAdjustType::MANUAL->value)
+                                ->dehydrated(),
                         ])
                         ->minItems(1)
                         ->columns(2),
@@ -405,5 +456,32 @@ class DistribusiPage extends Page implements HasForms, HasTable
     public function getSubheading(): string|Htmlable|null
     {
         return 'Transfer stok dari gudang pusat ke outlet, bazar & lokasi penjualan';
+    }
+
+    private static function syncLocationSellingPrice(Set $set, Get $get): void
+    {
+        $itemId = $get('item_id');
+
+        if ($itemId === null) {
+            return;
+        }
+
+        $item = Item::query()->find($itemId);
+
+        if ($item === null) {
+            return;
+        }
+
+        $type = $get('bazar_adjust_type') ?? BazarAdjustType::NONE->value;
+
+        if ($type === BazarAdjustType::MANUAL->value) {
+            return;
+        }
+
+        $base = (float) $item->latest_base_selling_price;
+        $value = (float) ($get('bazar_adjust_value') ?? 0);
+        $adjustType = BazarAdjustType::from($type);
+
+        $set('bazar_selling_price', round($adjustType->calculateBazarPrice($base, $value), 2));
     }
 }

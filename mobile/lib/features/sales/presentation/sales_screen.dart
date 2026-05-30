@@ -13,18 +13,22 @@ import 'widgets/cart_item_row.dart' show CartItemRow, formatSalesPrice;
 class SalesScreen extends ConsumerWidget {
   const SalesScreen({super.key});
 
-  String _locationHeaderLabel(WidgetRef ref) {
-    final name = resolveLocationName(ref);
-    if (name == 'Belum dipilih') return 'LOKASI';
-    return name.trim().toUpperCase();
+  String _locationHeaderLabel(String? locationName) {
+    if (locationName == null || locationName.isEmpty) return 'LOKASI';
+    return locationName.trim().toUpperCase();
   }
 
   Future<void> _checkout(BuildContext context, WidgetRef ref) async {
-    var locationId = resolveLocationId(ref);
+    final auth = ref.read(authProvider);
+    var locationId = auth.locationId;
+
+    if (locationId == null || locationId.isEmpty) {
+      locationId = resolveLocationId(ref);
+    }
 
     if (locationId == null || locationId.isEmpty) {
       await showLocationSelector(context, ref);
-      locationId = resolveLocationId(ref);
+      locationId = ref.read(authProvider).locationId ?? resolveLocationId(ref);
       if (locationId == null || !context.mounted) return;
     }
 
@@ -59,12 +63,15 @@ class SalesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final auth = ref.watch(authProvider);
     final cart = ref.watch(salesCartProvider);
     final notifier = ref.read(salesCartProvider.notifier);
     final subtotal = notifier.subtotal;
     final grandTotal = notifier.grandTotal;
     final isEmpty = cart.items.isEmpty;
-    final locationLabel = _locationHeaderLabel(ref);
+    final locationId = auth.locationId;
+    final locationLabel = _locationHeaderLabel(auth.locationName);
+    final needsLocationPicker = locationId == null || locationId.isEmpty;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -82,18 +89,19 @@ class SalesScreen extends ConsumerWidget {
                       title: 'Transaksi Jual',
                     ),
                   ),
-                  TextButton.icon(
-                    onPressed: () => showLocationSelector(context, ref),
-                    icon: const Icon(Icons.swap_horiz, size: 16),
-                    label: Text(
-                      'Ganti',
-                      style: AppTextStyles.cardSubtitle.copyWith(
-                        fontSize: 12,
-                        color: AppColors.voidBlack,
-                        fontWeight: FontWeight.w600,
+                  if (needsLocationPicker)
+                    TextButton.icon(
+                      onPressed: () => showLocationSelector(context, ref),
+                      icon: const Icon(Icons.swap_horiz, size: 16),
+                      label: Text(
+                        'Pilih',
+                        style: AppTextStyles.cardSubtitle.copyWith(
+                          fontSize: 12,
+                          color: AppColors.voidBlack,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
-                  ),
                 ],
               ),
             ),

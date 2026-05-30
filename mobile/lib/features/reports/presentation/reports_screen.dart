@@ -63,12 +63,14 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     final auth = ref.watch(authProvider);
     final userName = auth.name ?? 'User';
     final userRole = _formatRole(auth.role);
+    final locationLabel = auth.locationName ?? 'Lokasi belum dipilih';
     final initial = userName.isNotEmpty ? userName[0].toUpperCase() : 'U';
 
     final content = <Widget>[
       _UserInfoCard(
         userName: userName,
         userRole: userRole,
+        locationName: locationLabel,
         initial: initial,
         onLogout: () => _showLogoutDialog(context, ref),
       ),
@@ -117,12 +119,14 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 class _UserInfoCard extends StatelessWidget {
   final String userName;
   final String userRole;
+  final String locationName;
   final String initial;
   final VoidCallback onLogout;
 
   const _UserInfoCard({
     required this.userName,
     required this.userRole,
+    required this.locationName,
     required this.initial,
     required this.onLogout,
   });
@@ -168,6 +172,16 @@ class _UserInfoCard extends StatelessWidget {
                     color: Colors.white.withValues(alpha: 0.6),
                     fontSize: 11,
                   ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  locationName,
+                  style: AppTextStyles.monoMuted.copyWith(
+                    color: Colors.white.withValues(alpha: 0.45),
+                    fontSize: 10,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
