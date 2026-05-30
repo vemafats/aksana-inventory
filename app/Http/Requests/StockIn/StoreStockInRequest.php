@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\StockIn;
 
+use App\Helpers\SupplierCostHelper;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreStockInRequest extends FormRequest
@@ -26,12 +27,23 @@ class StoreStockInRequest extends FormRequest
             'items.*.qty_received' => ['required', 'integer', 'min:1'],
             'items.*.qty_available' => ['required', 'integer', 'min:0'],
             'items.*.qty_damaged' => ['required', 'integer', 'min:0'],
-            'items.*.supplier_cost' => ['required', 'numeric', 'min:0'],
+            'items.*.supplier_cost' => ['nullable', 'numeric', 'min:0'],
             'items.*.base_margin_type' => ['required', 'in:none,nominal,percentage'],
             'items.*.base_margin_value' => ['required', 'numeric', 'min:0'],
             'items.*.base_selling_price' => ['required', 'numeric', 'min:0'],
             'items.*.qc_note' => ['nullable', 'string'],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $items = $this->input('items', []);
+
+        foreach ($items as $index => $item) {
+            $items[$index]['supplier_cost'] = SupplierCostHelper::normalize($item['supplier_cost'] ?? 0);
+        }
+
+        $this->merge(['items' => $items]);
     }
 
     public function withValidator($validator): void

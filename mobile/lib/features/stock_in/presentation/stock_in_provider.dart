@@ -94,7 +94,7 @@ class StockInNotifier extends StateNotifier<List<StockInItem>> {
               'qty_received': item.qty,
               'qty_available': item.qty,
               'qty_damaged': 0,
-              'supplier_cost': 1,
+              'supplier_cost': 0,
               'base_margin_type': 'nominal',
               'base_margin_value': 0,
               'base_selling_price': 0,

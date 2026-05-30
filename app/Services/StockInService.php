@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Helpers\SupplierCostHelper;
 use App\Enums\LocationType;
 use App\Enums\StockStatus;
 use App\Models\Item;
@@ -92,6 +93,7 @@ class StockInService
 
             foreach ($data['items'] as $itemData) {
                 $item = Item::query()->where('barcode', $itemData['barcode'])->firstOrFail();
+                $supplierCost = SupplierCostHelper::normalize($itemData['supplier_cost'] ?? 0);
 
                 $stockInItem = StockInItem::query()->create([
                     'stock_in_transaction_id' => $transaction->id,
@@ -99,7 +101,7 @@ class StockInService
                     'qty_received' => $itemData['qty_received'],
                     'qty_available' => $itemData['qty_available'],
                     'qty_damaged' => $itemData['qty_damaged'],
-                    'supplier_cost' => $itemData['supplier_cost'],
+                    'supplier_cost' => $supplierCost,
                     'base_margin_type' => $itemData['base_margin_type'],
                     'base_margin_value' => $itemData['base_margin_value'],
                     'base_selling_price' => $itemData['base_selling_price'],
@@ -140,9 +142,9 @@ class StockInService
                     );
                 }
 
-                if ((float) $itemData['supplier_cost'] > 0) {
+                if (! SupplierCostHelper::isUnset($supplierCost)) {
                     $item->update([
-                        'latest_supplier_cost' => $itemData['supplier_cost'],
+                        'latest_supplier_cost' => $supplierCost,
                         'latest_base_margin_type' => $itemData['base_margin_type'],
                         'latest_base_margin_value' => $itemData['base_margin_value'],
                         'latest_base_selling_price' => $itemData['base_selling_price'],
@@ -181,20 +183,21 @@ class StockInService
         }
 
         return DB::transaction(function () use ($item, $supplierCost, $marginType, $marginValue, $qcNote, $photoId): StockInItem {
+            $normalizedCost = SupplierCostHelper::normalize($supplierCost);
             $baseSellingPrice = app(PriceCalculationService::class)
-                ->calculateBaseSellingPrice($supplierCost, $marginType, $marginValue);
+                ->calculateBaseSellingPrice($normalizedCost, $marginType, $marginValue);
 
             $item->update([
-                'supplier_cost' => $supplierCost,
+                'supplier_cost' => $normalizedCost,
                 'base_margin_type' => $marginType,
                 'base_margin_value' => $marginValue,
                 'base_selling_price' => $baseSellingPrice,
                 'qc_note' => $qcNote ?? $item->qc_note,
             ]);
 
-            if ($supplierCost > 0) {
+            if (! SupplierCostHelper::isUnset($normalizedCost)) {
                 $item->item()->update([
-                    'latest_supplier_cost' => $supplierCost,
+                    'latest_supplier_cost' => $normalizedCost,
                     'latest_base_margin_type' => $marginType,
                     'latest_base_margin_value' => $marginValue,
                     'latest_base_selling_price' => $baseSellingPrice,
@@ -259,7 +262,7 @@ class StockInService
                 );
             }
 
-            if ($itemData['supplier_cost'] < 0) {
+            if (($itemData['supplier_cost'] ?? 0) < 0) {
                 throw new InvalidArgumentException("supplier_cost tidak boleh negatif untuk item {$barcode}.");
             }
         }

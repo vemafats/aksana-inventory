@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Enums\LocationType;
 use App\Enums\UserRole;
+use App\Helpers\SupplierCostHelper;
 use App\Models\Category;
 use App\Models\Item;
 use App\Models\Location;
@@ -343,7 +344,7 @@ class StokPage extends Page
         }
 
         $hasZeroCost = collect($this->stockInItems)->contains(
-            fn (array $row): bool => (float) ($row['supplier_cost'] ?? 0) <= 0
+            fn (array $row): bool => SupplierCostHelper::isUnset($row['supplier_cost'] ?? 0)
         );
 
         if ($hasZeroCost && ! $this->stockInConfirmZeroCost) {
@@ -429,7 +430,7 @@ class StokPage extends Page
         $transaction->stockInItems->each->makeVisible(['supplier_cost']);
 
         $targetItem = $transaction->stockInItems->first(
-            fn (StockInItem $row): bool => (float) $row->supplier_cost <= 0
+            fn (StockInItem $row): bool => SupplierCostHelper::isUnset($row->supplier_cost)
         ) ?? $transaction->stockInItems->first();
 
         if ($targetItem === null) {
@@ -606,7 +607,7 @@ class StokPage extends Page
         $transaction->stockInItems->each->makeVisible(['supplier_cost']);
 
         return $transaction->stockInItems->contains(
-            fn (StockInItem $row): bool => (float) $row->supplier_cost <= 0
+            fn (StockInItem $row): bool => SupplierCostHelper::isUnset($row->supplier_cost)
         );
     }
 
@@ -677,7 +678,7 @@ class StokPage extends Page
                 ->map(function (StockInTransaction $transaction): StockInTransaction {
                     $transaction->items->each->makeVisible(['supplier_cost']);
                     $transaction->has_unpriced_items = $transaction->items->contains(
-                        fn (StockInItem $item): bool => (float) $item->supplier_cost <= 0
+                        fn (StockInItem $item): bool => SupplierCostHelper::isUnset($item->supplier_cost)
                     );
 
                     return $transaction;

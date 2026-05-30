@@ -230,6 +230,24 @@ class StockInTest extends TestCase
         )->assertForbidden();
     }
 
+    public function test_mobile_placeholder_supplier_cost_is_stored_as_zero(): void
+    {
+        $item = $this->createCatalogItem();
+
+        $response = $this->actingAsGudang()->postJson('/api/stock-in', $this->stockInPayload($item->barcode, [
+            'supplier_cost' => 1,
+        ]));
+
+        $response->assertCreated();
+
+        $stockInItemId = $response->json('data.items.0.id');
+
+        $this->assertDatabaseHas('stock_in_items', [
+            'id' => $stockInItemId,
+            'supplier_cost' => 0,
+        ]);
+    }
+
     /**
      * @param  array<string, mixed>  $overrides
      * @return array<string, mixed>
