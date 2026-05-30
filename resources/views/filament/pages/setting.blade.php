@@ -37,7 +37,7 @@
                             placeholder="Cari user..."
                             class="rounded-md border border-[var(--aksana-border)] px-3 py-1.5 text-sm w-40"
                         />
-                        <button type="button" wire:click="openCreateUser" class="aksana-tab aksana-tab-active text-[10px] whitespace-nowrap">
+                        <button type="button" wire:click="showCreateUser" class="aksana-tab aksana-tab-active text-[10px] whitespace-nowrap">
                             + USER
                         </button>
                     </div>
@@ -85,13 +85,12 @@
                                     <td class="text-xs text-[var(--aksana-muted)]">{{ $this->lastLoginLabel($user) }}</td>
                                     <td class="pr-4">
                                         <div class="flex gap-1">
-                                            <button type="button" wire:click="selectUser('{{ $user->id }}')" class="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--aksana-border)] bg-gray-50 hover:bg-gray-100" title="Edit">
+                                            <button type="button" wire:click="editUser('{{ $user->id }}')" class="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--aksana-border)] bg-gray-50 hover:bg-gray-100" title="Edit">
                                                 <x-heroicon-o-pencil class="h-3.5 w-3.5 text-[var(--aksana-muted)]" />
                                             </button>
                                             <button
                                                 type="button"
-                                                wire:click="deleteUser('{{ $user->id }}')"
-                                                wire:confirm="Hapus user {{ $user->name }}?"
+                                                wire:click="confirmDeleteUser('{{ $user->id }}')"
                                                 class="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--aksana-border)] bg-gray-50 hover:border-red-300 hover:text-red-600"
                                                 title="Hapus"
                                             >
@@ -171,10 +170,10 @@
 
                     <div class="mt-6 space-y-2">
                         <button type="button" wire:click="saveUser" class="aksana-tab aksana-tab-active w-full justify-center py-2.5 text-[11px]">
-                            SIMPAN PERUBAHAN
+                            {{ $isCreating ? 'SIMPAN USER' : 'SIMPAN PERUBAHAN' }}
                         </button>
                         <button type="button" wire:click="resetForm" class="aksana-tab w-full justify-center border border-[var(--aksana-border)] bg-white py-2.5 text-[11px]">
-                            RESET
+                            BATAL
                         </button>
                     </div>
                 @else
@@ -185,6 +184,30 @@
                 @endif
             </div>
         </div>
+
+        @if ($confirmDeleteUserId)
+            @php $deleteTarget = \App\Models\User::find($confirmDeleteUserId); @endphp
+            @if ($deleteTarget)
+                <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+                    <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+                        <h3 class="text-sm font-bold text-[var(--aksana-void)]">Hapus User</h3>
+                        <p class="mt-2 text-sm text-[var(--aksana-muted)]">
+                            Hapus user <strong>{{ $deleteTarget->name }}</strong>? Tindakan ini tidak bisa dibatalkan.
+                        </p>
+                        <div class="mt-6 flex justify-end gap-2">
+                            <button type="button" wire:click="cancelDeleteUser"
+                                class="rounded-md border border-[var(--aksana-border)] px-4 py-2 text-xs font-bold uppercase">
+                                Batal
+                            </button>
+                            <button type="button" wire:click="deleteUser('{{ $confirmDeleteUserId }}')"
+                                class="rounded-md bg-red-600 px-4 py-2 text-xs font-bold uppercase text-white hover:bg-red-700">
+                                Hapus
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            @endif
+        @endif
     @endif
 
     {{-- TAB 2: ROLES --}}

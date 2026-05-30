@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StockIn\StoreStockInRequest;
+use App\Models\StockInItem;
 use App\Models\StockInTransaction;
 use App\Models\StockMovement;
 use App\Services\StockInService;
@@ -86,6 +88,55 @@ class StockInController extends Controller
                 $this->formatTransaction($transaction),
                 ['stock_movements' => $movements],
             ),
+        ]);
+    }
+
+    public function updateItemPrice(
+        Request $request,
+        StockInTransaction $stockIn,
+        StockInItem $item,
+    ): JsonResponse {
+        $user = $request->user();
+
+        if ($user === null || ! in_array($user->role, [UserRole::OWNER, UserRole::ADMIN], true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'supplier_cost' => ['required', 'numeric', 'min:0'],
+            'margin_type' => ['required', 'in:nominal,percentage,none'],
+            'margin_value' => ['required', 'numeric', 'min:0'],
+            'qc_note' => ['nullable', 'string'],
+            'photo_id' => ['nullable', 'uuid', 'exists:photos,id'],
+        ]);
+
+        try {
+            $updatedItem = $this->stockInService->updateItemPrice(
+                $stockIn,
+                $item,
+                (float) $validated['supplier_cost'],
+                $validated['margin_type'],
+                (float) $validated['margin_value'],
+                $validated['qc_note'] ?? null,
+                $validated['photo_id'] ?? null,
+            );
+        } catch (InvalidArgumentException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => $exception->getMessage(),
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Harga berhasil diperbarui',
+            'data' => [
+                'item_name' => $updatedItem->item?->item_name,
+                'base_selling_price' => (float) $updatedItem->base_selling_price,
+            ],
         ]);
     }
 

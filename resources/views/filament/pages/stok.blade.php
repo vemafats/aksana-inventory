@@ -271,47 +271,176 @@
                 @endif
             </div>
 
-            <div class="flex flex-wrap items-center justify-between gap-4 border-t border-gray-100 pt-4">
-                <div class="text-sm">
-                    <span class="text-gray-500">TOTAL QTY:</span>
-                    <span class="font-mono font-bold ml-1">{{ $this->getTotalQty() }} unit</span>
-                    <span class="text-gray-300 mx-2">|</span>
-                    <span class="text-gray-500">TOTAL NILAI MODAL:</span>
-                    <span class="font-mono font-bold ml-1">Rp {{ number_format($this->getTotalModal(), 0, ',', '.') }}</span>
+            <div class="flex items-center justify-between pt-4 border-t border-gray-200 mt-4">
+                <div class="text-sm text-gray-500 font-mono">
+                    Total: {{ $this->getTotalQty() }} unit ·
+                    Nilai: Rp {{ number_format($this->getTotalModal(), 0, ',', '.') }}
                 </div>
-                <div class="flex gap-2">
+                <div class="flex gap-3">
                     <button type="button" wire:click="resetStockInForm"
-                        class="px-4 py-2 text-xs font-bold uppercase tracking-wide rounded border border-gray-300 text-gray-600 hover:bg-gray-50">
-                        Batal
+                        class="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">
+                        BATAL
                     </button>
-                    <button type="button" wire:click="submitStockIn" wire:loading.attr="disabled"
-                        class="px-4 py-2 text-xs font-bold uppercase tracking-wide rounded bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-50">
-                        <span wire:loading.remove wire:target="submitStockIn">Simpan Stok Masuk</span>
-                        <span wire:loading wire:target="submitStockIn">Menyimpan...</span>
+                    <button type="button" wire:click="submitStockIn"
+                        wire:loading.attr="disabled"
+                        class="px-6 py-2 text-sm font-bold uppercase tracking-wide bg-gray-900 text-white rounded-lg hover:opacity-90 disabled:opacity-50">
+                        <span wire:loading.remove wire:target="submitStockIn">SIMPAN STOK MASUK</span>
+                        <span wire:loading wire:target="submitStockIn">MENYIMPAN...</span>
                     </button>
                 </div>
             </div>
+
+            @if($stockInSuccess)
+            <div class="p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm mt-4">
+                ✓ {{ $stockInSuccess }}
+            </div>
+            @endif
+
+            @if($stockInError)
+            <div class="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm mt-4">
+                ✗ {{ $stockInError }}
+            </div>
+            @endif
         </div>
 
-        {{-- Right panel --}}
-        <div class="space-y-3">
-            <h3 class="text-sm font-semibold text-gray-900">Penambahan Terbaru</h3>
-            <div class="space-y-2">
-                @forelse($recentStockIns ?? [] as $recent)
-                <div class="rounded-lg border border-gray-200 p-3 text-sm">
-                    <p class="font-mono text-xs font-bold text-gray-900">{{ $recent->transaction_number }}</p>
-                    <p class="text-xs text-gray-500 mt-1">{{ $recent->transaction_date?->format('d M Y') }}</p>
-                    <p class="text-xs text-gray-400 mt-1">
-                        {{ $recent->stock_in_items_count ?? 0 }} jenis · {{ $recent->total_qty_received }} unit
-                    </p>
-                    @if($recent->note)
-                    <p class="text-xs text-gray-400 mt-1 truncate">{{ \Illuminate\Support\Str::limit($recent->note, 40) }}</p>
-                    @endif
-                </div>
-                @empty
-                <p class="text-xs text-gray-400">Belum ada transaksi barang masuk.</p>
-                @endforelse
+        {{-- Right panel: Riwayat Penambahan Stok --}}
+        <div class="space-y-4">
+            <h3 class="text-sm font-semibold text-gray-900">Riwayat Penambahan Stok</h3>
+
+            @if($editStockInSuccess)
+            <div class="p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
+                ✓ {{ $editStockInSuccess }}
             </div>
+            @endif
+
+            @if($editStockInError && !$editingStockInId)
+            <div class="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                ✗ {{ $editStockInError }}
+            </div>
+            @endif
+
+            <div class="overflow-x-auto rounded-lg border border-gray-200">
+                <table class="w-full text-xs">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-3 py-2 text-left font-bold uppercase tracking-wide text-gray-400">Tanggal</th>
+                            <th class="px-3 py-2 text-left font-bold uppercase tracking-wide text-gray-400">No. Ref</th>
+                            <th class="px-3 py-2 text-right font-bold uppercase tracking-wide text-gray-400">Qty</th>
+                            <th class="px-3 py-2 text-left font-bold uppercase tracking-wide text-gray-400">Harga</th>
+                            @if($this->canEditStockInPrice())
+                            <th class="px-3 py-2 text-right font-bold uppercase tracking-wide text-gray-400">Aksi</th>
+                            @endif
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        @forelse($recentStockIns ?? [] as $recent)
+                        <tr wire:key="recent-stock-in-{{ $recent->id }}" class="hover:bg-gray-50/50">
+                            <td class="px-3 py-2 font-mono text-gray-600">{{ $recent->transaction_date?->format('d/m/y') }}</td>
+                            <td class="px-3 py-2">
+                                <span class="font-mono font-bold text-gray-900">{{ $recent->transaction_number }}</span>
+                            </td>
+                            <td class="px-3 py-2 text-right font-mono">{{ $recent->total_qty_received }}</td>
+                            <td class="px-3 py-2">
+                                @if($this->stockInHasMissingPrice($recent))
+                                <span class="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
+                                    Harga Belum Diisi
+                                </span>
+                                @else
+                                <span class="text-gray-500">Lengkap</span>
+                                @endif
+                            </td>
+                            @if($this->canEditStockInPrice())
+                            <td class="px-3 py-2 text-right">
+                                <button type="button" wire:click="selectStockInForEdit('{{ $recent->id }}')"
+                                    class="text-[10px] font-bold uppercase tracking-wide text-gray-900 hover:underline">
+                                    Edit Harga
+                                </button>
+                            </td>
+                            @endif
+                        </tr>
+                        @empty
+                        <tr>
+                            <td colspan="{{ $this->canEditStockInPrice() ? 5 : 4 }}" class="px-3 py-6 text-center text-gray-400">
+                                Belum ada transaksi barang masuk.
+                            </td>
+                        </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            @if($editingStockInId && $this->canEditStockInPrice())
+            @php
+                $editingTransaction = collect($recentStockIns ?? [])->firstWhere('id', $editingStockInId);
+                $editingItem = $editingTransaction?->stockInItems?->firstWhere('id', $editingStockInItemId);
+            @endphp
+            <div class="rounded-lg border border-gray-200 p-4 space-y-3 bg-gray-50/50">
+                <div class="flex items-center justify-between">
+                    <h4 class="text-xs font-bold uppercase tracking-wide text-gray-700">Edit Harga Barang Masuk</h4>
+                    <button type="button" wire:click="cancelStockInPriceEdit" class="text-xs text-gray-500 hover:text-gray-700">Tutup</button>
+                </div>
+
+                @if($editStockInError)
+                <div class="p-2 bg-red-50 border border-red-200 rounded text-red-600 text-xs">
+                    ✗ {{ $editStockInError }}
+                </div>
+                @endif
+
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                        <span class="text-gray-400">Tanggal</span>
+                        <p class="font-mono">{{ $editingTransaction?->transaction_date?->format('d M Y') ?? '—' }}</p>
+                    </div>
+                    <div>
+                        <span class="text-gray-400">No. Ref</span>
+                        <p class="font-mono font-bold">{{ $editingTransaction?->transaction_number ?? '—' }}</p>
+                    </div>
+                    <div class="col-span-2">
+                        <span class="text-gray-400">Item</span>
+                        <p class="font-semibold">{{ $editingItem?->item?->item_name ?? '—' }}</p>
+                    </div>
+                    <div>
+                        <span class="text-gray-400">Qty</span>
+                        <p class="font-mono">{{ $editingItem?->qty_received ?? 0 }}</p>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-xs text-gray-400">Harga Modal (Rp)</label>
+                    <input type="number" min="0" step="1" wire:model.live="editSupplierCost"
+                        class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-400">Tipe Margin</label>
+                    <select wire:model.live="editMarginType" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                        <option value="none">Tanpa Margin</option>
+                        <option value="nominal">Nominal (Rp)</option>
+                        <option value="percentage">Persentase (%)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs text-gray-400">Nilai Margin</label>
+                    <input type="number" min="0" step="1" wire:model.live="editMarginValue"
+                        class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-400">Harga Jual Dasar (auto)</label>
+                    <input type="text" readonly
+                        value="Rp {{ number_format($editCalculatedPrice, 0, ',', '.') }}"
+                        class="mt-1 w-full rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-sm font-mono font-bold">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-400">Catatan QC</label>
+                    <input type="text" wire:model="editQcNote"
+                        class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Opsional">
+                </div>
+                <button type="button" wire:click="saveStockInPrice" wire:loading.attr="disabled"
+                    class="w-full px-4 py-2 text-xs font-bold uppercase tracking-wide bg-gray-900 text-white rounded-lg hover:opacity-90 disabled:opacity-50">
+                    <span wire:loading.remove wire:target="saveStockInPrice">Simpan Harga</span>
+                    <span wire:loading wire:target="saveStockInPrice">Menyimpan...</span>
+                </button>
+            </div>
+            @endif
         </div>
     </div>
     @endif

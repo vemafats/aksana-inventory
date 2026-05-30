@@ -167,6 +167,48 @@ class StockInService
         });
     }
 
+    public function updateItemPrice(
+        StockInTransaction $stockIn,
+        StockInItem $item,
+        float $supplierCost,
+        string $marginType,
+        float $marginValue,
+        ?string $qcNote = null,
+        ?string $photoId = null,
+    ): StockInItem {
+        if ($item->stock_in_transaction_id !== $stockIn->id) {
+            throw new InvalidArgumentException('Item tidak termasuk transaksi barang masuk ini.');
+        }
+
+        return DB::transaction(function () use ($item, $supplierCost, $marginType, $marginValue, $qcNote, $photoId): StockInItem {
+            $baseSellingPrice = app(PriceCalculationService::class)
+                ->calculateBaseSellingPrice($supplierCost, $marginType, $marginValue);
+
+            $item->update([
+                'supplier_cost' => $supplierCost,
+                'base_margin_type' => $marginType,
+                'base_margin_value' => $marginValue,
+                'base_selling_price' => $baseSellingPrice,
+                'qc_note' => $qcNote ?? $item->qc_note,
+            ]);
+
+            if ($supplierCost > 0) {
+                $item->item()->update([
+                    'latest_supplier_cost' => $supplierCost,
+                    'latest_base_margin_type' => $marginType,
+                    'latest_base_margin_value' => $marginValue,
+                    'latest_base_selling_price' => $baseSellingPrice,
+                ]);
+            }
+
+            if ($photoId !== null) {
+                $item->stockInTransaction()->update(['photo_id' => $photoId]);
+            }
+
+            return $item->fresh(['item', 'stockInTransaction']);
+        });
+    }
+
     /**
      * @param  array<string, mixed>  $data
      */

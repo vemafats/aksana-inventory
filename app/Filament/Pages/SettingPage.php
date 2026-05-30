@@ -49,6 +49,8 @@ class SettingPage extends Page
 
     public bool $isCreating = false;
 
+    public ?string $confirmDeleteUserId = null;
+
     public ?string $editingRoleKey = null;
 
     public string $editRoleDescription = '';
@@ -172,6 +174,26 @@ class SettingPage extends Page
         $this->isCreating = true;
     }
 
+    public function showCreateUser(): void
+    {
+        $this->openCreateUser();
+    }
+
+    public function editUser(string $id): void
+    {
+        $this->selectUser($id);
+    }
+
+    public function confirmDeleteUser(string $id): void
+    {
+        $this->confirmDeleteUserId = $id;
+    }
+
+    public function cancelDeleteUser(): void
+    {
+        $this->confirmDeleteUserId = null;
+    }
+
     public function resetForm(): void
     {
         $this->selectedUserId = null;
@@ -242,6 +264,7 @@ class SettingPage extends Page
     {
         if ($id === auth()->id()) {
             Notification::make()->title('Tidak dapat menghapus akun sendiri')->danger()->send();
+            $this->confirmDeleteUserId = null;
 
             return;
         }
@@ -251,6 +274,8 @@ class SettingPage extends Page
         if ($this->selectedUserId === $id) {
             $this->resetForm();
         }
+
+        $this->confirmDeleteUserId = null;
 
         Notification::make()->title('User berhasil dihapus')->success()->send();
     }

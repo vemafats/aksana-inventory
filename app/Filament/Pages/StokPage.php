@@ -8,6 +8,7 @@ use App\Models\Category;
 use App\Models\Item;
 use App\Models\Location;
 use App\Models\StockBalance;
+use App\Models\StockInItem;
 use App\Models\StockInTransaction;
 use App\Models\StockMovement;
 use App\Services\PhotoService;
@@ -85,6 +86,24 @@ class StokPage extends Page
     public string $stockInWarning = '';
 
     public bool $stockInConfirmZeroCost = false;
+
+    public ?string $editingStockInId = null;
+
+    public ?string $editingStockInItemId = null;
+
+    public float $editSupplierCost = 0;
+
+    public string $editMarginType = 'percentage';
+
+    public float $editMarginValue = 0;
+
+    public float $editCalculatedPrice = 0;
+
+    public string $editQcNote = '';
+
+    public string $editStockInError = '';
+
+    public string $editStockInSuccess = '';
 
     public static function canAccess(): bool
     {
@@ -372,6 +391,129 @@ class StokPage extends Page
         }
     }
 
+    public function canEditStockInPrice(): bool
+    {
+        $user = auth()->user();
+
+        return $user !== null && in_array($user->role, [UserRole::OWNER, UserRole::ADMIN], true);
+    }
+
+    public function selectStockInForEdit(string $transactionId): void
+    {
+        if (! $this->canEditStockInPrice()) {
+            $this->editStockInError = 'Hanya Owner dan Admin yang dapat mengedit harga modal.';
+
+            return;
+        }
+
+        $transaction = StockInTransaction::query()
+            ->with(['stockInItems.item'])
+            ->findOrFail($transactionId);
+
+        $this->editingStockInId = $transactionId;
+        $this->editStockInError = '';
+        $this->editStockInSuccess = '';
+
+        $targetItem = $transaction->stockInItems->first(
+            fn (StockInItem $row): bool => (float) $row->supplier_cost <= 0
+        ) ?? $transaction->stockInItems->first();
+
+        if ($targetItem === null) {
+            $this->editStockInError = 'Transaksi tidak memiliki item.';
+
+            return;
+        }
+
+        $targetItem->makeVisible(['supplier_cost']);
+        $this->editingStockInItemId = $targetItem->id;
+        $this->editSupplierCost = (float) $targetItem->supplier_cost;
+        $this->editMarginType = $targetItem->base_margin_type ?? 'percentage';
+        $this->editMarginValue = (float) ($targetItem->base_margin_value ?? 0);
+        $this->editQcNote = $targetItem->qc_note ?? '';
+        $this->recalculateEditPrice();
+    }
+
+    public function updatedEditSupplierCost(): void
+    {
+        $this->recalculateEditPrice();
+    }
+
+    public function updatedEditMarginType(): void
+    {
+        $this->recalculateEditPrice();
+    }
+
+    public function updatedEditMarginValue(): void
+    {
+        $this->recalculateEditPrice();
+    }
+
+    public function recalculateEditPrice(): void
+    {
+        $this->editCalculatedPrice = app(PriceCalculationService::class)
+            ->calculateBaseSellingPrice($this->editSupplierCost, $this->editMarginType, $this->editMarginValue);
+    }
+
+    public function cancelStockInPriceEdit(): void
+    {
+        $this->editingStockInId = null;
+        $this->editingStockInItemId = null;
+        $this->editSupplierCost = 0;
+        $this->editMarginType = 'percentage';
+        $this->editMarginValue = 0;
+        $this->editCalculatedPrice = 0;
+        $this->editQcNote = '';
+        $this->editStockInError = '';
+        $this->editStockInSuccess = '';
+    }
+
+    public function saveStockInPrice(): void
+    {
+        if (! $this->canEditStockInPrice()) {
+            $this->editStockInError = 'Hanya Owner dan Admin yang dapat mengedit harga modal.';
+
+            return;
+        }
+
+        if ($this->editingStockInId === null || $this->editingStockInItemId === null) {
+            return;
+        }
+
+        $this->editStockInError = '';
+        $this->editStockInSuccess = '';
+
+        try {
+            $transaction = StockInTransaction::query()->findOrFail($this->editingStockInId);
+            $item = StockInItem::query()->findOrFail($this->editingStockInItemId);
+
+            app(StockInService::class)->updateItemPrice(
+                $transaction,
+                $item,
+                $this->editSupplierCost,
+                $this->editMarginType,
+                $this->editMarginValue,
+                $this->editQcNote !== '' ? $this->editQcNote : null,
+            );
+
+            $this->cancelStockInPriceEdit();
+            $this->editStockInSuccess = 'Harga berhasil disimpan.';
+            $this->refreshSummaryStats();
+        } catch (InvalidArgumentException $exception) {
+            $this->editStockInError = $exception->getMessage();
+        }
+    }
+
+    public function stockInHasMissingPrice(StockInTransaction $transaction): bool
+    {
+        if (! $transaction->relationLoaded('stockInItems')) {
+            $transaction->load('stockInItems');
+        }
+
+        return $transaction->stockInItems->contains(
+            fn (StockInItem $row): bool => (float) $row->supplier_cost <= 0
+        );
+    }
+
     protected function getViewData(): array
     {
         return [
@@ -423,11 +565,14 @@ class StokPage extends Page
                 ->orderBy('created_at')
                 ->first(),
             'recentStockIns' => StockInTransaction::query()
-                ->withCount('stockInItems')
+                ->with(['stockInItems.item'])
                 ->orderByDesc('transaction_date')
                 ->orderByDesc('created_at')
-                ->limit(5)
-                ->get(),
+                ->limit(10)
+                ->get()
+                ->each(function (StockInTransaction $transaction): void {
+                    $transaction->stockInItems->each->makeVisible(['supplier_cost']);
+                }),
         ];
     }
 

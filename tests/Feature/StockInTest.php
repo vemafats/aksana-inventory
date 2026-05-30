@@ -23,6 +23,7 @@ use Database\Seeders\ProductModelSeeder;
 use Database\Seeders\SizeSeeder;
 use Database\Seeders\UserSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class StockInTest extends TestCase
@@ -170,6 +171,65 @@ class StockInTest extends TestCase
         $response->assertForbidden();
     }
 
+    public function test_owner_can_update_stock_in_item_price(): void
+    {
+        $item = $this->createCatalogItem();
+
+        $create = $this->actingAsGudang()->postJson('/api/stock-in', $this->stockInPayload($item->barcode, [
+            'supplier_cost' => 0,
+            'base_margin_type' => 'none',
+            'base_margin_value' => 0,
+            'base_selling_price' => 0,
+        ]));
+
+        $create->assertCreated();
+
+        $transactionId = $create->json('data.id');
+        $stockInItemId = $create->json('data.items.0.id');
+
+        $response = $this->actingAsOwner()->putJson(
+            "/api/stock-in/{$transactionId}/items/{$stockInItemId}",
+            [
+                'supplier_cost' => 120000,
+                'margin_type' => 'nominal',
+                'margin_value' => 30000,
+                'qc_note' => 'Harga diisi via web',
+            ],
+        );
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.base_selling_price', 150000);
+
+        $content = $response->getContent();
+        $this->assertStringNotContainsString('supplier_cost', $content);
+
+        $this->assertDatabaseHas('stock_in_items', [
+            'id' => $stockInItemId,
+            'base_selling_price' => 150000,
+        ]);
+    }
+
+    public function test_sales_cannot_update_stock_in_item_price(): void
+    {
+        $item = $this->createCatalogItem();
+
+        $create = $this->actingAsGudang()->postJson('/api/stock-in', $this->stockInPayload($item->barcode));
+        $create->assertCreated();
+
+        $transactionId = $create->json('data.id');
+        $stockInItemId = $create->json('data.items.0.id');
+
+        $this->actingAsSales()->putJson(
+            "/api/stock-in/{$transactionId}/items/{$stockInItemId}",
+            [
+                'supplier_cost' => 120000,
+                'margin_type' => 'nominal',
+                'margin_value' => 30000,
+            ],
+        )->assertForbidden();
+    }
+
     /**
      * @param  array<string, mixed>  $overrides
      * @return array<string, mixed>
@@ -239,5 +299,12 @@ class StockInTest extends TestCase
         ]);
 
         return $this->withToken($login->json('data.token'));
+    }
+
+    private function actingAsOwner(): static
+    {
+        Sanctum::actingAs(User::query()->where('email', 'owner@aksana.id')->firstOrFail());
+
+        return $this;
     }
 }
