@@ -79,10 +79,11 @@ class StockInNotifier extends StateNotifier<List<StockInItem>> {
     String? supplierName,
     required String transactionDate,
     String? poReference,
+    String? photoId,
   }) async {
     if (state.isEmpty) return false;
 
-    final payload = {
+    final payload = <String, dynamic>{
       'supplier_name': supplierName,
       'transaction_date': transactionDate,
       'note': poReference,
@@ -101,6 +102,10 @@ class StockInNotifier extends StateNotifier<List<StockInItem>> {
           )
           .toList(),
     };
+
+    if (photoId != null && photoId.isNotEmpty) {
+      payload['photo_id'] = photoId;
+    }
 
     await _service.createTransaction(payload, dio);
     clear();

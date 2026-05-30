@@ -23,10 +23,10 @@
             <tbody>
                 @forelse ($this->getSalesRows() as $row)
                     <tr>
-                        <td class="font-semibold">{{ $row->location_name }}</td>
-                        <td>{{ $row->location_type }}</td>
-                        <td class="font-mono">{{ $row->transaction_count }}</td>
-                        <td class="font-mono font-bold">{{ \App\Filament\Pages\LaporanPenjualanPage::formatRupiah((float) $row->total_sales) }}</td>
+                        <td class="font-semibold">{{ data_get($row, 'location_name', '-') }}</td>
+                        <td>{{ data_get($row, 'location_type', '-') }}</td>
+                        <td class="font-mono">{{ data_get($row, 'transaction_count', 0) }}</td>
+                        <td class="font-mono font-bold">{{ \App\Filament\Pages\LaporanPenjualanPage::formatRupiah((float) data_get($row, 'total_sales', 0)) }}</td>
                     </tr>
                 @empty
                     <tr>

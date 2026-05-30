@@ -1,8 +1,12 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/auth/auth_provider.dart';
@@ -21,12 +25,21 @@ class StockInScreen extends ConsumerStatefulWidget {
 
 class _StockInScreenState extends ConsumerState<StockInScreen> {
   final _poController = TextEditingController();
+  final _imagePicker = ImagePicker();
   bool _isSubmitting = false;
+  String? _photoId;
+  String? _photoPath;
 
   @override
   void dispose() {
     _poController.dispose();
     super.dispose();
+  }
+
+  String get _photoRelatedId {
+    final userId = ref.read(authProvider).userId;
+    if (userId != null && userId.isNotEmpty) return userId;
+    return '00000000-0000-4000-8000-000000000001';
   }
 
   Future<void> _openScan() async {
@@ -38,31 +51,79 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     }
   }
 
+  Future<void> _takePhoto() async {
+    final image = await _imagePicker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 80,
+      maxWidth: 1200,
+    );
+    if (image == null || !mounted) return;
+
+    setState(() {
+      _photoPath = image.path;
+      _photoId = null;
+    });
+
+    try {
+      final dio = ref.read(apiClientProvider).dio;
+      final photoId = await ref.read(stockInServiceProvider).uploadPhoto(
+            dio,
+            filePath: image.path,
+            relatedId: _photoRelatedId,
+          );
+      if (!mounted) return;
+      setState(() => _photoId = photoId);
+      if (photoId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Upload foto gagal. Coba lagi.'),
+            backgroundColor: AppColors.warning,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Photo upload failed: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Upload foto gagal. Transaksi tetap bisa dikirim.'),
+            backgroundColor: AppColors.warning,
+          ),
+        );
+      }
+    }
+  }
+
+  void _clearPhoto() {
+    setState(() {
+      _photoId = null;
+      _photoPath = null;
+    });
+  }
+
   Future<void> _confirmSubmit() async {
     final items = ref.read(stockInProvider);
     if (items.isEmpty) return;
 
+    final totalQty = items.fold<int>(0, (sum, item) => sum + item.qty);
+    final itemCount = items.length;
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(
-          'Konfirmasi Barang Masuk',
-          style: AppTextStyles.cardTitle.copyWith(fontSize: 16),
-        ),
+        title: const Text('Konfirmasi Barang Masuk'),
         content: Text(
-          'Kirim ${items.length} item ke gudang pusat?',
-          style: AppTextStyles.cardSubtitle.copyWith(fontSize: 13),
+          'Kirim $totalQty unit ($itemCount jenis item) '
+          'ke gudang pusat?\n\n'
+          'Harga modal akan diisi via web admin.',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
+            onPressed: () => Navigator.pop(ctx, false),
             child: const Text('BATAL'),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size(80, 40),
-            ),
+            onPressed: () => Navigator.pop(ctx, true),
             child: const Text('KIRIM'),
           ),
         ],
@@ -70,10 +131,10 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     );
 
     if (confirmed != true || !mounted) return;
-    await _submit();
+    await _submitStockIn();
   }
 
-  Future<void> _submit() async {
+  Future<void> _submitStockIn() async {
     setState(() => _isSubmitting = true);
 
     try {
@@ -83,6 +144,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             dio,
             transactionDate: DateFormat('yyyy-MM-dd').format(DateTime.now()),
             poReference: po.isEmpty ? null : po,
+            photoId: _photoId,
           );
 
       if (!mounted) return;
@@ -116,6 +178,91 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
+  }
+
+  Widget _buildPhotoSection() {
+    final hasPreview = _photoPath != null && !kIsWeb;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('FOTO QC', style: AppTextStyles.sectionLabel),
+          const SizedBox(height: 8),
+          if (!hasPreview) ...[
+            OutlinedButton.icon(
+              onPressed: _isSubmitting ? null : _takePhoto,
+              icon: const Icon(Icons.camera_alt_outlined, size: 18),
+              label: const Text('AMBIL FOTO'),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 44),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+            if (_photoPath != null && kIsWeb)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  'Foto dipilih (preview tidak tersedia di web)',
+                  style: AppTextStyles.cardSubtitle,
+                ),
+              ),
+          ] else ...[
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.file(
+                    File(_photoPath!),
+                    height: 120,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: GestureDetector(
+                    onTap: _isSubmitting ? null : _clearPhoto,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: AppColors.danger,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Icon(
+                        Icons.close,
+                        size: 14,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (_photoId != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                'Foto terunggah',
+                style: AppTextStyles.cardSubtitle.copyWith(
+                  color: AppColors.success,
+                  fontSize: 10,
+                ),
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
   }
 
   @override
@@ -204,26 +351,35 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: SizedBox(
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: items.isEmpty || _isSubmitting
-                      ? null
-                      : _confirmSubmit,
-                  child: _isSubmitting
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Text(
-                          '✓ KONFIRMASI $totalQty ITEM',
-                          style: AppTextStyles.buttonPrimary,
-                        ),
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (items.isNotEmpty) ...[
+                    _buildPhotoSection(),
+                    const SizedBox(height: 12),
+                  ],
+                  SizedBox(
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: items.isEmpty || _isSubmitting
+                          ? null
+                          : _confirmSubmit,
+                      child: _isSubmitting
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(
+                              '✓ KONFIRMASI $totalQty ITEM',
+                              style: AppTextStyles.buttonPrimary,
+                            ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

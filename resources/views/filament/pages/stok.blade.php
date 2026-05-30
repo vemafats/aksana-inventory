@@ -1,5 +1,4 @@
 <x-filament-panels::page>
-@php use Illuminate\Support\Str; @endphp
 <div class="space-y-4">
 
 {{-- Page subtitle --}}
@@ -73,7 +72,7 @@
                             <th class="px-4 py-2 text-left text-xs font-bold uppercase tracking-wide text-gray-400">BARCODE</th>
                             @foreach($allLocations ?? [] as $location)
                             <th class="px-3 py-2 text-right text-xs font-bold uppercase tracking-wide text-gray-400 whitespace-nowrap">
-                                {{ Str::limit(strtoupper($location->location_name), 12, '') }}
+                                {{ \Illuminate\Support\Str::limit(strtoupper($location->location_name), 12, '') }}
                             </th>
                             @endforeach
                             <th class="px-4 py-2 text-right text-xs font-bold uppercase tracking-wide text-gray-400">TOTAL</th>
@@ -306,7 +305,7 @@
                         {{ $recent->stock_in_items_count ?? 0 }} jenis · {{ $recent->total_qty_received }} unit
                     </p>
                     @if($recent->note)
-                    <p class="text-xs text-gray-400 mt-1 truncate">{{ Str::limit($recent->note, 40) }}</p>
+                    <p class="text-xs text-gray-400 mt-1 truncate">{{ \Illuminate\Support\Str::limit($recent->note, 40) }}</p>
                     @endif
                 </div>
                 @empty
