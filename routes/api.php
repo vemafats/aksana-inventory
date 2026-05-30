@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CatalogController;
 use App\Http\Controllers\Api\CatalogQrCodeController;
+use App\Http\Controllers\Api\EmployeeController;
 use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\PhotoController;
 use App\Http\Controllers\Api\ReportController;
@@ -51,8 +52,12 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function (): void {
     Route::post('/stock-opnames/{opname}/validate', [StockOpnameController::class, 'validate']);
     Route::post('/stock-opnames/{opname}/reject', [StockOpnameController::class, 'reject']);
 
+    Route::get('/locations', [LocationController::class, 'index']);
+    Route::get('/locations/sales', [LocationController::class, 'salesLocations']);
     Route::get('/locations/central-warehouse', [LocationController::class, 'centralWarehouse']);
     Route::post('/locations/{location}/close', [LocationController::class, 'close']);
+
+    Route::get('/employees', [EmployeeController::class, 'index']);
 
     Route::prefix('reports')->group(function (): void {
         Route::get('dashboard-summary', [ReportController::class, 'dashboardSummary']);
