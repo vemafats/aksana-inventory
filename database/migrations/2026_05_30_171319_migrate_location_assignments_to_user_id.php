@@ -14,6 +14,10 @@ return new class extends Migration
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
         });
 
+        Schema::table('location_assignments', function (Blueprint $table) {
+            $table->uuid('employee_id')->nullable()->change();
+        });
+
         $this->migrateEmployeeToUserIds('location_assignments', 'employee_id');
     }
 
