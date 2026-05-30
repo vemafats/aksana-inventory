@@ -368,12 +368,16 @@
 
                 <div>
                     <label class="text-xs text-gray-400">Harga Modal (Rp)</label>
-                    <input type="number" min="0" step="1" wire:model.live="editSupplierCost"
+                    <input type="number" min="0" step="1000"
+                        wire:model.lazy="editSupplierCost"
+                        wire:change="recalculateEditPrice"
                         class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono">
                 </div>
                 <div>
                     <label class="text-xs text-gray-400">Tipe Margin</label>
-                    <select wire:model.live="editMarginType" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                    <select wire:model.lazy="editMarginType"
+                        wire:change="recalculateEditPrice"
+                        class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
                         <option value="none">Tanpa Margin</option>
                         <option value="nominal">Nominal (Rp)</option>
                         <option value="percentage">Persentase (%)</option>
@@ -381,7 +385,9 @@
                 </div>
                 <div>
                     <label class="text-xs text-gray-400">Nilai Margin</label>
-                    <input type="number" min="0" step="1" wire:model.live="editMarginValue"
+                    <input type="number" min="0" step="1"
+                        wire:model.lazy="editMarginValue"
+                        wire:change="recalculateEditPrice"
                         class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono">
                 </div>
                 <div>
@@ -396,8 +402,9 @@
                         class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Opsional">
                 </div>
                 <button type="button" wire:click="saveStockInPrice" wire:loading.attr="disabled"
-                    class="w-full px-4 py-2 text-xs font-bold uppercase tracking-wide bg-gray-900 text-white rounded-lg hover:opacity-90 disabled:opacity-50">
-                    <span wire:loading.remove wire:target="saveStockInPrice">Simpan Harga</span>
+                    class="w-full px-6 py-2 text-sm font-bold uppercase bg-gray-900 text-white rounded-lg hover:opacity-90 disabled:opacity-50"
+                    style="background-color:#111827;color:#fff;">
+                    <span wire:loading.remove wire:target="saveStockInPrice">SIMPAN HARGA</span>
                     <span wire:loading wire:target="saveStockInPrice">Menyimpan...</span>
                 </button>
             </div>
@@ -410,24 +417,19 @@
         Nilai: Rp {{ number_format($this->getTotalModal(), 0, ',', '.') }}
     </p>
 
-    <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
+    <div class="flex flex-wrap justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
         <button
             wire:click="resetStockInForm"
             type="button"
-            class="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors">
+            class="shrink-0 px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">
             BATAL
         </button>
         <button
             wire:click="submitStockIn"
-            wire:loading.attr="disabled"
             type="button"
-            class="px-6 py-2 text-sm font-bold uppercase tracking-wide bg-gray-900 text-white rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity">
-            <span wire:loading.remove wire:target="submitStockIn">
-                ✓ SIMPAN STOK MASUK
-            </span>
-            <span wire:loading wire:target="submitStockIn" class="flex items-center gap-2">
-                MENYIMPAN...
-            </span>
+            class="shrink-0 px-6 py-2 text-sm font-bold uppercase bg-gray-900 text-white rounded-lg hover:opacity-90"
+            style="background-color:#111827;color:#fff;">
+            ✓ SIMPAN STOK MASUK
         </button>
     </div>
 

@@ -91,15 +91,17 @@ class StokPage extends Page
 
     public ?string $editingStockInItemId = null;
 
-    public float $editSupplierCost = 0;
-
     public string $editMarginType = 'percentage';
-
-    public float $editMarginValue = 0;
 
     public float $editCalculatedPrice = 0;
 
     public string $editQcNote = '';
+
+    /** @var int|float|string|null */
+    public $editSupplierCost = 0;
+
+    /** @var int|float|string|null */
+    public $editMarginValue = 0;
 
     public string $editStockInError = '';
 
@@ -516,25 +518,18 @@ class StokPage extends Page
         return (int) ($this->locationQtyMap($item)->get($locationId)['qty'] ?? 0);
     }
 
-    public function updatedEditSupplierCost(): void
-    {
-        $this->recalculateEditPrice();
-    }
-
-    public function updatedEditMarginType(): void
-    {
-        $this->recalculateEditPrice();
-    }
-
-    public function updatedEditMarginValue(): void
-    {
-        $this->recalculateEditPrice();
-    }
-
     public function recalculateEditPrice(): void
     {
-        $this->editCalculatedPrice = app(PriceCalculationService::class)
-            ->calculateBaseSellingPrice($this->editSupplierCost, $this->editMarginType, $this->editMarginValue);
+        $cost = (float) ($this->editSupplierCost ?? 0);
+        $margin = (float) ($this->editMarginValue ?? 0);
+
+        $this->editCalculatedPrice = match ($this->editMarginType) {
+            'nominal' => $cost + $margin,
+            'percentage' => $cost > 0
+                ? round($cost * (1 + $margin / 100))
+                : 0,
+            default => $cost,
+        };
     }
 
     public function cancelStockInPriceEdit(): void
@@ -562,6 +557,12 @@ class StokPage extends Page
             return;
         }
 
+        $this->validate([
+            'editSupplierCost' => ['required', 'numeric', 'min:1'],
+            'editMarginType' => ['required', 'in:nominal,percentage,none'],
+            'editMarginValue' => ['required', 'numeric', 'min:0'],
+        ]);
+
         $this->editStockInError = '';
         $this->editStockInSuccess = '';
 
@@ -572,9 +573,9 @@ class StokPage extends Page
             app(StockInService::class)->updateItemPrice(
                 $transaction,
                 $item,
-                $this->editSupplierCost,
+                (float) $this->editSupplierCost,
                 $this->editMarginType,
-                $this->editMarginValue,
+                (float) $this->editMarginValue,
                 $this->editQcNote !== '' ? $this->editQcNote : null,
             );
 
