@@ -123,11 +123,20 @@ class StokPage extends Page
 
     public function selectTab(string $tab): void
     {
-        if (! in_array($tab, ['ringkasan', 'tambah-stok', 'riwayat-pergerakan', 'harga-jual'], true)) {
+        if ($tab === 'update-harga' && auth()->user()?->role !== UserRole::OWNER) {
+            return;
+        }
+
+        if (! in_array($tab, ['ringkasan', 'tambah-stok', 'riwayat-pergerakan', 'harga-jual', 'update-harga'], true)) {
             return;
         }
 
         $this->activeTab = $tab;
+    }
+
+    public function isOwner(): bool
+    {
+        return auth()->user()?->role === UserRole::OWNER;
     }
 
     public function toggleCostView(): void
@@ -171,6 +180,7 @@ class StokPage extends Page
             'tambah-stok' => 'Tambah Stok',
             'riwayat-pergerakan' => 'Riwayat Pergerakan',
             'harga-jual' => 'Harga Jual Dasar',
+            'update-harga' => 'Update Harga Stok',
             default => 'Stok',
         };
     }
@@ -658,6 +668,19 @@ class StokPage extends Page
                 ->get()
                 ->each(function (StockInTransaction $transaction): void {
                     $transaction->stockInItems->each->makeVisible(['supplier_cost']);
+                }),
+            'stockInHistory' => StockInTransaction::query()
+                ->with(['items.item', 'createdBy'])
+                ->orderByDesc('created_at')
+                ->limit(50)
+                ->get()
+                ->map(function (StockInTransaction $transaction): StockInTransaction {
+                    $transaction->items->each->makeVisible(['supplier_cost']);
+                    $transaction->has_unpriced_items = $transaction->items->contains(
+                        fn (StockInItem $item): bool => (float) $item->supplier_cost <= 0
+                    );
+
+                    return $transaction;
                 }),
         ];
     }

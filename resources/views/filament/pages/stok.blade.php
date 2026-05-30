@@ -24,6 +24,13 @@
         {{ $tab['label'] }}
     </button>
     @endforeach
+    @if($this->isOwner())
+    <button
+        wire:click="selectTab('update-harga')"
+        style="padding: 8px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; border-radius: 6px 6px 0 0; border: none; cursor: pointer; transition: all 0.15s; {{ $activeTab === 'update-harga' ? 'background: #070D1E; color: white;' : 'background: transparent; color: #49586B;' }}">
+        UPDATE HARGA STOK
+    </button>
+    @endif
 </div>
 
 {{-- Tab content --}}
@@ -590,6 +597,158 @@
                 @endforelse
             </tbody>
         </table>
+    </div>
+    @endif
+
+    {{-- UPDATE HARGA STOK (Owner only) --}}
+    @if($activeTab === 'update-harga' && $this->isOwner())
+    <div>
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+            <div>
+                <h3 style="font-size:14px; font-weight:700; color:#070D1E; margin:0;">Update Harga Stok</h3>
+                <p style="font-size:12px; color:#49586B; margin:4px 0 0;">Update harga modal untuk stok yang masuk via mobile</p>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center;">
+                <span style="font-size:11px; color:#49586B; background:#F3F4F6; padding:4px 10px; border-radius:20px; font-family:monospace;">
+                    {{ ($stockInHistory ?? collect())->count() }} transaksi
+                </span>
+            </div>
+        </div>
+
+        @if($editStockInSuccess)
+        <div style="padding:12px; background:#D1FAE5; border:1px solid #A7F3D0; border-radius:8px; color:#059669; font-size:13px; margin-bottom:12px;">
+            ✓ {{ $editStockInSuccess }}
+        </div>
+        @endif
+
+        @if($editStockInError)
+        <div style="padding:12px; background:#FEE2E2; border:1px solid #FECACA; border-radius:8px; color:#DC2626; font-size:13px; margin-bottom:12px;">
+            ✗ {{ $editStockInError }}
+        </div>
+        @endif
+
+        <div style="display:flex; gap:12px; margin-bottom:12px;">
+            <div style="display:flex; align-items:center; gap:6px;">
+                <span style="width:8px; height:8px; border-radius:50%; background:#F59100; display:inline-block;"></span>
+                <span style="font-size:11px; color:#49586B;">Harga belum diisi</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px;">
+                <span style="width:8px; height:8px; border-radius:50%; background:#29A85A; display:inline-block;"></span>
+                <span style="font-size:11px; color:#49586B;">Harga sudah lengkap</span>
+            </div>
+        </div>
+
+        <div style="border:1px solid #D1DAE5; border-radius:12px; overflow:hidden;">
+            <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                <thead>
+                    <tr style="background:#F8F9FB;">
+                        <th style="padding:10px 16px; text-align:left; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:#49586B; border-bottom:1px solid #D1DAE5;">TANGGAL</th>
+                        <th style="padding:10px 16px; text-align:left; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:#49586B; border-bottom:1px solid #D1DAE5;">NO. REF</th>
+                        <th style="padding:10px 16px; text-align:left; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:#49586B; border-bottom:1px solid #D1DAE5;">ITEM</th>
+                        <th style="padding:10px 16px; text-align:right; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:#49586B; border-bottom:1px solid #D1DAE5;">QTY</th>
+                        <th style="padding:10px 16px; text-align:center; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:#49586B; border-bottom:1px solid #D1DAE5;">STATUS HARGA</th>
+                        <th style="padding:10px 16px; text-align:left; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:#49586B; border-bottom:1px solid #D1DAE5;">DIINPUT OLEH</th>
+                        <th style="padding:10px 16px; text-align:center; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:#49586B; border-bottom:1px solid #D1DAE5;">AKSI</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($stockInHistory ?? [] as $trx)
+                    <tr style="border-bottom:1px solid #F3F4F6; {{ $loop->last ? 'border-bottom:none;' : '' }}">
+                        <td style="padding:12px 16px; font-family:monospace; font-size:12px; color:#49586B;">
+                            {{ $trx->transaction_date?->timezone('Asia/Jakarta')->format('d M Y') ?? '—' }}
+                        </td>
+                        <td style="padding:12px 16px; font-family:monospace; font-size:12px; color:#070D1E; font-weight:600;">
+                            {{ $trx->transaction_number ?? '-' }}
+                        </td>
+                        <td style="padding:12px 16px;">
+                            @foreach($trx->items as $item)
+                            <div style="font-size:12px; font-weight:600; color:#070D1E;">{{ $item->item->item_name ?? '-' }}</div>
+                            <div style="font-size:11px; font-family:monospace; color:#49586B;">{{ $item->item->barcode ?? '-' }}</div>
+                            @endforeach
+                        </td>
+                        <td style="padding:12px 16px; text-align:right; font-family:monospace; font-weight:700; color:#070D1E;">
+                            {{ $trx->total_qty_received ?? $trx->items->sum('qty_received') }}
+                        </td>
+                        <td style="padding:12px 16px; text-align:center;">
+                            @if($trx->has_unpriced_items)
+                            <span style="background:#FEF3C7; color:#D97706; font-size:10px; font-weight:700; padding:3px 10px; border-radius:20px; letter-spacing:0.05em;">⚠ HARGA BELUM DIISI</span>
+                            @else
+                            <span style="background:#D1FAE5; color:#059669; font-size:10px; font-weight:700; padding:3px 10px; border-radius:20px; letter-spacing:0.05em;">✓ LENGKAP</span>
+                            @endif
+                        </td>
+                        <td style="padding:12px 16px; font-size:12px; color:#49586B;">{{ $trx->createdBy->name ?? '-' }}</td>
+                        <td style="padding:12px 16px; text-align:center;">
+                            <button wire:click="selectStockInForEdit('{{ $trx->id }}')" type="button"
+                                style="padding:6px 14px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; background:#070D1E; color:white; border:none; border-radius:6px; cursor:pointer;">
+                                EDIT HARGA
+                            </button>
+                        </td>
+                    </tr>
+
+                    @if($editingStockInId === $trx->id)
+                    <tr style="background:#F8F9FB;">
+                        <td colspan="7" style="padding:16px;">
+                            <div style="background:white; border:1px solid #D1DAE5; border-radius:10px; padding:16px;">
+                                <h4 style="font-size:13px; font-weight:700; color:#070D1E; margin:0 0 12px;">
+                                    Edit Harga — {{ $trx->items->first()?->item?->item_name }}
+                                </h4>
+                                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap:12px; align-items:end;">
+                                    <div>
+                                        <label style="font-size:10px; font-weight:700; color:#49586B; text-transform:uppercase; letter-spacing:0.08em; display:block; margin-bottom:6px;">Harga Modal (Rp)</label>
+                                        <input wire:model.lazy="editSupplierCost" wire:change="recalculateEditPrice" type="number" min="0" step="1000"
+                                            style="width:100%; padding:8px 12px; border:1px solid #D1DAE5; border-radius:8px; font-size:13px; box-sizing:border-box;">
+                                    </div>
+                                    <div>
+                                        <label style="font-size:10px; font-weight:700; color:#49586B; text-transform:uppercase; letter-spacing:0.08em; display:block; margin-bottom:6px;">Tipe Margin</label>
+                                        <select wire:model="editMarginType" wire:change="recalculateEditPrice"
+                                            style="width:100%; padding:8px 12px; border:1px solid #D1DAE5; border-radius:8px; font-size:13px; box-sizing:border-box; background:white;">
+                                            <option value="percentage">Persentase (%)</option>
+                                            <option value="nominal">Nominal (Rp)</option>
+                                            <option value="none">Tanpa Margin</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style="font-size:10px; font-weight:700; color:#49586B; text-transform:uppercase; letter-spacing:0.08em; display:block; margin-bottom:6px;">Nilai Margin</label>
+                                        <input wire:model.lazy="editMarginValue" wire:change="recalculateEditPrice" type="number" min="0"
+                                            style="width:100%; padding:8px 12px; border:1px solid #D1DAE5; border-radius:8px; font-size:13px; box-sizing:border-box;">
+                                    </div>
+                                    <div>
+                                        <label style="font-size:10px; font-weight:700; color:#49586B; text-transform:uppercase; letter-spacing:0.08em; display:block; margin-bottom:6px;">Harga Jual Dasar (Auto)</label>
+                                        <div style="padding:8px 12px; background:#F3F4F6; border:1px solid #D1DAE5; border-radius:8px; font-size:13px; font-family:monospace; font-weight:700; color:#070D1E;">
+                                            Rp {{ number_format($editCalculatedPrice, 0, ',', '.') }}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="margin-top:12px;">
+                                    <label style="font-size:10px; font-weight:700; color:#49586B; text-transform:uppercase; letter-spacing:0.08em; display:block; margin-bottom:6px;">Catatan QC</label>
+                                    <input wire:model="editQcNote" type="text" placeholder="Opsional"
+                                        style="width:100%; padding:8px 12px; border:1px solid #D1DAE5; border-radius:8px; font-size:13px; box-sizing:border-box;">
+                                </div>
+                                <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+                                    <button wire:click="cancelStockInPriceEdit" type="button"
+                                        style="padding:8px 16px; border:1px solid #D1DAE5; border-radius:8px; font-size:12px; font-weight:700; background:white; cursor:pointer; color:#49586B; text-transform:uppercase;">
+                                        BATAL
+                                    </button>
+                                    <button wire:click="saveStockInPrice" type="button"
+                                        style="padding:8px 20px; background:#070D1E; color:white; border:none; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; text-transform:uppercase;">
+                                        SIMPAN HARGA
+                                    </button>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    @endif
+
+                    @empty
+                    <tr>
+                        <td colspan="7" style="padding:32px; text-align:center; color:#49586B; font-size:13px;">
+                            Belum ada riwayat penambahan stok.
+                        </td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
     </div>
     @endif
 
