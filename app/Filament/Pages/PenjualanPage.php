@@ -2,6 +2,8 @@
 
 namespace App\Filament\Pages;
 
+use App\Helpers\FormatHelper;
+
 use App\Enums\PaymentMethod;
 use App\Models\SalesItem;
 use App\Models\SalesTransaction;
@@ -211,12 +213,8 @@ class PenjualanPage extends Page implements HasTable
 
     public static function formatRupiah(float $amount, bool $compact = false): string
     {
-        if ($compact && $amount >= 1_000_000) {
-            return 'Rp '.number_format($amount / 1_000_000, 1, ',', '.').'M';
-        }
-
-        if ($compact && $amount >= 1_000) {
-            return 'Rp '.number_format($amount / 1_000, 0, ',', '.').'k';
+        if ($compact) {
+            return FormatHelper::price($amount);
         }
 
         return 'Rp '.number_format($amount, 0, ',', '.');

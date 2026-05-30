@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Helpers\FormatHelper;
 use App\Services\ReportService;
 use Filament\Support\Enums\IconPosition;
 use Filament\Widgets\StatsOverviewWidget;
@@ -29,7 +30,7 @@ class DashboardStatsWidget extends StatsOverviewWidget
                 ->descriptionIcon('heroicon-m-archive-box', IconPosition::Before)
                 ->icon('heroicon-m-archive-box')
                 ->extraAttributes(['class' => 'aksana-stat-card']),
-            Stat::make('Omzet Hari Ini', $this->formatRupiah($summary['todays_sales']))
+            Stat::make('Omzet Hari Ini', FormatHelper::price($summary['todays_sales']))
                 ->description($summary['todays_transactions'].' transaksi hari ini')
                 ->descriptionIcon('heroicon-m-banknotes', IconPosition::Before)
                 ->icon('heroicon-m-banknotes')
@@ -44,10 +45,5 @@ class DashboardStatsWidget extends StatsOverviewWidget
                     'class' => $lowStockCritical ? 'aksana-stat-card aksana-stat-danger' : 'aksana-stat-card',
                 ]),
         ];
-    }
-
-    private function formatRupiah(float $amount): string
-    {
-        return 'Rp '.number_format($amount, 0, ',', '.');
     }
 }

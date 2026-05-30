@@ -46,7 +46,7 @@
             </div>
             <div class="bg-white border border-gray-200 rounded-lg p-4">
                 <p class="text-xs font-bold uppercase tracking-widest text-gray-400">NILAI INVENTORY</p>
-                <p class="text-3xl font-bold font-mono mt-1">Rp {{ number_format(($totalCapitalValue ?? 0)/1000000, 1) }}M</p>
+                <p class="text-3xl font-bold font-mono mt-1">{{ \App\Helpers\FormatHelper::price($totalCapitalValue ?? 0) }}</p>
                 <p class="text-xs font-mono text-gray-400 mt-1">harga modal</p>
             </div>
             <div class="bg-white border border-gray-200 rounded-lg p-4">
@@ -505,33 +505,40 @@
                 wire:click="toggleCostView"
                 class="px-3 py-1.5 text-xs font-bold uppercase tracking-wide rounded border
                     {{ $showCost ? 'bg-gray-900 text-white border-gray-900' : 'border-gray-300 text-gray-600 hover:bg-gray-50' }}">
-                {{ $showCost ? '🔒 Sembunyikan Modal' : '👁 Lihat Harga Modal' }}
+                {{ $showCost ? '🔒 Sembunyikan Modal & Margin' : '👁 Lihat Harga Modal & Margin' }}
             </button>
             @endif
         </div>
 
         {{-- Password modal for cost view --}}
         @if($showPasswordModal)
-        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div class="bg-white rounded-lg p-6 w-80 shadow-xl">
-                <h3 class="font-bold text-sm mb-1">Verifikasi Identitas</h3>
-                <p class="text-xs text-gray-400 mb-4">Masukkan password untuk melihat harga modal</p>
+        <div class="fixed inset-0 z-50 flex items-center justify-center" style="background: rgba(0,0,0,0.5);">
+            <div class="bg-white rounded-xl p-6 w-full max-w-sm mx-4 shadow-2xl" style="z-index: 9999;">
+                <h3 class="font-bold text-base mb-1">Verifikasi Identitas</h3>
+                <p class="text-xs text-gray-400 mb-4">
+                    Masukkan password untuk melihat harga modal dan margin
+                </p>
                 <input
                     type="password"
                     wire:model="costPassword"
+                    wire:keydown.enter="verifyCostPassword"
                     placeholder="Password"
-                    class="w-full border border-gray-300 rounded px-3 py-2 text-sm mb-3 focus:outline-none focus:border-gray-900">
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm mb-3 focus:outline-none focus:border-gray-900">
                 @if($passwordError)
                 <p class="text-xs text-red-500 mb-3">{{ $passwordError }}</p>
                 @endif
-                <div class="flex gap-2">
-                    <button wire:click="verifyCostPassword"
-                        class="flex-1 bg-gray-900 text-white text-xs font-bold py-2 rounded uppercase tracking-wide">
-                        Verifikasi
-                    </button>
-                    <button wire:click="cancelCostView"
-                        class="flex-1 border border-gray-300 text-xs font-bold py-2 rounded uppercase tracking-wide">
+                <div class="grid grid-cols-2 gap-2">
+                    <button
+                        wire:click="cancelCostView"
+                        type="button"
+                        class="w-full border border-gray-300 text-sm font-semibold py-2.5 rounded-lg hover:bg-gray-50 transition-colors">
                         Batal
+                    </button>
+                    <button
+                        wire:click="verifyCostPassword"
+                        type="button"
+                        class="w-full bg-gray-900 text-white text-sm font-semibold py-2.5 rounded-lg hover:opacity-90 transition-opacity">
+                        Verifikasi
                     </button>
                 </div>
             </div>
@@ -547,7 +554,9 @@
                     <th class="px-4 py-2 text-right text-xs font-bold uppercase tracking-wide text-gray-400">MODAL</th>
                     @endif
                     <th class="px-4 py-2 text-right text-xs font-bold uppercase tracking-wide text-gray-400">HARGA JUAL DASAR</th>
+                    @if($showCost)
                     <th class="px-4 py-2 text-right text-xs font-bold uppercase tracking-wide text-gray-400">MARGIN</th>
+                    @endif
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
@@ -557,18 +566,20 @@
                     <td class="px-4 py-3 font-mono text-xs text-gray-500">{{ $item->barcode }}</td>
                     @if($showCost)
                     <td class="px-4 py-3 text-right font-mono text-xs text-gray-500">
-                        Rp {{ number_format($item->latest_supplier_cost) }}
+                        {{ \App\Helpers\FormatHelper::price($item->latest_supplier_cost) }}
                     </td>
                     @endif
                     <td class="px-4 py-3 text-right font-mono text-xs font-bold">
-                        Rp {{ number_format($item->latest_base_selling_price) }}
+                        {{ \App\Helpers\FormatHelper::price($item->latest_base_selling_price) }}
                     </td>
+                    @if($showCost)
                     <td class="px-4 py-3 text-right text-xs font-bold text-green-600">
                         ↗ {{ $this->itemMarginPercent($item) }}%
                     </td>
+                    @endif
                 </tr>
                 @empty
-                <tr><td colspan="5" class="px-4 py-8 text-center text-gray-400 text-sm">Belum ada data harga.</td></tr>
+                <tr><td colspan="{{ $showCost ? 5 : 3 }}" class="px-4 py-8 text-center text-gray-400 text-sm">Belum ada data harga.</td></tr>
                 @endforelse
             </tbody>
         </table>

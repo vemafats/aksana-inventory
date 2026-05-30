@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Helpers\FormatHelper;
 use App\Services\ReportService;
 use Filament\Pages\Page;
 
@@ -45,6 +46,6 @@ class LaporanGrossProfitPage extends Page
 
     public static function formatRupiah(float $amount): string
     {
-        return 'Rp '.number_format($amount, 0, ',', '.');
+        return FormatHelper::price($amount);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Helpers\FormatHelper;
 use App\Services\ReportService;
 use Filament\Pages\Page;
 use Illuminate\Support\Collection;
@@ -43,6 +44,6 @@ class LaporanPenjualanPage extends Page
 
     public static function formatRupiah(float $amount): string
     {
-        return 'Rp '.number_format($amount, 0, ',', '.');
+        return FormatHelper::price($amount);
     }
 }
