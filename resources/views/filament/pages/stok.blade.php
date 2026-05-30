@@ -512,32 +512,39 @@
 
         {{-- Password modal for cost view --}}
         @if($showPasswordModal)
-        <div class="fixed inset-0 z-50 flex items-center justify-center" style="background: rgba(0,0,0,0.5);">
-            <div class="bg-white rounded-xl p-6 w-full max-w-sm mx-4 shadow-2xl" style="z-index: 9999;">
-                <h3 class="font-bold text-base mb-1">Verifikasi Identitas</h3>
-                <p class="text-xs text-gray-400 mb-4">
+        <div style="position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.5);">
+            <div style="background: white; border-radius: 12px; padding: 24px; width: 100%; max-width: 360px; margin: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+                <h3 style="font-weight: 700; font-size: 15px; margin: 0 0 4px 0; color: #070D1E;">
+                    Verifikasi Identitas
+                </h3>
+                <p style="font-size: 12px; color: #49586B; margin: 0 0 16px 0;">
                     Masukkan password untuk melihat harga modal dan margin
                 </p>
+
                 <input
                     type="password"
                     wire:model="costPassword"
                     wire:keydown.enter="verifyCostPassword"
                     placeholder="Password"
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm mb-3 focus:outline-none focus:border-gray-900">
+                    style="width: 100%; box-sizing: border-box; border: 1px solid #d1d5db; border-radius: 8px; padding: 10px 12px; font-size: 14px; margin-bottom: 8px; outline: none;">
+
                 @if($passwordError)
-                <p class="text-xs text-red-500 mb-3">{{ $passwordError }}</p>
+                <p style="color: #F04040; font-size: 12px; margin: 0 0 8px 0;">
+                    {{ $passwordError }}
+                </p>
                 @endif
-                <div class="grid grid-cols-2 gap-2">
+
+                <div style="display: flex; gap: 8px; margin-top: 8px;">
                     <button
                         wire:click="cancelCostView"
                         type="button"
-                        class="w-full border border-gray-300 text-sm font-semibold py-2.5 rounded-lg hover:bg-gray-50 transition-colors">
+                        style="flex: 1; padding: 10px 0; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; font-weight: 600; background: white; cursor: pointer; color: #49586B;">
                         Batal
                     </button>
                     <button
                         wire:click="verifyCostPassword"
                         type="button"
-                        class="w-full bg-gray-900 text-white text-sm font-semibold py-2.5 rounded-lg hover:opacity-90 transition-opacity">
+                        style="flex: 1; padding: 10px 0; border-radius: 8px; font-size: 13px; font-weight: 600; color: white; background: #070D1E; cursor: pointer; border: none;">
                         Verifikasi
                     </button>
                 </div>
