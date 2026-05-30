@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\LocationStatus;
 use App\Enums\StockStatus;
+use App\Models\Employee;
 use App\Models\Item;
 use App\Models\Location;
 use App\Models\LocationAssignment;
@@ -115,7 +116,13 @@ class SalesService
     public function createTransaction(array $data, User $createdBy): SalesTransaction
     {
         $location = $this->validateLocation($data['location_id']);
-        $this->validateEmployeeAssignment($data['employee_id'], $location->id);
+        $employeeId = $this->resolveEmployeeId($data, $createdBy);
+        $data['employee_id'] = $employeeId;
+
+        if ($employeeId !== null) {
+            $this->validateEmployeeAssignment($employeeId, $location->id);
+        }
+
         $this->validateStock($data['items'], $location->id);
 
         return DB::transaction(function () use ($data, $createdBy, $location): SalesTransaction {
@@ -222,6 +229,24 @@ class SalesService
         }
 
         return (float) $item->latest_base_selling_price;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function resolveEmployeeId(array $data, User $createdBy): ?string
+    {
+        if (! empty($data['employee_id'])) {
+            return $data['employee_id'];
+        }
+
+        return Employee::query()
+            ->where('is_active', true)
+            ->where(function ($query) use ($createdBy): void {
+                $query->where('name', $createdBy->name)
+                    ->orWhere('email', $createdBy->email);
+            })
+            ->value('id');
     }
 
     /**

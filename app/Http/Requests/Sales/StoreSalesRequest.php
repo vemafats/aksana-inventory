@@ -18,7 +18,7 @@ class StoreSalesRequest extends FormRequest
     {
         return [
             'location_id' => ['required', 'uuid', 'exists:locations,id'],
-            'employee_id' => ['required', 'uuid', 'exists:employees,id'],
+            'employee_id' => ['nullable', 'uuid', 'exists:employees,id'],
             'transaction_date' => ['required', 'date'],
             'payment_method' => ['required', 'in:cash,qris,transfer'],
             'note' => ['nullable', 'string'],

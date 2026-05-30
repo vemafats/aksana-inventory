@@ -3,8 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../core/auth/auth_provider.dart';
@@ -23,25 +21,18 @@ class ScanScreen extends ConsumerStatefulWidget {
   ConsumerState<ScanScreen> createState() => _ScanScreenState();
 }
 
-class _ScanScreenState extends ConsumerState<ScanScreen>
-    with SingleTickerProviderStateMixin {
-  MobileScannerController? _scannerController;
-  late AnimationController _scanLineController;
-  bool _scanLocked = false;
-  final _manualBarcodeController = TextEditingController();
+class _ScanScreenState extends ConsumerState<ScanScreen> {
+  MobileScannerController? _controller;
+  bool _isProcessing = false;
 
   @override
   void initState() {
     super.initState();
-    _scanLineController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2200),
-    )..repeat(reverse: true);
-
     if (!kIsWeb) {
-      _scannerController = MobileScannerController(
+      _controller = MobileScannerController(
         detectionSpeed: DetectionSpeed.noDuplicates,
         facing: CameraFacing.back,
+        torchEnabled: false,
         formats: const [BarcodeFormat.qrCode],
       );
     }
@@ -49,9 +40,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
 
   @override
   void dispose() {
-    _scanLineController.dispose();
-    _scannerController?.dispose();
-    _manualBarcodeController.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
@@ -66,10 +55,10 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
         }
       }
     }
-    return 'TERMINAL_04';
+    return widget.selectionMode ? 'PILIH ITEM' : 'TERMINAL_04';
   }
 
-  String? _extractBarcodeValue(BarcodeCapture capture) {
+  String? _extractBarcode(BarcodeCapture capture) {
     for (final barcode in capture.barcodes) {
       final value = barcode.rawValue ?? barcode.displayValue;
       if (value != null && value.trim().isNotEmpty) {
@@ -79,87 +68,63 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
     return null;
   }
 
-  void _handleBarcodeCapture(BarcodeCapture capture) {
-    debugPrint(
-      '[Scan] onDetect fired — ${capture.barcodes.length} barcode(s)',
-    );
+  Future<void> _onBarcodeDetected(BarcodeCapture capture) async {
+    if (_isProcessing) return;
 
-    for (final barcode in capture.barcodes) {
-      debugPrint(
-        '[Scan] format=${barcode.format} '
-        'raw=${barcode.rawValue} display=${barcode.displayValue}',
-      );
-    }
-
-    final value = _extractBarcodeValue(capture);
-    if (value == null) {
-      debugPrint('[Scan] No usable barcode value in capture');
+    final barcode = _extractBarcode(capture);
+    if (barcode == null) {
+      debugPrint('[Scan] onDetect fired but no usable barcode value');
       return;
     }
 
-    debugPrint('[Scan] Using barcode value: $value');
-    _onBarcodeDetected(value);
-  }
-
-  Future<void> _onBarcodeDetected(String barcode) async {
-    if (_scanLocked || ref.read(isLoadingProvider)) {
-      debugPrint('[Scan] Ignored duplicate detect while busy');
-      return;
-    }
+    debugPrint('[Scan] Barcode detected: $barcode');
 
     final apiClient = ref.read(apiClientProvider);
     final token = await apiClient.getToken();
     if (token == null || token.isEmpty) {
-      debugPrint('[Scan] No auth token — redirecting to login');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Sesi berakhir. Silakan login kembali.'),
-            backgroundColor: AppColors.danger,
-          ),
-        );
-        context.go('/login');
-      }
+      debugPrint('[Scan] No auth token');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Sesi berakhir. Silakan login kembali.'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+      context.go('/login');
       return;
     }
 
-    _scanLocked = true;
-    ref.read(scanResultProvider.notifier).state = null;
-    ref.read(scanErrorProvider.notifier).state = null;
-    ref.read(isLoadingProvider.notifier).state = true;
+    setState(() => _isProcessing = true);
+    ref.read(scanProcessingProvider.notifier).state = true;
+    await _controller?.stop();
 
-    await _scannerController?.stop();
-    debugPrint('[Scan] Looking up barcode via API: $barcode');
+    ref.read(scanLoadingProvider.notifier).state = true;
+    ref.read(scanErrorProvider.notifier).state = null;
+    ref.read(scanResultProvider.notifier).state = null;
 
     try {
-      final dio = apiClient.dio;
-      final item = await ref
+      final result = await ref
           .read(scanServiceProvider)
-          .findByBarcode(barcode.trim(), dio);
+          .findByBarcode(barcode, apiClient.dio);
 
       if (!mounted) return;
 
-      if (item == null) {
-        debugPrint('[Scan] API returned 404 — barcode not found');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Barcode tidak ditemukan'),
-            backgroundColor: AppColors.danger,
-          ),
-        );
+      if (result == null) {
+        debugPrint('[Scan] Barcode not found: $barcode');
+        ref.read(scanErrorProvider.notifier).state =
+            'Barcode tidak ditemukan. Buat katalog dulu di web admin.';
+        await _resetScan(restartCamera: true);
       } else if (widget.selectionMode) {
-        debugPrint('[Scan] Selection mode — returning item: ${item['item_name']}');
-        context.pop(item);
+        debugPrint('[Scan] Selection mode — returning item');
+        context.pop(result);
       } else {
-        debugPrint('[Scan] Success — showing result card: ${item['item_name']}');
-        ref.read(scanResultProvider.notifier).state = item;
+        debugPrint('[Scan] Success — ${result['item_name']}');
+        ref.read(scanResultProvider.notifier).state = result;
+        setState(() => _isProcessing = false);
+        ref.read(scanProcessingProvider.notifier).state = false;
       }
     } on DioException catch (e) {
-      debugPrint(
-        '[Scan] DioException status=${e.response?.statusCode} '
-        'message=${e.message} data=${e.response?.data}',
-      );
-
+      debugPrint('[Scan] API error: ${e.response?.statusCode} ${e.message}');
       if (!mounted) return;
 
       if (e.response?.statusCode == 401) {
@@ -174,37 +139,31 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            e.response?.data is Map &&
-                    (e.response!.data as Map)['message'] != null
-                ? (e.response!.data as Map)['message'].toString()
-                : 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.',
-          ),
-          backgroundColor: AppColors.danger,
-        ),
-      );
-    } catch (e, stack) {
-      debugPrint('[Scan] Unexpected error: $e\n$stack');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Terjadi kesalahan: $e'),
-            backgroundColor: AppColors.danger,
-          ),
-        );
-      }
+      ref.read(scanErrorProvider.notifier).state =
+          'Gagal memuat data: ${e.message ?? e.toString()}';
+      await _resetScan(restartCamera: true);
+    } catch (e) {
+      debugPrint('[Scan] Unexpected error: $e');
+      if (!mounted) return;
+      ref.read(scanErrorProvider.notifier).state =
+          'Gagal memuat data: ${e.toString()}';
+      await _resetScan(restartCamera: true);
     } finally {
-      ref.read(isLoadingProvider.notifier).state = false;
+      ref.read(scanLoadingProvider.notifier).state = false;
+    }
+  }
 
-      if (mounted && !widget.selectionMode) {
-        await _scannerController?.start();
-      }
+  Future<void> _resetScan({bool restartCamera = true}) async {
+    ref.read(scanResultProvider.notifier).state = null;
+    ref.read(scanErrorProvider.notifier).state = null;
+    ref.read(scanProcessingProvider.notifier).state = false;
 
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) _scanLocked = false;
-      });
+    if (mounted) {
+      setState(() => _isProcessing = false);
+    }
+
+    if (restartCamera && !kIsWeb && _controller != null) {
+      await _controller!.start();
     }
   }
 
@@ -212,13 +171,15 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
   Widget build(BuildContext context) {
     final auth = ref.watch(authProvider);
     final scanResult = ref.watch(scanResultProvider);
-    final isLoading = ref.watch(isLoadingProvider);
+    final isLoading = ref.watch(scanLoadingProvider);
+    final scanError = ref.watch(scanErrorProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: widget.selectionMode
           ? AppBar(
               backgroundColor: AppColors.background,
+              elevation: 0,
               leading: IconButton(
                 icon: const Icon(Icons.close, color: AppColors.voidBlack),
                 onPressed: () => context.pop(),
@@ -228,66 +189,211 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
       body: SafeArea(
         top: !widget.selectionMode,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
           child: SingleChildScrollView(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 ScreenHeader(
-                  backLabel: widget.selectionMode
-                      ? 'PILIH ITEM'
-                      : _locationBackLabel(auth.user),
+                  backLabel: _locationBackLabel(auth.user),
                   title: widget.selectionMode ? 'Scan Item' : 'Quick Scan',
                 ),
-                const SizedBox(height: 20),
-                _CameraView(
-                  isLoading: isLoading,
-                  scanLineAnimation: _scanLineController,
-                  scannerController: _scannerController,
-                  onCapture: _handleBarcodeCapture,
+                const SizedBox(height: 16),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: SizedBox(
+                    height: 260,
+                    width: double.infinity,
+                    child: kIsWeb || _controller == null
+                        ? ColoredBox(
+                            color: AppColors.cameraBg,
+                            child: Center(
+                              child: Icon(
+                                Icons.qr_code_2,
+                                size: 64,
+                                color: Colors.white.withValues(alpha: 0.3),
+                              ),
+                            ),
+                          )
+                        : Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              MobileScanner(
+                                controller: _controller!,
+                                fit: BoxFit.cover,
+                                onDetect: _onBarcodeDetected,
+                              ),
+                              Positioned(
+                                top: 12,
+                                left: 12,
+                                child: _corner(topLeft: true),
+                              ),
+                              Positioned(
+                                top: 12,
+                                right: 12,
+                                child: _corner(topRight: true),
+                              ),
+                              Positioned(
+                                bottom: 12,
+                                left: 12,
+                                child: _corner(bottomLeft: true),
+                              ),
+                              Positioned(
+                                bottom: 12,
+                                right: 12,
+                                child: _corner(bottomRight: true),
+                              ),
+                              Positioned(
+                                top: 12,
+                                left: 36,
+                                child: Text(
+                                  'CAMERA_ACTIVE',
+                                  style: AppTextStyles.monoMuted.copyWith(
+                                    color: Colors.white.withValues(alpha: 0.5),
+                                    fontSize: 9,
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                bottom: 12,
+                                right: 36,
+                                child: Text(
+                                  'scanning...',
+                                  style: AppTextStyles.monoMuted.copyWith(
+                                    color: AppColors.success,
+                                    fontSize: 9,
+                                  ),
+                                ),
+                              ),
+                              if (isLoading)
+                                ColoredBox(
+                                  color: Colors.black.withValues(alpha: 0.5),
+                                  child: const Center(
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                  ),
                 ),
-                if (widget.selectionMode && kIsWeb) ...[
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _manualBarcodeController,
-                          style: AppTextStyles.mono,
-                          decoration: InputDecoration(
-                            hintText: 'Masukkan barcode',
-                            hintStyle: AppTextStyles.monoMuted,
-                            filled: true,
-                            fillColor: AppColors.card,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide:
-                                  const BorderSide(color: AppColors.border),
+                const SizedBox(height: 16),
+                if (scanError != null)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.danger.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: AppColors.danger.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          color: AppColors.danger,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            scanError,
+                            style: AppTextStyles.cardSubtitle.copyWith(
+                              color: AppColors.danger,
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      SizedBox(
-                        height: 48,
-                        child: ElevatedButton(
-                          onPressed: isLoading
-                              ? null
-                              : () => _onBarcodeDetected(
-                                    _manualBarcodeController.text,
-                                  ),
-                          style: ElevatedButton.styleFrom(
-                            minimumSize: const Size(72, 48),
-                          ),
-                          child: const Text('CARI'),
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 16),
+                          onPressed: () {
+                            ref.read(scanErrorProvider.notifier).state = null;
+                          },
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ],
                 if (!widget.selectionMode && scanResult != null) ...[
-                  const SizedBox(height: 16),
-                  _ResultCard(item: scanResult, ref: ref),
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.card,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                scanResult['item_name']?.toString() ?? '-',
+                                style: AppTextStyles.cardTitle,
+                              ),
+                            ),
+                            Text(
+                              'Rp ${_formatPrice(scanResult['latest_base_selling_price'])}',
+                              style: AppTextStyles.monoBold,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'SKU ${scanResult['barcode'] ?? '-'} · STOK: ${_getTotalStock(scanResult)}',
+                          style: AppTextStyles.monoMuted,
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  ref
+                                      .read(salesCartProvider.notifier)
+                                      .addItem(scanResult);
+                                  context.go('/sales');
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  minimumSize: const Size(double.infinity, 52),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: Text(
+                                  'JUAL',
+                                  style: AppTextStyles.buttonPrimary,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () => _resetScan(restartCamera: true),
+                                style: OutlinedButton.styleFrom(
+                                  minimumSize: const Size(double.infinity, 52),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  side: const BorderSide(color: AppColors.border),
+                                ),
+                                child: Text(
+                                  'SCAN LAGI',
+                                  style: AppTextStyles.buttonPrimary.copyWith(
+                                    color: AppColors.voidBlack,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ],
             ),
@@ -296,318 +402,97 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
       ),
     );
   }
-}
 
-class _CameraView extends StatelessWidget {
-  final bool isLoading;
-  final AnimationController scanLineAnimation;
-  final MobileScannerController? scannerController;
-  final ValueChanged<BarcodeCapture> onCapture;
-
-  const _CameraView({
-    required this.isLoading,
-    required this.scanLineAnimation,
-    required this.scannerController,
-    required this.onCapture,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: SizedBox(
-        height: 280,
-        width: double.infinity,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (kIsWeb)
-              const _WebCameraPlaceholder()
-            else
-              MobileScanner(
-                controller: scannerController,
-                fit: BoxFit.cover,
-                onDetect: onCapture,
-              ),
-            const _CameraOverlay(),
-            _AnimatedScanLine(animation: scanLineAnimation),
-            if (isLoading)
-              Container(
-                color: Colors.black54,
-                child: const Center(
-                  child: CircularProgressIndicator(
-                    color: AppColors.scanLine,
-                    strokeWidth: 2,
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _WebCameraPlaceholder extends StatelessWidget {
-  const _WebCameraPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return ColoredBox(
-      color: AppColors.cameraBg,
-      child: Center(
-        child: Icon(
-          Icons.qr_code_2,
-          size: 64,
-          color: Colors.white.withValues(alpha: 0.3),
-        ),
-      ),
-    );
-  }
-}
-
-class _CameraOverlay extends StatelessWidget {
-  const _CameraOverlay();
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Positioned(
-          top: 12,
-          left: 12,
-          child: Text(
-            'CAMERA_ACTIVE',
-            style: GoogleFonts.ibmPlexMono(
-              fontSize: 9,
-              fontWeight: FontWeight.w400,
-              color: Colors.white.withValues(alpha: 0.4),
-            ),
-          ),
-        ),
-        Positioned(
-          bottom: 12,
-          right: 12,
-          child: Text(
-            'scanning...',
-            style: GoogleFonts.ibmPlexMono(
-              fontSize: 9,
-              fontWeight: FontWeight.w400,
-              color: AppColors.scanLine,
-            ),
-          ),
-        ),
-        const _CornerBrackets(),
-      ],
-    );
-  }
-}
-
-class _CornerBrackets extends StatelessWidget {
-  const _CornerBrackets();
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Positioned(top: 16, left: 16, child: _bracket(true, true)),
-        Positioned(top: 16, right: 16, child: _bracket(true, false)),
-        Positioned(bottom: 16, left: 16, child: _bracket(false, true)),
-        Positioned(bottom: 16, right: 16, child: _bracket(false, false)),
-      ],
-    );
+  String _formatPrice(dynamic price) {
+    if (price == null) return '0';
+    final num p = num.tryParse(price.toString()) ?? 0;
+    if (p >= 1000000) return '${(p / 1000000).toStringAsFixed(1)}M';
+    if (p >= 1000) return '${(p / 1000).toStringAsFixed(0)}k';
+    return p.toStringAsFixed(0);
   }
 
-  Widget _bracket(bool top, bool left) {
+  int _getTotalStock(Map<String, dynamic> item) {
+    final summary = item['stock_summary'];
+    if (summary is Map && summary['total_available'] != null) {
+      return int.tryParse(summary['total_available'].toString()) ?? 0;
+    }
+
+    final balances = item['stock_balances'] as List? ?? [];
+    return balances.fold<int>(0, (sum, balance) {
+      if (balance is! Map) return sum;
+      final status = balance['stock_status']?.toString();
+      if (status == 'available') {
+        return sum + (int.tryParse(balance['qty'].toString()) ?? 0);
+      }
+      return sum;
+    });
+  }
+
+  Widget _corner({
+    bool topLeft = false,
+    bool topRight = false,
+    bool bottomLeft = false,
+    bool bottomRight = false,
+  }) {
     return SizedBox(
       width: 20,
       height: 20,
       child: CustomPaint(
-        painter: _BracketPainter(top: top, left: left),
+        painter: _CornerPainter(
+          topLeft: topLeft,
+          topRight: topRight,
+          bottomLeft: bottomLeft,
+          bottomRight: bottomRight,
+        ),
       ),
     );
   }
 }
 
-class _BracketPainter extends CustomPainter {
-  final bool top;
-  final bool left;
+class _CornerPainter extends CustomPainter {
+  final bool topLeft;
+  final bool topRight;
+  final bool bottomLeft;
+  final bool bottomRight;
 
-  _BracketPainter({required this.top, required this.left});
+  _CornerPainter({
+    this.topLeft = false,
+    this.topRight = false,
+    this.bottomLeft = false,
+    this.bottomRight = false,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.3)
+      ..color = Colors.white.withValues(alpha: 0.5)
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke;
 
     final path = Path();
-    if (top && left) {
-      path.moveTo(0, size.height);
+    if (topLeft) {
+      path.moveTo(0, size.height * 0.6);
       path.lineTo(0, 0);
+      path.lineTo(size.width * 0.6, 0);
+    }
+    if (topRight) {
+      path.moveTo(size.width * 0.4, 0);
       path.lineTo(size.width, 0);
-    } else if (top && !left) {
-      path.moveTo(0, 0);
-      path.lineTo(size.width, 0);
-      path.lineTo(size.width, size.height);
-    } else if (!top && left) {
-      path.moveTo(0, 0);
+      path.lineTo(size.width, size.height * 0.6);
+    }
+    if (bottomLeft) {
+      path.moveTo(0, size.height * 0.4);
       path.lineTo(0, size.height);
+      path.lineTo(size.width * 0.6, size.height);
+    }
+    if (bottomRight) {
+      path.moveTo(size.width * 0.4, size.height);
       path.lineTo(size.width, size.height);
-    } else {
-      path.moveTo(size.width, 0);
-      path.lineTo(size.width, size.height);
-      path.lineTo(0, size.height);
+      path.lineTo(size.width, size.height * 0.4);
     }
     canvas.drawPath(path, paint);
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class _AnimatedScanLine extends StatelessWidget {
-  final AnimationController animation;
-
-  const _AnimatedScanLine({required this.animation});
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: animation,
-      builder: (context, child) {
-        return Align(
-          alignment: Alignment(0, -1 + 2 * animation.value),
-          child: Container(
-            height: 2,
-            margin: const EdgeInsets.symmetric(horizontal: 32),
-            decoration: BoxDecoration(
-              color: AppColors.scanLine,
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.scanLine.withValues(alpha: 0.55),
-                  blurRadius: 10,
-                  spreadRadius: 1,
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _ResultCard extends StatelessWidget {
-  final Map<String, dynamic> item;
-  final WidgetRef ref;
-
-  const _ResultCard({required this.item, required this.ref});
-
-  String get _name => item['item_name']?.toString() ?? '—';
-  String get _barcode => item['barcode']?.toString() ?? '—';
-
-  int get _qty {
-    final summary = item['stock_summary'];
-    if (summary is Map) {
-      return (summary['total_available'] as num?)?.toInt() ?? 0;
-    }
-    return 0;
-  }
-
-  String get _priceLabel {
-    final raw = item['bazar_selling_price'] ?? item['latest_base_selling_price'];
-    if (raw == null) return '—';
-    final price = (raw as num).toDouble();
-    return NumberFormat.currency(
-      locale: 'id_ID',
-      symbol: 'Rp ',
-      decimalDigits: 0,
-    ).format(price);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  _name,
-                  style: AppTextStyles.cardTitle.copyWith(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(_priceLabel, style: AppTextStyles.monoBold),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'SKU $_barcode · STOK: ${AppColors.formatQty(_qty)}',
-            style: AppTextStyles.monoMuted,
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: SizedBox(
-                  height: 44,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      ref.read(salesCartProvider.notifier).addItem(item);
-                      context.go('/sales');
-                    },
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(0, 44),
-                    ),
-                    child: Text('JUAL', style: AppTextStyles.buttonPrimary),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: SizedBox(
-                  height: 44,
-                  child: OutlinedButton(
-                    onPressed: () {
-                      context.push('/stock/check', extra: item);
-                    },
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.voidBlack,
-                      side: const BorderSide(color: AppColors.border),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      textStyle: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.5,
-                      ),
-                    ),
-                    child: const Text('DETAIL'),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+  bool shouldRepaint(_CornerPainter old) => false;
 }

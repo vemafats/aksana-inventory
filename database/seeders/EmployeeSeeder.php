@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Models\Employee;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
 
 class EmployeeSeeder extends Seeder
 {
@@ -15,19 +14,19 @@ class EmployeeSeeder extends Seeder
                 'employee_code' => 'EMP001',
                 'name' => 'Agus Wijaya',
                 'phone' => '081234567890',
-                'email' => 'agus@aksana.id',
+                'email' => 'gudang@aksana.id',
             ],
             [
                 'employee_code' => 'EMP002',
                 'name' => 'Rina Kusuma',
                 'phone' => '081234567891',
-                'email' => 'rina@aksana.id',
+                'email' => 'picbazar@aksana.id',
             ],
             [
                 'employee_code' => 'EMP003',
                 'name' => 'Doni Pratama',
                 'phone' => '081234567892',
-                'email' => 'doni@aksana.id',
+                'email' => 'sales@aksana.id',
             ],
             [
                 'employee_code' => 'EMP004',
@@ -38,15 +37,14 @@ class EmployeeSeeder extends Seeder
         ];
 
         foreach ($employees as $employee) {
-            Employee::firstOrCreate(
+            Employee::updateOrCreate(
                 ['employee_code' => $employee['employee_code']],
                 [
-                    'id' => (string) Str::uuid(),
                     'name' => $employee['name'],
                     'phone' => $employee['phone'],
                     'email' => $employee['email'],
                     'is_active' => true,
-                ]
+                ],
             );
         }
     }

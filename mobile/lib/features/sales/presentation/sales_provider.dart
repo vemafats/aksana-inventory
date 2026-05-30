@@ -37,6 +37,8 @@ class SalesCartState {
   final String? errorMessage;
   final bool isSuccess;
   final double bazarDiscount;
+  final String? selectedLocationId;
+  final String? selectedLocationName;
 
   const SalesCartState({
     this.items = const [],
@@ -45,6 +47,8 @@ class SalesCartState {
     this.errorMessage,
     this.isSuccess = false,
     this.bazarDiscount = 0,
+    this.selectedLocationId,
+    this.selectedLocationName,
   });
 
   SalesCartState copyWith({
@@ -54,6 +58,8 @@ class SalesCartState {
     String? errorMessage,
     bool? isSuccess,
     double? bazarDiscount,
+    String? selectedLocationId,
+    String? selectedLocationName,
     bool clearError = false,
   }) =>
       SalesCartState(
@@ -63,6 +69,9 @@ class SalesCartState {
         errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
         isSuccess: isSuccess ?? this.isSuccess,
         bazarDiscount: bazarDiscount ?? this.bazarDiscount,
+        selectedLocationId: selectedLocationId ?? this.selectedLocationId,
+        selectedLocationName:
+            selectedLocationName ?? this.selectedLocationName,
       );
 }
 
@@ -78,13 +87,19 @@ class SalesCartNotifier extends StateNotifier<SalesCartState> {
 
   double get grandTotal => subtotal - state.bazarDiscount;
 
-  void addItem(Map<String, dynamic> catalogItem) {
-    final itemId = catalogItem['id']?.toString();
+  void setSelectedLocation(String id, String name) {
+    state = state.copyWith(
+      selectedLocationId: id,
+      selectedLocationName: name,
+      clearError: true,
+    );
+  }
+
+  void addItem(Map<String, dynamic> result) {
+    final itemId = result['id']?.toString();
     if (itemId == null || itemId.isEmpty) return;
 
-    final priceRaw = catalogItem['bazar_selling_price'] ??
-        catalogItem['latest_base_selling_price'];
-    final price = priceRaw is num ? priceRaw.toDouble() : 0.0;
+    final price = _parseSellingPrice(result['latest_base_selling_price']);
 
     final index = state.items.indexWhere((item) => item.itemId == itemId);
     if (index >= 0) {
@@ -100,8 +115,8 @@ class SalesCartNotifier extends StateNotifier<SalesCartState> {
         ...state.items,
         CartItem(
           itemId: itemId,
-          itemName: catalogItem['item_name']?.toString() ?? '—',
-          sku: catalogItem['sku']?.toString() ?? '—',
+          itemName: result['item_name']?.toString() ?? '—',
+          sku: result['barcode']?.toString() ?? '—',
           bazarSellingPrice: price,
         ),
       ],
@@ -141,16 +156,15 @@ class SalesCartNotifier extends StateNotifier<SalesCartState> {
   Future<bool> checkout(
     Dio dio, {
     required String locationId,
-    required String employeeId,
+    String? employeeId,
   }) async {
     if (state.items.isEmpty) return false;
 
     state = state.copyWith(isLoading: true, clearError: true, isSuccess: false);
 
     try {
-      final payload = {
+      final payload = <String, dynamic>{
         'location_id': locationId,
-        'employee_id': employeeId,
         'transaction_date': DateFormat("yyyy-MM-dd'T'HH:mm:ss").format(
           DateTime.now(),
         ),
@@ -168,6 +182,9 @@ class SalesCartNotifier extends StateNotifier<SalesCartState> {
             )
             .toList(),
       };
+      if (employeeId != null && employeeId.isNotEmpty) {
+        payload['employee_id'] = employeeId;
+      }
 
       await _service.createTransaction(payload, dio);
       state = const SalesCartState(isSuccess: true);
@@ -203,6 +220,11 @@ class SalesCartNotifier extends StateNotifier<SalesCartState> {
     }
     return 'Terjadi kesalahan. Coba lagi.';
   }
+}
+
+double _parseSellingPrice(dynamic raw) {
+  if (raw is num) return raw.toDouble();
+  return double.tryParse(raw?.toString() ?? '0') ?? 0.0;
 }
 
 final salesCartProvider =

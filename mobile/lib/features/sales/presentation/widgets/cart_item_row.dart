@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -21,18 +21,13 @@ String formatSalesPrice(double amount) {
   return 'Rp ${amount.toInt()}';
 }
 
-class CartItemRow extends StatelessWidget {
+class CartItemRow extends ConsumerWidget {
   final CartItem item;
-  final VoidCallback onDelete;
 
-  const CartItemRow({
-    super.key,
-    required this.item,
-    required this.onDelete,
-  });
+  const CartItemRow({super.key, required this.item});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return GestureDetector(
       onLongPress: () async {
         final confirmed = await showDialog<bool>(
@@ -61,7 +56,9 @@ class CartItemRow extends StatelessWidget {
             ],
           ),
         );
-        if (confirmed == true) onDelete();
+        if (confirmed == true) {
+          ref.read(salesCartProvider.notifier).removeItem(item.itemId);
+        }
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
@@ -72,34 +69,65 @@ class CartItemRow extends StatelessWidget {
           border: Border.all(color: AppColors.border),
         ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Text(item.itemName, style: AppTextStyles.cardTitle),
                   Text(
-                    item.itemName,
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.voidBlack,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'qty ${AppColors.formatQty(item.qty)}',
+                    'qty ${item.qty.toString().padLeft(2, '0')}',
                     style: AppTextStyles.monoMuted,
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 12),
-            Text(
-              formatSalesPrice(item.lineTotal),
-              style: AppTextStyles.monoBold.copyWith(fontSize: 14),
+            Row(
+              children: [
+                GestureDetector(
+                  onTap: () => ref
+                      .read(salesCartProvider.notifier)
+                      .updateQty(item.itemId, -1),
+                  child: Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: AppColors.border,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Icon(Icons.remove, size: 14),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  item.qty.toString(),
+                  style: AppTextStyles.monoBold,
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () => ref
+                      .read(salesCartProvider.notifier)
+                      .updateQty(item.itemId, 1),
+                  child: Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: AppColors.voidBlack,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Icon(
+                      Icons.add,
+                      size: 14,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  formatSalesPrice(item.bazarSellingPrice * item.qty),
+                  style: AppTextStyles.monoBold,
+                ),
+              ],
             ),
           ],
         ),

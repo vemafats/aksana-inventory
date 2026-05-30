@@ -10,6 +10,10 @@ class AuthState {
   final Map<String, dynamic>? user;
   final bool isLoading;
   final String? errorMessage;
+  final String? locationId;
+  final String? locationName;
+  final String? employeeId;
+  final String? employeeName;
 
   const AuthState({
     this.isAuthenticated = false,
@@ -17,6 +21,10 @@ class AuthState {
     this.user,
     this.isLoading = false,
     this.errorMessage,
+    this.locationId,
+    this.locationName,
+    this.employeeId,
+    this.employeeName,
   });
 
   String? get role => user?['role'] as String?;
@@ -29,12 +37,20 @@ class AuthState {
     Map<String, dynamic>? user,
     bool? isLoading,
     String? errorMessage,
+    String? locationId,
+    String? locationName,
+    String? employeeId,
+    String? employeeName,
   }) => AuthState(
     isAuthenticated: isAuthenticated ?? this.isAuthenticated,
     token: token ?? this.token,
     user: user ?? this.user,
     isLoading: isLoading ?? this.isLoading,
     errorMessage: errorMessage,
+    locationId: locationId ?? this.locationId,
+    locationName: locationName ?? this.locationName,
+    employeeId: employeeId ?? this.employeeId,
+    employeeName: employeeName ?? this.employeeName,
   );
 }
 
@@ -48,7 +64,25 @@ class AuthNotifier extends StateNotifier<AuthState> {
     final token = await _api.getToken();
     if (token != null) {
       state = state.copyWith(isAuthenticated: true, token: token);
+      await fetchProfile();
     }
+  }
+
+  Future<void> fetchProfile() async {
+    try {
+      final res = await _api.dio.get('/me');
+      final data = res.data['data'];
+      if (data is! Map) return;
+      final profile = Map<String, dynamic>.from(data);
+      state = state.copyWith(
+        user: profile,
+        isAuthenticated: true,
+        locationId: profile['location_id']?.toString(),
+        locationName: profile['location_name']?.toString(),
+        employeeId: profile['employee_id']?.toString(),
+        employeeName: profile['employee_name']?.toString(),
+      );
+    } catch (_) {}
   }
 
   Future<bool> login(String email, String password) async {
@@ -64,6 +98,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         user: Map<String, dynamic>.from(data['user']),
         isLoading: false,
       );
+      await fetchProfile();
       return true;
     } catch (e) {
       state = state.copyWith(

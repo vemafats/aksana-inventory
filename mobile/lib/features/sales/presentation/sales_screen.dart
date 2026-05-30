@@ -12,53 +12,97 @@ import 'widgets/cart_item_row.dart';
 class SalesScreen extends ConsumerWidget {
   const SalesScreen({super.key});
 
-  String _locationLabel(Map<String, dynamic>? user) {
-    final locations = user?['assigned_locations'];
-    if (locations is List && locations.isNotEmpty) {
-      final first = locations.first;
-      if (first is Map) {
-        final name = first['name'] ?? first['location_name'];
-        if (name != null) {
-          return name.toString().trim().toUpperCase();
-        }
+  String _locationLabel(WidgetRef ref) {
+    final auth = ref.watch(authProvider);
+    final name = auth.locationName ?? auth.user?['location_name']?.toString();
+    if (name != null && name.isNotEmpty) {
+      return name.trim().toUpperCase();
+    }
+    return 'LOKASI';
+  }
+
+  Future<String?> _pickLocation(BuildContext context, WidgetRef ref) async {
+    final service = ref.read(salesServiceProvider);
+    final dio = ref.read(apiClientProvider).dio;
+    List<Map<String, dynamic>> locations;
+    try {
+      locations = await service.fetchLocations(dio);
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Gagal memuat daftar lokasi'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
       }
+      return null;
     }
-    return 'BAZAR SENAYAN';
-  }
 
-  String? _locationId(Map<String, dynamic>? user) {
-    final locations = user?['assigned_locations'];
-    if (locations is List && locations.isNotEmpty) {
-      final first = locations.first;
-      if (first is Map) return first['id']?.toString();
-    }
-    return null;
-  }
-
-  String? _employeeId(Map<String, dynamic>? user) =>
-      user?['employee_id']?.toString();
-
-  Future<void> _checkout(BuildContext context, WidgetRef ref) async {
-    final auth = ref.read(authProvider);
-    final locationId = _locationId(auth.user);
-    final employeeId = _employeeId(auth.user);
-
-    if (locationId == null || employeeId == null) {
+    if (!context.mounted) return null;
+    if (locations.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Data lokasi atau karyawan belum tersedia. Login dengan akun yang valid.',
-          ),
+          content: Text('Tidak ada lokasi penjualan aktif'),
           backgroundColor: AppColors.warning,
         ),
       );
-      return;
+      return null;
+    }
+
+    return showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: AppColors.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'Pilih Lokasi Penjualan',
+                style: AppTextStyles.cardTitle.copyWith(fontSize: 16),
+              ),
+            ),
+            ...locations.map((loc) {
+              final id = loc['id']?.toString() ?? '';
+              final name =
+                  loc['location_name']?.toString() ?? loc['name']?.toString() ?? '—';
+              return ListTile(
+                title: Text(name),
+                onTap: () {
+                  ref
+                      .read(salesCartProvider.notifier)
+                      .setSelectedLocation(id, name);
+                  Navigator.pop(ctx, id);
+                },
+              );
+            }),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _checkout(BuildContext context, WidgetRef ref) async {
+    final auth = ref.read(authProvider);
+
+    var locationId = auth.locationId ?? ref.read(salesCartProvider).selectedLocationId;
+
+    if (locationId == null || locationId.isEmpty) {
+      locationId = await _pickLocation(context, ref);
+      if (locationId == null || !context.mounted) return;
     }
 
     final success = await ref.read(salesCartProvider.notifier).checkout(
           ref.read(apiClientProvider).dio,
           locationId: locationId,
-          employeeId: employeeId,
+          employeeId: auth.employeeId,
         );
 
     if (!context.mounted) return;
@@ -85,7 +129,6 @@ class SalesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final auth = ref.watch(authProvider);
     final cart = ref.watch(salesCartProvider);
     final notifier = ref.read(salesCartProvider.notifier);
     final subtotal = notifier.subtotal;
@@ -101,7 +144,7 @@ class SalesScreen extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: ScreenHeader(
-                backLabel: _locationLabel(auth.user),
+                backLabel: _locationLabel(ref),
                 title: 'Transaksi Jual',
               ),
             ),
@@ -125,11 +168,7 @@ class SalesScreen extends ConsumerWidget {
                       itemCount: cart.items.length,
                       itemBuilder: (context, index) {
                         final item = cart.items[index];
-                        return CartItemRow(
-                          item: item,
-                          onDelete: () =>
-                              notifier.removeItem(item.itemId),
-                        );
+                        return CartItemRow(item: item);
                       },
                     ),
             ),
@@ -249,7 +288,8 @@ class _SalesSummaryCard extends StatelessWidget {
                 backgroundColor: Colors.white,
                 foregroundColor: AppColors.voidBlack,
                 disabledBackgroundColor: Colors.white.withValues(alpha: 0.35),
-                disabledForegroundColor: AppColors.voidBlack.withValues(alpha: 0.4),
+                disabledForegroundColor:
+                    AppColors.voidBlack.withValues(alpha: 0.4),
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),

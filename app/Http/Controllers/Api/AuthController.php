@@ -99,6 +99,23 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
+        $employee = Employee::query()
+            ->where('is_active', true)
+            ->where(function ($query) use ($user): void {
+                $query->where('name', $user->name)
+                    ->orWhere('email', $user->email);
+            })
+            ->first();
+
+        $assignments = $employee
+            ? $employee->locationAssignments()
+                ->where('is_active', true)
+                ->with('location:id,location_name,location_type,status')
+                ->get()
+            : collect();
+
+        $primary = $assignments->first();
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -107,6 +124,10 @@ class AuthController extends Controller
                 'email' => $user->email,
                 'role' => $user->role->value,
                 'is_active' => $user->is_active,
+                'employee_id' => $employee?->id,
+                'employee_name' => $employee?->name,
+                'location_id' => $primary?->location_id,
+                'location_name' => $primary?->location?->location_name,
                 'assigned_locations' => $this->getAssignedLocations($user),
             ],
         ]);
@@ -132,7 +153,11 @@ class AuthController extends Controller
     private function getAssignedLocations(User $user): array
     {
         $employee = Employee::query()
-            ->where('name', $user->name)
+            ->where('is_active', true)
+            ->where(function ($query) use ($user): void {
+                $query->where('name', $user->name)
+                    ->orWhere('email', $user->email);
+            })
             ->first();
 
         if (! $employee) {
