@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/auth/auth_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../core/utils/price_format.dart';
+import '../../../core/utils/format_utils.dart';
 import '../../../core/widgets/screen_header.dart';
 import 'reports_provider.dart';
 
@@ -296,7 +296,7 @@ class _ReportContent extends StatelessWidget {
                 ),
               ] else ...[
                 Text(
-                  formatRupiahCompact(data.todaysNetSales),
+                  FormatUtils.formatPrice(data.todaysNetSales),
                   style: AppTextStyles.monoLarge.copyWith(fontSize: 32),
                 ),
                 const SizedBox(height: 8),
@@ -325,7 +325,7 @@ class _ReportContent extends StatelessWidget {
             Expanded(
               child: _MiniStatCard(
                 label: 'AVG BASKET',
-                value: formatRupiahCompact(data.avgBasketToday),
+                value: FormatUtils.formatPrice(data.avgBasketToday),
               ),
             ),
           ],

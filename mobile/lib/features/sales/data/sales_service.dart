@@ -15,7 +15,8 @@ class SalesService {
     Map<String, dynamic> data,
     Dio dio,
   ) async {
-    final res = await dio.post('/sales', data: data);
+    final payload = Map<String, dynamic>.from(data)..remove('employee_id');
+    final res = await dio.post('/sales', data: payload);
     final body = res.data;
     if (body is Map<String, dynamic>) {
       return body;

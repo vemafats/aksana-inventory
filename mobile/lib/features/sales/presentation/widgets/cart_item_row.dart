@@ -3,23 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/format_utils.dart';
 import '../sales_provider.dart';
-
-String formatSalesPrice(double amount) {
-  if (amount >= 1000000) {
-    final m = amount / 1000000;
-    final text =
-        m == m.roundToDouble() ? m.toInt().toString() : m.toStringAsFixed(1);
-    return 'Rp ${text}M';
-  }
-  if (amount >= 1000) {
-    final k = amount / 1000;
-    final text =
-        k == k.roundToDouble() ? k.toInt().toString() : k.toStringAsFixed(1);
-    return 'Rp ${text}k';
-  }
-  return 'Rp ${amount.toInt()}';
-}
 
 class CartItemRow extends ConsumerWidget {
   final CartItem item;
@@ -76,7 +61,7 @@ class CartItemRow extends ConsumerWidget {
                 children: [
                   Text(item.itemName, style: AppTextStyles.cardTitle),
                   Text(
-                    'qty ${item.qty.toString().padLeft(2, '0')}',
+                    'qty ${FormatUtils.formatQty(item.qty)}',
                     style: AppTextStyles.monoMuted,
                   ),
                 ],
@@ -124,7 +109,7 @@ class CartItemRow extends ConsumerWidget {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  formatSalesPrice(item.bazarSellingPrice * item.qty),
+                  FormatUtils.formatPrice(item.bazarSellingPrice * item.qty),
                   style: AppTextStyles.monoBold,
                 ),
               ],

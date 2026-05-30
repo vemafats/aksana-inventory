@@ -140,12 +140,14 @@ class StockInService
                     );
                 }
 
-                $item->update([
-                    'latest_supplier_cost' => $itemData['supplier_cost'],
-                    'latest_base_margin_type' => $itemData['base_margin_type'],
-                    'latest_base_margin_value' => $itemData['base_margin_value'],
-                    'latest_base_selling_price' => $itemData['base_selling_price'],
-                ]);
+                if ((float) $itemData['supplier_cost'] > 0) {
+                    $item->update([
+                        'latest_supplier_cost' => $itemData['supplier_cost'],
+                        'latest_base_margin_type' => $itemData['base_margin_type'],
+                        'latest_base_margin_value' => $itemData['base_margin_value'],
+                        'latest_base_selling_price' => $itemData['base_selling_price'],
+                    ]);
+                }
 
                 $totalReceived += $itemData['qty_received'];
                 $totalAvailable += $itemData['qty_available'];
@@ -215,8 +217,8 @@ class StockInService
                 );
             }
 
-            if ($itemData['supplier_cost'] <= 0) {
-                throw new InvalidArgumentException("supplier_cost harus lebih dari 0 untuk item {$barcode}.");
+            if ($itemData['supplier_cost'] < 0) {
+                throw new InvalidArgumentException("supplier_cost tidak boleh negatif untuk item {$barcode}.");
             }
         }
     }

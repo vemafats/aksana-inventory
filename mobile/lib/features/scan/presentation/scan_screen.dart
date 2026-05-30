@@ -7,6 +7,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../core/auth/auth_provider.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/format_utils.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/screen_header.dart';
 import '../../sales/presentation/sales_provider.dart';
@@ -323,7 +324,9 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
                               ),
                             ),
                             Text(
-                              'Rp ${_formatPrice(scanResult['latest_base_selling_price'])}',
+                              FormatUtils.formatPrice(
+                                scanResult['latest_base_selling_price'],
+                              ),
                               style: AppTextStyles.monoBold,
                             ),
                           ],
@@ -387,14 +390,6 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
         ),
       ),
     );
-  }
-
-  String _formatPrice(dynamic price) {
-    if (price == null) return '0';
-    final num p = num.tryParse(price.toString()) ?? 0;
-    if (p >= 1000000) return '${(p / 1000000).toStringAsFixed(1)}M';
-    if (p >= 1000) return '${(p / 1000).toStringAsFixed(0)}k';
-    return p.toStringAsFixed(0);
   }
 
   int _getTotalStock(Map<String, dynamic> item) {

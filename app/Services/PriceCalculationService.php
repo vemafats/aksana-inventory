@@ -12,6 +12,7 @@ class PriceCalculationService
         float $marginValue,
     ): float {
         $price = match ($marginType) {
+            'none' => $cost,
             'nominal' => $cost + $marginValue,
             'percentage' => $cost * (1 + $marginValue / 100),
             default => throw new InvalidArgumentException("Tipe margin tidak valid: {$marginType}"),

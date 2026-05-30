@@ -5,10 +5,11 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/auth/auth_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/utils/format_utils.dart';
 import '../../../core/widgets/screen_header.dart';
 import 'location_selector.dart';
 import 'sales_provider.dart';
-import 'widgets/cart_item_row.dart' show CartItemRow, formatSalesPrice;
+import 'widgets/cart_item_row.dart';
 
 class SalesScreen extends ConsumerWidget {
   const SalesScreen({super.key});
@@ -179,12 +180,12 @@ class _SalesSummaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _summaryRow('SUBTOTAL', formatSalesPrice(subtotal), muted: true),
+          _summaryRow('SUBTOTAL', FormatUtils.formatPrice(subtotal), muted: true),
           if (discount > 0) ...[
             const SizedBox(height: 8),
             _summaryRow(
               'DISKON BAZAR',
-              '-${formatSalesPrice(discount)}',
+              '-${FormatUtils.formatPrice(discount)}',
               valueColor: AppColors.warning,
               muted: true,
             ),
@@ -206,7 +207,7 @@ class _SalesSummaryCard extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                formatSalesPrice(grandTotal),
+                FormatUtils.formatPrice(grandTotal),
                 style: AppTextStyles.monoLarge.copyWith(fontSize: 28),
               ),
             ],

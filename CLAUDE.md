@@ -140,10 +140,24 @@ Role values: `owner` | `admin` | `admin_gudang` | `pic_bazar` | `sales`
 
 ### Barang Masuk
 ```
-Supplier → scan QR → input qty (available+damaged) →
-input harga modal + margin → hitung harga jual dasar →
-simpan stock_balances (gudang) + stock_movements
+VIA MOBILE (Admin Gudang) — scan + qty saja:
+  Login → STOK → Barang Masuk →
+  input PO Reference → scan QR item →
+  input qty diterima (stepper) →
+  foto QC (opsional, dianjurkan) →
+  KONFIRMASI → tampilkan "{total_qty} unit ({n} jenis) ke gudang"
+  supplier_cost = 0 (diisi via web)
+
+VIA WEB ADMIN (Owner/Admin) — lengkap dengan harga:
+  Stok → Tambah Stok →
+  input PO + tanggal + supplier →
+  pilih item + qty available + qty damaged →
+  input harga modal + tipe margin + nilai margin →
+  harga jual dasar = auto-calculate →
+  upload foto (opsional) →
+  SIMPAN → stok bertambah di gudang
 ```
+**PENTING:** Harga modal HANYA bisa diinput via web admin, TIDAK via mobile.
 
 ### Transfer ke Lokasi
 ```
@@ -262,31 +276,120 @@ DB: aksana_inventory, user: aksana_user
 
 ## Bug Fixes (UAT 2026-05-30)
 
-| ID | Error | Fix |
-|---|---|---|
-| B001 | PostgreSQL GROUP BY column error | Gunakan `selectRaw` sebelum `groupBy` |
-| B002 | UUID vs bigint di personal_access_tokens | `ALTER COLUMN tokenable_id TYPE varchar(255)` |
-| B003 | Scan QR tidak merespons di HP | Rewrite ScanScreen dengan proper MobileScannerController |
-| B004 | Harga Rp 0 di cart | Parse `latest_base_selling_price` ke double |
-| B005 | Location/employee tidak tersedia | Location selector + employee_id nullable |
-| B006 | API login 500 | Sama dengan B002 |
-| B007 | Dropdown lokasi kosong di Distribusi | Update status lokasi dari draft ke active |
-| B008 | Report mobile-summary selalu 0 | Timezone-aware query `AT TIME ZONE 'Asia/Jakarta'` |
-| B009 | Git pull conflict di VPS | Deploy script pakai `git reset --hard origin/main` |
+| ID | Error | Status | Fix |
+|---|---|---|---|
+| B001 | PostgreSQL GROUP BY column error | ✅ Fixed | Gunakan `selectRaw` sebelum `groupBy` |
+| B002 | UUID vs bigint di personal_access_tokens | ✅ Fixed | `ALTER COLUMN tokenable_id TYPE varchar(255)` |
+| B003 | Scan QR tidak merespons di HP | ✅ Fixed | Rewrite ScanScreen dengan proper MobileScannerController |
+| B004 | Harga Rp 0 di cart | ✅ Fixed | Parse `latest_base_selling_price` ke double |
+| B005 | Location/employee tidak tersedia | ✅ Fixed | Location selector + employee_id nullable |
+| B006 | API login 500 | ✅ Fixed | Sama dengan B002 |
+| B007 | Dropdown lokasi kosong di Distribusi | ✅ Fixed | Update status lokasi dari draft ke active |
+| B008 | Report mobile-summary selalu 0 | ✅ Fixed | Timezone-aware query `AT TIME ZONE 'Asia/Jakarta'` |
+| B009 | Git pull conflict di VPS | ✅ Fixed | Deploy script pakai `git reset --hard origin/main` |
+| B010 | Route [login] not defined | ✅ Non-fatal | Warning log saja, tidak affect fungsi |
+| B011 | Pesan konfirmasi barang masuk "1 item" | 🔲 Pending | Harus tampilkan total qty bukan jumlah jenis item |
 
 ---
 
 ## Revisi Pending (Post-UAT)
 
-| ID | Item | File |
-|---|---|---|
-| R001 | Status transfer: hapus "DALAM PERJALANAN" → "AKTIF" | DistribusiPage.php |
-| R002 | Rename tab "HARGA JUAL" → "HARGA JUAL DASAR" | stok.blade.php |
-| R003 | Margin dilindungi password seperti Harga Modal | StokPage.php |
-| R004 | Harga Jual Bazar = auto-calculate di form distribusi | DistribusiPage.php |
-| R005 | Tombol Verifikasi tidak terlihat di dialog Harga Modal | Blade CSS |
-| R006 | STAT tab tidak bisa di-scroll/tap | reports_screen.dart |
-| R007 | Setting page role badges kosong | setting.blade.php |
+### Status R001–R007
+
+| ID | Item | File | Status |
+|---|---|---|---|
+| R001 | Status transfer: "DALAM PERJALANAN" → "AKTIF" | DistribusiPage.php | ✅ Fixed |
+| R002 | Rename tab "HARGA JUAL" → "HARGA JUAL DASAR" | stok.blade.php | ✅ Fixed |
+| R003 | Margin dilindungi password seperti Harga Modal | StokPage.php | 🔲 Pending |
+| R004 | Harga Jual Bazar = auto-calculate di form distribusi | DistribusiPage.php | ✅ Fixed |
+| R005 | Tombol Verifikasi tidak terlihat di dialog Harga Modal | Blade CSS | 🔲 Pending |
+| R006 | STAT tab tidak bisa di-scroll/tap | reports_screen.dart | ✅ Fixed |
+| R007 | Setting page — Tambah/Edit User belum tersambung ke DB | setting.blade.php | 🔲 Pending |
+
+### Fitur Baru dari UAT (F-series)
+
+| ID | Fitur | Scope | Keputusan |
+|---|---|---|---|
+| F001 | Input harga modal + margin saat barang masuk | **Web Admin only** | Pilihan B: hanya via web sub-tab Tambah Stok, BUKAN di mobile |
+| F002 | Sub-tab Tambah Stok di web admin — form lengkap | Web (StokPage) | Alur sama dengan mobile: scan/pilih item + qty + harga modal + margin |
+| F003 | Upload foto saat barang masuk | Web + Mobile | Foto QC wajib sebelum konfirmasi barang masuk |
+| F004 | Stok Ringkasan: breakdown per lokasi per item | Web (stok.blade.php) | Tabel "Total Semua Stok per Item" tambah kolom per lokasi |
+
+### Detail F001 — Barang Masuk: Harga Modal di Web Saja
+
+**Alur yang benar:**
+```
+Mobile (Admin Gudang):
+  Scan QR Code → input qty diterima → KONFIRMASI
+  (tanpa input harga — harga diisi via web)
+
+Web Admin (Owner/Admin):
+  Stok → Tambah Stok → pilih item → input qty →
+  input harga modal → input tipe margin (nominal/%) →
+  sistem hitung harga jual dasar otomatis → SIMPAN
+```
+
+**Implikasi API:**
+- POST /api/stock-in dari mobile: `supplier_cost` bisa 0 atau null
+- Web admin memanggil POST /api/stock-in dengan `supplier_cost` yang valid
+- Backend tetap menyimpan `latest_supplier_cost` di tabel `items`
+
+### Detail B011 — Fix Pesan Konfirmasi Barang Masuk
+
+**Sekarang:** "Kirim 1 item ke gudang pusat?"
+**Seharusnya:** "Kirim {total_qty} unit ({n} jenis item) ke gudang pusat?"
+
+Contoh: 1 jenis H&M Essential Coklat L, qty 4 →
+"Kirim 4 unit (1 jenis item) ke gudang pusat?"
+
+File: `lib/features/stock_in/presentation/stock_in_screen.dart`
+
+### Detail F002 — Form Tambah Stok Web Admin
+
+Form di sub-tab Tambah Stok harus memiliki:
+- No. Referensi/PO (input teks)
+- Tanggal Masuk (date picker)
+- Nama Supplier (input teks, opsional)
+- Lokasi Tujuan (auto: Gudang Pusat, read-only)
+- Section ITEM DITERIMA:
+  - Pilih item dari katalog (searchable dropdown)
+  - Qty Diterima (required)
+  - Qty Available (required, ≤ qty diterima)
+  - Qty Damaged (auto = qty diterima - qty available)
+  - Harga Modal / supplier_cost (required, Owner/Admin only)
+  - Tipe Margin: nominal | percentage
+  - Nilai Margin (input angka)
+  - Harga Jual Dasar (auto-calculate, read-only)
+  - QC Note (opsional)
+  - Tombol + Tambah Item (untuk item berikutnya)
+- Total Qty + Total Nilai Modal (auto-calculate)
+- Tombol: BATAL | SIMPAN
+
+### Detail F003 — Upload Foto Barang Masuk
+
+**Web Admin:**
+- Tambah FileUpload field di form Tambah Stok
+- Upload sebelum klik SIMPAN
+- Foto disimpan via PhotoService (watermark + compress)
+- Foto ID dikirim ke POST /api/stock-in sebagai `photo_id`
+
+**Mobile:**
+- Tambah tombol kamera sebelum KONFIRMASI di Barang Masuk screen
+- Gunakan `image_picker` package (sudah ada di pubspec.yaml)
+- Upload via POST /api/photos → dapat photo_id
+- Kirim photo_id saat POST /api/stock-in
+
+### Detail F004 — Stok Ringkasan: Lokasi Per Item
+
+Tabel "Total Semua Stok per Item" tambah kolom per lokasi:
+
+| ITEM | BARCODE | GUDANG | BINTARO | CREATIVE | SURYA | TOTAL | STATUS |
+|---|---|---|---|---|---|---|---|
+
+- Kolom lokasi: dynamic berdasarkan lokasi yang ada di database
+- Qty per lokasi = stock_balances WHERE stock_status = available
+- Jika qty 0 di lokasi: tampilkan "—" (muted)
+- Jika qty > 0: tampilkan angka bold
 
 ---
 
