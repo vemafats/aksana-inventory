@@ -1,21 +1,21 @@
 # CLAUDE.md — Aksana Inventory
-# Last Updated: 2026-05-30 (post UAT Day 1)
-
-Ini adalah file konteks utama untuk Claude Code. Baca seluruh file ini sebelum mengerjakan tugas apapun.
+# Last Updated: 2026-05-31 (post UAT Day 2)
+# Baca seluruh file ini sebelum mengerjakan tugas apapun.
 
 ---
 
 ## Ringkasan Proyek
 
-**Aksana Inventory** adalah sistem inventory dan penjualan untuk bisnis butik berbasis gudang pusat dan lokasi bazar/outlet/toko.
+**Aksana Inventory** — sistem inventory dan penjualan untuk bisnis butik berbasis gudang pusat dan lokasi bazar/outlet/toko.
 
-- **Web Admin**: Laravel + Filament (manajemen penuh)
-- **Mobile App**: Flutter + Dart (operasional lapangan)
+- **Web Admin**: Laravel 11 + Filament v3
+- **Mobile**: Flutter + Dart
 - **Backend API**: Laravel REST API
-- **Database**: PostgreSQL 16 (Hostinger VPS)
+- **Database**: PostgreSQL 16
 - **Server**: Hostinger VPS 187.127.114.2 (Ubuntu 24.04, Apache2, Redis, Supervisor, SSL)
 - **Live URL**: https://app.ftrhijab.id/admin
 - **GitHub**: https://github.com/vemafats/aksana-inventory
+- **Mobile folder**: aksana-inventory/mobile/ (monorepo)
 
 ---
 
@@ -24,33 +24,30 @@ Ini adalah file konteks utama untuk Claude Code. Baca seluruh file ini sebelum m
 | Layer | Teknologi |
 |---|---|
 | Backend | PHP 8.2 + Laravel 11 |
-| Auth | Laravel Sanctum (token TTL: 30 hari) |
-| Web Admin | Laravel + Filament v3 |
+| Auth | Laravel Sanctum (30 hari) |
+| Web Admin | Filament v3 |
 | Mobile | Flutter + Dart |
-| HTTP Client (mobile) | Dio |
+| HTTP Client | Dio |
 | State Management | Riverpod |
-| Routing (mobile) | GoRouter |
-| QR Code | simplesoftwareio/simple-qrcode |
-| Barcode Scanner | mobile_scanner |
+| Routing | GoRouter |
+| Scanner | mobile_scanner |
 | Database | PostgreSQL 16 |
-| Queue/Cache | Redis 7.0 |
+| Cache/Queue | Redis 7.0 |
 | Server | Apache2 + Supervisor + Certbot SSL |
-| Fonts | Google Fonts (Inter + IBM Plex Mono) |
 
 ---
 
-## Konsep Inti — WAJIB DIPAHAMI
+## Konsep Inti
 
 ### 1. Katalog ≠ Stok
-- Menambah item ke Katalog TIDAK menambah stok
-- Stok hanya bertambah melalui Barang Masuk
-- `items` = master referensi barang
-- `stock_balances` = jumlah stok aktual
+- Tambah item ke Katalog TIDAK menambah stok
+- Stok hanya bertambah via Barang Masuk
+- `items` = master referensi
+- `stock_balances` = stok aktual
 
 ### 2. Barcode = Identitas Varian
 Format: `KAT-MRK-MODEL-WRN-UK`
 Contoh: `SPT-NIK-AIRMAX-HIT-40`
-Barcode unik di tabel `items`.
 
 ### 3. Stock Balance = Item + Lokasi + Status
 ```
@@ -58,37 +55,32 @@ UNIQUE (item_id, location_id, stock_status)
 stock_status: available | damaged | lost
 ```
 
-### 4. Semua Mutasi Stok Wajib StockBalanceService
-- TIDAK BOLEH update `stock_balances` langsung dari controller
-- Selalu gunakan `StockBalanceService`
-- Wajib dalam `DB::transaction()`
-- Setiap mutasi wajib membuat `StockMovement` record
+### 4. Wajib StockBalanceService
+- TIDAK BOLEH update stock_balances langsung dari controller
+- Wajib DB::transaction()
+- Setiap mutasi wajib StockMovement record
 
-### 5. Harga = Snapshot
-Harga modal, harga jual, diskon harus disimpan sebagai snapshot per transaksi.
+### 5. Backend Recalculate Semua Harga
+Jangan percaya total dari frontend/mobile.
 
-### 6. Backend Recalculate Semua Total
-JANGAN percaya total dari mobile/frontend. Backend wajib hitung ulang semua.
+### 6. supplier_cost WAJIB TERSEMBUNYI
+- TIDAK BOLEH di API response manapun
+- Hanya Owner + password yang bisa lihat
+- `latest_supplier_cost` ada di Item.$hidden
+- `supplier_cost_snapshot` ada di SalesItem.$hidden
 
 ---
 
-## ⚠️ PERUBAHAN ARSITEKTUR PENTING (2026-05-30)
+## Perubahan Arsitektur Penting
 
-### Employee DIMERGE ke User
-**Keputusan:** Employee dan User adalah entitas yang SAMA. Tidak ada entitas terpisah.
-
-**Perubahan database:**
-- `users` ditambah: `nik` (string unique), `position` (string)
-- `location_assignments.employee_id` → diganti `user_id` (FK users.id)
-- `sales_transactions` ditambah `user_id` (FK users.id)
-
-**Rules:**
+### Employee DIMERGE ke User (2026-05-30)
+- Tabel `employees` DEPRECATED
+- `users` ditambah: `nik`, `position`
+- `location_assignments.employee_id` → `user_id`
+- `sales_transactions` ditambah `user_id`
 - Jangan buat relasi baru ke tabel `employees`
-- `LocationAssignment` belongsTo `User` (bukan Employee)
-- `SalesTransaction` belongsTo `User` untuk kasir
-- `ReportService::resolveAccessibleLocationIds()` lookup via `user_id`
-- API `/api/me` return `nik`, `position`, `location_id`, `location_name`
-- Tabel `employees` masih ada tapi DEPRECATED
+- `LocationAssignment` belongsTo `User`
+- `SalesTransaction` belongsTo `User`
 
 ---
 
@@ -104,88 +96,119 @@ JANGAN percaya total dari mobile/frontend. Backend wajib hitung ulang semua.
 | Transaksi Jual | ✓ | ✓ | ✗ | ✓ | ✓ |
 | Stok Opname | ✓ | ✓ | ✓ | ✓ | Terbatas |
 | Return Sisa | ✓ | ✓ | ✓ | ✓ | ✗ |
-| Tutup Bazar | ✓ | ✓ | ✓ | ✓ | ✗ |
 | Laporan | ✓ | ✓ | Terbatas | Terbatas | ✗ |
 | Setting | ✓ | ✓ | ✗ | ✗ | ✗ |
-| Harga Modal | Owner+password | ✗ | ✗ | ✗ | ✗ |
-| Margin | Owner+password | ✗ | ✗ | ✗ | ✗ |
+| Harga Modal + Margin | Owner+password | ✗ | ✗ | ✗ | ✗ |
+| Update Harga Stok tab | Owner only | ✗ | ✗ | ✗ | ✗ |
+| Gross Profit report | Owner only | ✗ | ✗ | ✗ | ✗ |
 
 Role values: `owner` | `admin` | `admin_gudang` | `pic_bazar` | `sales`
 
 ---
 
-## Aturan Keamanan Data
+## Harga — Penamaan Konsisten
 
-### supplier_cost — WAJIB TERSEMBUNYI
-- TIDAK BOLEH muncul di API response manapun
-- TIDAK BOLEH muncul di UI (kecuali Owner+password)
-- `latest_supplier_cost` ada di `Item.$hidden`
-- `supplier_cost_snapshot` ada di `SalesItem.$hidden` dan `TransferItem.$hidden`
-
-### Harga Modal dan Margin
-- Default: kolom Modal dan Margin TIDAK TAMPIL
-- Owner klik "Lihat Harga Modal" → input password → Modal + Margin muncul
-- TTL token: 15 menit (`cost_view_token`)
-- Role non-Owner: tombol tidak terlihat
-
-### Penamaan Harga — Konsisten
 - **Harga Jual Dasar** = harga modal + margin → `latest_base_selling_price`
 - **Harga Jual Lokasi/Bazar** = Harga Jual Dasar + nilai penyesuaian
 - Tab web admin: "HARGA JUAL DASAR" (bukan "Harga Jual")
-- Harga Jual di form distribusi = AUTO-CALCULATE (bukan input manual)
+- Margin JUGA dilindungi password sama seperti Harga Modal
+- Harga Jual Bazar di form distribusi = AUTO-CALCULATE
+
+### Barang Masuk — Harga Modal
+
+**Penting:** Harga modal HANYA bisa diinput via web admin (Pilihan B).
+
+```
+VIA MOBILE (Admin Gudang):
+  Scan QR → input qty → foto QC (opsional) → KONFIRMASI
+  supplier_cost = 0 (diisi via web)
+  Pesan konfirmasi: "Kirim {total_qty} unit ({n} jenis) ke gudang"
+
+VIA WEB ADMIN (Owner/Admin):
+  Stok → Tambah Stok → pilih item + qty + harga modal + margin
+  → harga jual dasar auto-calculate → SIMPAN
+  ATAU
+  Stok → Update Harga Stok (Owner only) → edit harga transaksi
+  yang masuk dari mobile
+```
 
 ---
 
 ## Alur Bisnis
 
-### Barang Masuk
-```
-VIA MOBILE (Admin Gudang) — scan + qty saja:
-  Login → STOK → Barang Masuk →
-  input PO Reference → scan QR item →
-  input qty diterima (stepper) →
-  foto QC (opsional, dianjurkan) →
-  KONFIRMASI → tampilkan "{total_qty} unit ({n} jenis) ke gudang"
-  supplier_cost = 0 (diisi via web)
-
-VIA WEB ADMIN (Owner/Admin) — lengkap dengan harga:
-  Stok → Tambah Stok →
-  input PO + tanggal + supplier →
-  pilih item + qty available + qty damaged →
-  input harga modal + tipe margin + nilai margin →
-  harga jual dasar = auto-calculate →
-  upload foto (opsional) →
-  SIMPAN → stok bertambah di gudang
-```
-**PENTING:** Harga modal HANYA bisa diinput via web admin, TIDAK via mobile.
-
 ### Transfer ke Lokasi
 ```
-Admin → pilih item + lokasi → input penyesuaian harga (opsional) →
+Admin → pilih item + lokasi → input penyesuaian (opsional) →
 harga jual lokasi = auto-calculate →
-stok berpindah instan (tidak ada konfirmasi "diterima")
+stok berpindah INSTAN
 Status: AKTIF (bukan "Dalam Perjalanan")
 ```
 
 ### Transaksi Jual (Mobile)
 ```
-Login (auto-detect lokasi dari user_id) →
-scan QR → item muncul → tap JUAL →
-cart + stepper qty →
-BAYAR → pilih lokasi jika belum assigned →
-pilih metode (TUNAI/QRIS/TRANSFER) →
+Login → auto-detect lokasi dari user_id →
+scan QR → JUAL → cart + stepper qty →
+BAYAR → pilih metode (TUNAI/QRIS/TRANSFER) →
 backend recalculate → simpan → stok berkurang
 ```
-PENTING: Stok harus ada di lokasi yang dipilih. Jika 0 → error normal.
 
-### Stok Opname
+### ⚠️ Stok Opname — ATURAN KRITIS
+
+**Saat sesi opname aktif → SEMUA transaksi DIBLOKIR:**
+- Tidak bisa jual
+- Tidak bisa barang masuk
+- Tidak bisa transfer
+- SalesService, StockInService, TransferService wajib throw exception jika ada sesi aktif
+
+**Flow Mobile:**
 ```
-Buat sesi → scan → input qty fisik →
-submit → Owner/Admin validasi →
-SETELAH validasi: stok dioverwrite
-Single session: hanya 1 sesi aktif sekaligus
-Status: draft → pending_validation → validated/rejected
+1. Buat sesi → WAJIB pilih lokasi
+2. Scan QR Code item
+3. Input QTY FISIK (qty yang dihitung secara fisik)
+4. Input QTY RUSAK (opsional)
+5. Lihat sistem qty vs fisik qty + selisih
+6. SIMPAN ITEM → lanjut scan item berikutnya
+7. Setelah semua item: SUBMIT UNTUK VALIDASI
+8. Sesi status: draft → pending_validation
 ```
+
+**Flow Web Admin (Owner/Admin):**
+```
+Stok Opname → tab AKTIF & PENDING →
+Lihat sesi pending dengan detail:
+  ITEM | SISTEM | FISIK | SELISIH | RUSAK
+Tombol VALIDASI → stok dioverwrite sesuai fisik
+Tombol TOLAK → stok tidak berubah
+```
+
+**Status flow:**
+```
+draft → pending_validation → validated (stok dioverwrite)
+                           → rejected  (stok tidak berubah)
+```
+
+**Validator:** Owner dan Admin saja.
+
+**Single Session Rule:**
+- Hanya 1 sesi aktif (draft/pending_validation) di satu waktu
+- Cek GET /api/stock-opnames/active sebelum buat sesi baru
+
+**API Stok Opname:**
+```
+GET  /api/stock-opnames/active    → cek sesi aktif (register SEBELUM {id})
+POST /api/stock-opnames           → buat sesi baru { location_id, notes }
+GET  /api/stock-opnames/{id}      → detail sesi
+POST /api/stock-opnames/{id}/items → tambah item
+  body: { item_id, physical_qty, damaged_qty, system_qty }
+POST /api/stock-opnames/{id}/submit   → submit untuk validasi
+POST /api/stock-opnames/{id}/validate → validasi (Owner/Admin)
+POST /api/stock-opnames/{id}/reject   → tolak (Owner/Admin)
+```
+
+**Movement types untuk opname:**
+- `stock_opname_plus` — fisik > sistem (stok bertambah)
+- `stock_opname_lost` — fisik < sistem (stok berkurang)
+- `available_to_damaged` — item rusak ditemukan
 
 ---
 
@@ -193,13 +216,13 @@ Status: draft → pending_validation → validated/rejected
 
 ### Timezone Queries
 ```php
-// BENAR — gunakan helper ini:
+// BENAR — gunakan helper:
 $this->whereReportDate($query, 'transaction_date', $today)
 // Yang menjalankan:
 ->whereRaw("DATE(column AT TIME ZONE 'Asia/Jakarta') = ?", [$date])
 
 // SALAH:
-->whereDate('transaction_date', $date)  // tidak timezone-aware
+->whereDate('transaction_date', $date)
 ```
 
 ### GROUP BY
@@ -209,28 +232,64 @@ $this->whereReportDate($query, 'transaction_date', $today)
 ->groupBy('item_id')
 
 // SALAH (error di PostgreSQL):
-->groupBy('item_id')  // tanpa selectRaw
+->groupBy('item_id')
 ```
 
 ### UUID Morphs
 `personal_access_tokens.tokenable_id` harus `varchar(255)`.
-Migration wajib pakai `uuidMorphs()` bukan `morphs()`.
+Gunakan `uuidMorphs()` bukan `morphs()` di migration.
+
+### Blade Templates
+TIDAK BOLEH ada `use` statement di dalam `@php` block.
+Gunakan fully qualified class names: `\App\Models\Item::all()`
 
 ---
 
-## Stok Opname
+## Struktur Web Admin
 
-### Single Session Rule
-- Hanya 1 sesi aktif di satu waktu
-- Cek `/api/stock-opnames/active` sebelum buat sesi baru
-- Throw `OpnameSessionActiveException` jika ada sesi aktif
+### Sub-tab Stok
+```
+RINGKASAN         → stat cards + tabel per item per lokasi
++ TAMBAH STOK     → form lengkap + harga modal + margin
+RIWAYAT PERGERAKAN → movement table
+HARGA JUAL DASAR  → harga + margin (modal & margin butuh password)
+UPDATE HARGA STOK → Owner only, edit harga transaksi dari mobile
+```
 
-### Validator Flow
+### Sub-tab Distribusi
 ```
-draft → pending_validation → validated (stok dioverwrite)
-                           → rejected  (stok tidak berubah)
+TRANSFER KELUAR   → status: AKTIF (transfer instan)
+RETUR MASUK       → form return dari lokasi ke gudang
+LOKASI PENJUALAN  → master lokasi
+RIWAYAT
 ```
-Yang bisa validasi: Owner, Admin saja.
+
+### Sub-tab Penjualan
+```
+RINGKASAN → per-lokasi + metode pembayaran
+RIWAYAT
+TOP PRODUK
+```
+
+### Stok Opname Web
+```
+AKTIF & PENDING → sesi yang perlu divalidasi + tombol VALIDASI/TOLAK
+RIWAYAT         → sesi tervalidasi/ditolak
+```
+
+### Laporan Lengkap
+```
+Laporan Stok     → per item per lokasi, status AMAN/KRITIS/HABIS
+Laporan Penjualan → per lokasi + date filter
+Laporan Gross Profit → Owner only, total sales, HPP, profit, margin %
+```
+
+### Analytics
+```
+Laporan Lengkap
+Setting          → User Management (CRUD) + Roles + Menu Access
+Riwayat Pergerakan
+```
 
 ---
 
@@ -242,170 +301,141 @@ static const String baseUrl = 'https://app.ftrhijab.id/api';
 ```
 
 ### Tab Bar (5 tab)
-`SCAN | JUAL | STOK | STAT | AKUN`
+```
+SCAN | JUAL | STOK | STAT | AKUN
+```
+
+### Format Angka
+- Juta: **JT** (bukan M)
+- Ribu: **RB** (bukan K)
+- Misal: Rp 1.4 JT, Rp 550 RB
+- Berlaku di web dan mobile
 
 ### Employee Detection
-Employee TIDAK di-scan manual.
 Employee = User yang sedang login.
-`employee_id` di API request = null (deprecated).
+`employee_id` di API = null (deprecated).
+`user_id` = `auth()->user()->id`.
 
 ### APK Versioning
+Current production: `aksana-v1.2.0.apk` (v1.2.0+14)
 Format: `aksana-v{version}.apk`
-Ubah `pubspec.yaml` version setiap build baru.
-Current production: v1.0.9
+
+### Stok Opname Mobile — Status Fix Needed
+**Masalah saat ini:** Setelah buat sesi, tidak ada tombol scan item.
+**File yang perlu difix:**
+- `lib/features/stock_opname/presentation/` (cek semua file di folder ini)
+- Screen setelah session dibuat harus punya tombol "+ SCAN ITEM"
+- Flow: tap scan → kamera → scan QR → form qty → SIMPAN ITEM
+- API: POST /api/stock-opnames/{id}/items
 
 ---
 
 ## Deployment
 
-### Deploy Command
+### Deploy Command (VPS)
 ```bash
 /root/deploy.sh
-# git fetch + reset hard + composer + migrate + cache + restart
+# git reset --hard + composer + migrate + cache + restart workers
 ```
 
-### VPS
+### VPS Info
 ```
 IP: 187.127.114.2
 OS: Ubuntu 24.04, Apache2, PHP 8.2, PostgreSQL 16, Redis 7.0
-Deploy: /root/deploy.sh
-DB: aksana_inventory, user: aksana_user
+SSL: Let's Encrypt (expire 2026-08-27)
+```
+
+### Setelah Deploy
+Jika ada migrate + seed yang perlu dijalankan:
+```bash
+cd /var/www/aksana-inventory
+php artisan migrate --force
+php artisan db:seed --class=UserSeeder --force
+php artisan db:seed --class=LocationAssignmentSeeder --force
 ```
 
 ---
 
-## Bug Fixes (UAT 2026-05-30)
+## Bug Fixes Status
 
-| ID | Error | Status | Fix |
-|---|---|---|---|
-| B001 | PostgreSQL GROUP BY column error | ✅ Fixed | Gunakan `selectRaw` sebelum `groupBy` |
-| B002 | UUID vs bigint di personal_access_tokens | ✅ Fixed | `ALTER COLUMN tokenable_id TYPE varchar(255)` |
-| B003 | Scan QR tidak merespons di HP | ✅ Fixed | Rewrite ScanScreen dengan proper MobileScannerController |
-| B004 | Harga Rp 0 di cart | ✅ Fixed | Parse `latest_base_selling_price` ke double |
-| B005 | Location/employee tidak tersedia | ✅ Fixed | Location selector + employee_id nullable |
-| B006 | API login 500 | ✅ Fixed | Sama dengan B002 |
-| B007 | Dropdown lokasi kosong di Distribusi | ✅ Fixed | Update status lokasi dari draft ke active |
-| B008 | Report mobile-summary selalu 0 | ✅ Fixed | Timezone-aware query `AT TIME ZONE 'Asia/Jakarta'` |
-| B009 | Git pull conflict di VPS | ✅ Fixed | Deploy script pakai `git reset --hard origin/main` |
-| B010 | Route [login] not defined | ✅ Non-fatal | Warning log saja, tidak affect fungsi |
-| B011 | Pesan konfirmasi barang masuk "1 item" | 🔲 Pending | Harus tampilkan total qty bukan jumlah jenis item |
+| ID | Error | Status |
+|---|---|---|
+| B001 | PostgreSQL GROUP BY | ✅ Fixed |
+| B002 | UUID vs bigint personal_access_tokens | ✅ Fixed |
+| B003 | Scan QR tidak merespons di HP | ✅ Fixed |
+| B004 | Harga Rp 0 di cart | ✅ Fixed |
+| B005 | Location/employee tidak tersedia | ✅ Fixed |
+| B006 | API login 500 | ✅ Fixed |
+| B007 | Dropdown lokasi kosong di Distribusi | ✅ Fixed |
+| B008 | Report mobile-summary selalu 0 | ✅ Fixed |
+| B009 | Git pull conflict di VPS | ✅ Fixed |
+| B010 | Route [login] not defined | ✅ Non-fatal |
+| B011 | Pesan konfirmasi qty barang masuk | ✅ Fixed |
+| B012 | Tombol SIMPAN tidak ada di Tambah Stok | ✅ Fixed |
 
 ---
 
-## Revisi Pending (Post-UAT)
+## Revisi Status
 
-### Status R001–R007
+| ID | Item | Status |
+|---|---|---|
+| R001 | Status transfer "AKTIF" | ✅ Fixed |
+| R002 | Tab "Harga Jual Dasar" | ✅ Fixed |
+| R003 | Margin dilindungi password | ✅ Fixed |
+| R004 | Harga Jual Bazar auto-calculate | ✅ Fixed |
+| R005 | Tombol Verifikasi di dialog | ✅ Fixed |
+| R006 | STAT tab scroll/tap | ✅ Fixed |
+| R007 | Setting page User CRUD | ✅ Fixed |
 
-| ID | Item | File | Status |
-|---|---|---|---|
-| R001 | Status transfer: "DALAM PERJALANAN" → "AKTIF" | DistribusiPage.php | ✅ Fixed |
-| R002 | Rename tab "HARGA JUAL" → "HARGA JUAL DASAR" | stok.blade.php | ✅ Fixed |
-| R003 | Margin dilindungi password seperti Harga Modal | StokPage.php | 🔲 Pending |
-| R004 | Harga Jual Bazar = auto-calculate di form distribusi | DistribusiPage.php | ✅ Fixed |
-| R005 | Tombol Verifikasi tidak terlihat di dialog Harga Modal | Blade CSS | 🔲 Pending |
-| R006 | STAT tab tidak bisa di-scroll/tap | reports_screen.dart | ✅ Fixed |
-| R007 | Setting page — Tambah/Edit User belum tersambung ke DB | setting.blade.php | 🔲 Pending |
+---
 
-### Fitur Baru dari UAT (F-series)
+## Fitur Baru (F-series)
 
-| ID | Fitur | Scope | Keputusan |
-|---|---|---|---|
-| F001 | Input harga modal + margin saat barang masuk | **Web Admin only** | Pilihan B: hanya via web sub-tab Tambah Stok, BUKAN di mobile |
-| F002 | Sub-tab Tambah Stok di web admin — form lengkap | Web (StokPage) | Alur sama dengan mobile: scan/pilih item + qty + harga modal + margin |
-| F003 | Upload foto saat barang masuk | Web + Mobile | Foto QC wajib sebelum konfirmasi barang masuk |
-| F004 | Stok Ringkasan: breakdown per lokasi per item | Web (stok.blade.php) | Tabel "Total Semua Stok per Item" tambah kolom per lokasi |
+| ID | Fitur | Status |
+|---|---|---|
+| F001 | Harga modal HANYA via web admin | ✅ Implemented |
+| F002 | Form Tambah Stok web lengkap | ✅ Implemented |
+| F003 | Upload foto barang masuk (web+mobile) | ✅ Implemented |
+| F004 | Stok Ringkasan per lokasi | ✅ Implemented |
+| F005 | Edit harga transaksi dari mobile (tab Update Harga Stok) | ✅ Implemented |
 
-### Detail F001 — Barang Masuk: Harga Modal di Web Saja
+---
 
-**Alur yang benar:**
-```
-Mobile (Admin Gudang):
-  Scan QR Code → input qty diterima → KONFIRMASI
-  (tanpa input harga — harga diisi via web)
+## Pending (Belum Selesai)
 
-Web Admin (Owner/Admin):
-  Stok → Tambah Stok → pilih item → input qty →
-  input harga modal → input tipe margin (nominal/%) →
-  sistem hitung harga jual dasar otomatis → SIMPAN
-```
+### P001 — Stok Opname Mobile: Tombol Scan Item
+**Masalah:** Setelah buat sesi opname, tidak ada tombol "+ SCAN ITEM"
+**File:** `lib/features/stock_opname/presentation/` (cek semua file)
+**Yang dibutuhkan:**
+1. Tombol "+ SCAN ITEM" di session detail screen
+2. Flow: tap → kamera → scan QR → form qty fisik + rusak → SIMPAN
+3. API: POST /api/stock-opnames/{id}/items
+4. Setelah save: kembali ke session screen, item muncul di list
+5. SUBMIT UNTUK VALIDASI → status jadi pending_validation
 
-**Implikasi API:**
-- POST /api/stock-in dari mobile: `supplier_cost` bisa 0 atau null
-- Web admin memanggil POST /api/stock-in dengan `supplier_cost` yang valid
-- Backend tetap menyimpan `latest_supplier_cost` di tabel `items`
-
-### Detail B011 — Fix Pesan Konfirmasi Barang Masuk
-
-**Sekarang:** "Kirim 1 item ke gudang pusat?"
-**Seharusnya:** "Kirim {total_qty} unit ({n} jenis item) ke gudang pusat?"
-
-Contoh: 1 jenis H&M Essential Coklat L, qty 4 →
-"Kirim 4 unit (1 jenis item) ke gudang pusat?"
-
-File: `lib/features/stock_in/presentation/stock_in_screen.dart`
-
-### Detail F002 — Form Tambah Stok Web Admin
-
-Form di sub-tab Tambah Stok harus memiliki:
-- No. Referensi/PO (input teks)
-- Tanggal Masuk (date picker)
-- Nama Supplier (input teks, opsional)
-- Lokasi Tujuan (auto: Gudang Pusat, read-only)
-- Section ITEM DITERIMA:
-  - Pilih item dari katalog (searchable dropdown)
-  - Qty Diterima (required)
-  - Qty Available (required, ≤ qty diterima)
-  - Qty Damaged (auto = qty diterima - qty available)
-  - Harga Modal / supplier_cost (required, Owner/Admin only)
-  - Tipe Margin: nominal | percentage
-  - Nilai Margin (input angka)
-  - Harga Jual Dasar (auto-calculate, read-only)
-  - QC Note (opsional)
-  - Tombol + Tambah Item (untuk item berikutnya)
-- Total Qty + Total Nilai Modal (auto-calculate)
-- Tombol: BATAL | SIMPAN
-
-### Detail F003 — Upload Foto Barang Masuk
-
-**Web Admin:**
-- Tambah FileUpload field di form Tambah Stok
-- Upload sebelum klik SIMPAN
-- Foto disimpan via PhotoService (watermark + compress)
-- Foto ID dikirim ke POST /api/stock-in sebagai `photo_id`
-
-**Mobile:**
-- Tambah tombol kamera sebelum KONFIRMASI di Barang Masuk screen
-- Gunakan `image_picker` package (sudah ada di pubspec.yaml)
-- Upload via POST /api/photos → dapat photo_id
-- Kirim photo_id saat POST /api/stock-in
-
-### Detail F004 — Stok Ringkasan: Lokasi Per Item
-
-Tabel "Total Semua Stok per Item" tambah kolom per lokasi:
-
-| ITEM | BARCODE | GUDANG | BINTARO | CREATIVE | SURYA | TOTAL | STATUS |
-|---|---|---|---|---|---|---|---|
-
-- Kolom lokasi: dynamic berdasarkan lokasi yang ada di database
-- Qty per lokasi = stock_balances WHERE stock_status = available
-- Jika qty 0 di lokasi: tampilkan "—" (muted)
-- Jika qty > 0: tampilkan angka bold
+### P002 — Stok Opname: Block Semua Transaksi saat Sesi Aktif
+**Status Laravel:** ✅ Sudah diimplementasi di SalesService, StockInService, TransferService
+**Status Mobile:** 🔲 Perlu tambah warning banner + disable tab saat opname aktif
+- Check GET /api/stock-opnames/active saat app startup
+- Simpan di `activeOpnameProvider`
+- Tampilkan banner amber di semua screen transaksi
+- Disable JUAL tab dan Barang Masuk
 
 ---
 
 ## Default Credentials
 
-| Email | Password | Role | NIK |
-|---|---|---|---|
-| owner@aksana.id | password | owner | USR-001 |
-| admin@aksana.id | password | admin | USR-002 |
-| gudang@aksana.id | password | admin_gudang | USR-003 |
-| picbazar@aksana.id | password | pic_bazar | USR-004 |
-| sales@aksana.id | password | sales | USR-005 |
+| Email | Password | Role | NIK | Lokasi |
+|---|---|---|---|---|
+| owner@aksana.id | password | owner | USR-001 | - |
+| admin@aksana.id | password | admin | USR-002 | - |
+| gudang@aksana.id | password | admin_gudang | USR-003 | Gudang Pusat |
+| picbazar@aksana.id | password | pic_bazar | USR-004 | Bintaro Avenue |
+| sales@aksana.id | password | sales | USR-005 | Creative Box Bintaro |
 
 ---
 
-## Coding Rules (Ringkasan)
+## Coding Rules
 
 1. UUID primary keys di semua tabel
 2. supplier_cost TIDAK BOLEH di response apapun
@@ -414,6 +444,11 @@ Tabel "Total Semua Stok per Item" tambah kolom per lokasi:
 5. Backend recalculate semua harga
 6. PostgreSQL: gunakan whereReportDate() helper
 7. PostgreSQL: selectRaw sebelum groupBy
-8. Employee = User — jangan relasi baru ke tabel employees
+8. Jangan buat relasi baru ke tabel employees
 9. API /api/me harus return location_id dan location_name
-10. Transfer bersifat instan — status AKTIF bukan "Dalam Perjalanan"
+10. Transfer bersifat instan — status AKTIF
+11. Format angka: JT (juta), RB (ribu) — web dan mobile
+12. TIDAK BOLEH ada `use` statement di @php block Blade
+13. Saat opname aktif: SEMUA transaksi diblokir
+14. Margin dan Harga Modal sama-sama butuh password Owner
+15. Update Harga Stok tab hanya visible untuk role Owner
