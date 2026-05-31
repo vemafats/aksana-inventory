@@ -8,9 +8,11 @@ use App\Enums\LocationType;
 use App\Enums\StockStatus;
 use App\Models\Item;
 use App\Models\Location;
+use App\Models\StockOpnameTransaction;
 use App\Models\TransferItem;
 use App\Models\TransferTransaction;
 use App\Models\User;
+use Exception;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -247,6 +249,8 @@ class TransferService
      */
     public function createTransfer(array $data, User $createdBy): TransferTransaction
     {
+        $this->assertNoActiveOpnameSession();
+
         $this->validateLocations($data);
         $this->validateSufficientStockForItems($data);
 
@@ -428,5 +432,21 @@ class TransferService
 
         return str_contains($message, 'unique')
             || str_contains($message, 'duplicate');
+    }
+
+    private function assertNoActiveOpnameSession(): void
+    {
+        $hasActiveOpname = StockOpnameTransaction::whereIn(
+            'validation_status',
+            ['draft', 'pending_validation'],
+        )->exists();
+
+        if ($hasActiveOpname) {
+            throw new Exception(
+                'Tidak dapat melakukan transaksi. '.
+                'Sesi stok opname sedang aktif. '.
+                'Hubungi owner atau admin untuk memvalidasi sesi opname terlebih dahulu.',
+            );
+        }
     }
 }

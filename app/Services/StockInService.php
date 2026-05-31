@@ -9,7 +9,9 @@ use App\Models\Item;
 use App\Models\Location;
 use App\Models\StockInItem;
 use App\Models\StockInTransaction;
+use App\Models\StockOpnameTransaction;
 use App\Models\User;
+use Exception;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -71,6 +73,19 @@ class StockInService
      */
     public function createTransaction(array $data, User $createdBy): StockInTransaction
     {
+        $hasActiveOpname = StockOpnameTransaction::whereIn(
+            'validation_status',
+            ['draft', 'pending_validation'],
+        )->exists();
+
+        if ($hasActiveOpname) {
+            throw new Exception(
+                'Tidak dapat melakukan transaksi. '.
+                'Sesi stok opname sedang aktif. '.
+                'Hubungi owner atau admin untuk memvalidasi sesi opname terlebih dahulu.',
+            );
+        }
+
         return DB::transaction(function () use ($data, $createdBy): StockInTransaction {
             $barcodes = collect($data['items'])->pluck('barcode')->all();
             $this->validateBarcodes($barcodes);

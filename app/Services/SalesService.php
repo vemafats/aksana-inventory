@@ -8,8 +8,10 @@ use App\Models\Item;
 use App\Models\Location;
 use App\Models\SalesItem;
 use App\Models\SalesTransaction;
+use App\Models\StockOpnameTransaction;
 use App\Models\TransferItem;
 use App\Models\User;
+use Exception;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -100,6 +102,19 @@ class SalesService
      */
     public function createTransaction(array $data, User $createdBy): SalesTransaction
     {
+        $hasActiveOpname = StockOpnameTransaction::whereIn(
+            'validation_status',
+            ['draft', 'pending_validation'],
+        )->exists();
+
+        if ($hasActiveOpname) {
+            throw new Exception(
+                'Tidak dapat melakukan transaksi. '.
+                'Sesi stok opname sedang aktif. '.
+                'Hubungi owner atau admin untuk memvalidasi sesi opname terlebih dahulu.',
+            );
+        }
+
         $location = $this->validateLocation($data['location_id']);
         $salesUserId = $this->resolveSalesUserId($data, $createdBy);
         $data['user_id'] = $salesUserId;
