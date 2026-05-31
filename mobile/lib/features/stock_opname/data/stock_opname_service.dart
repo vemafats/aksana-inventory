@@ -46,6 +46,19 @@ class StockOpnameService {
     return _mapData(res.data);
   }
 
+  Future<List<Map<String, dynamic>>> fetchLocationStock(
+    Dio dio,
+    String locationId,
+  ) async {
+    final res = await dio.get('/stocks/location/$locationId');
+    final data = res.data['data'];
+    if (data is! List) return [];
+    return data
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+  }
+
   Map<String, dynamic> _mapData(dynamic body) {
     final data = body is Map ? body['data'] : null;
     if (data is Map<String, dynamic>) return data;

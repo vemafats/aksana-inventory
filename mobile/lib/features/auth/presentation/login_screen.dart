@@ -122,6 +122,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                         ),
                       ],
+                      const Spacer(),
+                      const Text(
+                        'v1.2.0',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF49586B),
+                          fontFamily: 'IBMPlexMono',
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 24),
                     ],
                   ),
                 ),

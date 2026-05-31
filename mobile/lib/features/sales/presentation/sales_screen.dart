@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/auth/auth_provider.dart';
+import '../../../core/opname/active_opname_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/format_utils.dart';
@@ -31,6 +32,20 @@ class SalesScreen extends ConsumerWidget {
       await showLocationSelector(context, ref);
       locationId = ref.read(authProvider).locationId ?? resolveLocationId(ref);
       if (locationId == null || !context.mounted) return;
+    }
+
+    final dio = ref.read(apiClientProvider).dio;
+    if (await isActiveOpnameBlocking(dio)) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Sesi opname aktif. Selesaikan opname terlebih dahulu.',
+          ),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+      return;
     }
 
     final success = await ref.read(salesCartProvider.notifier).checkout(

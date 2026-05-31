@@ -10,6 +10,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/auth/auth_provider.dart';
+import '../../../core/opname/active_opname_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/screen_header.dart';
@@ -104,6 +105,19 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
   Future<void> _confirmSubmit() async {
     final items = ref.read(stockInProvider);
     if (items.isEmpty) return;
+
+    if (await isActiveOpnameBlocking(ref.read(apiClientProvider).dio)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Sesi opname aktif. Selesaikan opname terlebih dahulu.',
+          ),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+      return;
+    }
 
     final totalQty = items.fold<int>(0, (sum, item) => sum + item.qty);
     final itemCount = items.length;

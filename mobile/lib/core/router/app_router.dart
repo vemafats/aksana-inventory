@@ -8,6 +8,7 @@ import '../../features/sales/presentation/sales_screen.dart';
 import '../../features/stock_in/presentation/stock_in_screen.dart';
 import '../../features/stock_check/presentation/stock_check_screen.dart';
 import '../../features/stock_check/presentation/stock_menu_screen.dart';
+import '../../features/stock_opname/presentation/opname_session_screen.dart';
 import '../../features/stock_opname/presentation/stock_opname_screen.dart';
 import '../../features/return_stock/presentation/return_stock_screen.dart';
 import '../../features/reports/presentation/reports_screen.dart';
@@ -55,6 +56,14 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: 'stock-opname',
                 builder: (_, __) => const StockOpnameScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'session/:sessionId',
+                    builder: (context, state) => OpnameSessionScreen(
+                      sessionId: state.pathParameters['sessionId']!,
+                    ),
+                  ),
+                ],
               ),
               GoRoute(
                 path: 'return',
