@@ -24,10 +24,12 @@ use Database\Seeders\SizeSeeder;
 use Database\Seeders\UserSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use Tests\Concerns\CreatesActiveEvents;
 use Tests\TestCase;
 
 class ReportSalesTest extends TestCase
 {
+    use CreatesActiveEvents;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -240,9 +242,11 @@ class ReportSalesTest extends TestCase
     ): void {
         Sanctum::actingAs(User::query()->where('email', 'gudang@aksana.id')->firstOrFail());
 
+        $event = $this->activeEventForLocation($bazar);
+
         $this->postJson('/api/transfers', [
             'from_location_id' => $warehouse->id,
-            'to_location_id' => $bazar->id,
+            'event_id' => $event->id,
             'transfer_date' => now()->toDateString(),
             'items' => [[
                 'item_id' => $item->id,

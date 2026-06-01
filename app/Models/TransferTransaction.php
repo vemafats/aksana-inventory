@@ -21,6 +21,7 @@ class TransferTransaction extends Model
         'transfer_number',
         'from_location_id',
         'to_location_id',
+        'event_id',
         'transfer_date',
         'status',
         'note',
@@ -47,6 +48,11 @@ class TransferTransaction extends Model
     public function toLocation(): BelongsTo
     {
         return $this->belongsTo(Location::class, 'to_location_id');
+    }
+
+    public function event(): BelongsTo
+    {
+        return $this->belongsTo(Event::class);
     }
 
     public function createdBy(): BelongsTo

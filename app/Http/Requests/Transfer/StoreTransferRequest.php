@@ -18,7 +18,8 @@ class StoreTransferRequest extends FormRequest
     {
         return [
             'from_location_id' => ['required', 'uuid', 'exists:locations,id'],
-            'to_location_id' => ['required', 'uuid', 'exists:locations,id', 'different:from_location_id'],
+            'event_id' => ['required', 'uuid', 'exists:events,id'],
+            'to_location_id' => ['sometimes', 'nullable', 'uuid', 'exists:locations,id', 'different:from_location_id'],
             'transfer_date' => ['required', 'date'],
             'note' => ['nullable', 'string'],
             'items' => ['required', 'array', 'min:1'],

@@ -6,6 +6,7 @@ use App\Enums\BazarAdjustType;
 use App\Enums\LocationStatus;
 use App\Enums\LocationType;
 use App\Enums\StockStatus;
+use App\Models\Event;
 use App\Models\Item;
 use App\Models\Location;
 use App\Models\StockOpnameTransaction;
@@ -251,6 +252,8 @@ class TransferService
     {
         $this->assertNoActiveOpnameSession();
 
+        $data = $this->resolveEventDestination($data);
+
         $this->validateLocations($data);
         $this->validateSufficientStockForItems($data);
 
@@ -303,9 +306,35 @@ class TransferService
                 'transferItems.item',
                 'fromLocation',
                 'toLocation',
+                'event',
                 'createdBy',
             ]);
         });
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function resolveEventDestination(array $data): array
+    {
+        if (empty($data['event_id'])) {
+            return $data;
+        }
+
+        $event = Event::query()->find($data['event_id']);
+
+        if ($event === null) {
+            throw new InvalidArgumentException('Event tidak ditemukan.');
+        }
+
+        if ($event->status !== 'active') {
+            throw new InvalidArgumentException('Event tidak aktif.');
+        }
+
+        $data['to_location_id'] = $event->location_id;
+
+        return $data;
     }
 
     public function completeTransfer(TransferTransaction $transfer): void
@@ -396,6 +425,7 @@ class TransferService
                     'transfer_number' => $this->generateTransferNumber(),
                     'from_location_id' => $data['from_location_id'],
                     'to_location_id' => $data['to_location_id'],
+                    'event_id' => $data['event_id'] ?? null,
                     'transfer_date' => $data['transfer_date'],
                     'status' => 'completed',
                     'note' => $data['note'] ?? null,

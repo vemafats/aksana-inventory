@@ -40,7 +40,7 @@ class TransferController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = TransferTransaction::query()
-            ->with(['fromLocation', 'toLocation', 'createdBy'])
+            ->with(['fromLocation', 'toLocation', 'event', 'createdBy'])
             ->latest();
 
         if ($request->filled('from_location_id')) {
@@ -105,6 +105,13 @@ class TransferController extends Controller
                 'id' => $transfer->createdBy->id,
                 'name' => $transfer->createdBy->name,
                 'email' => $transfer->createdBy->email,
+            ];
+        }
+
+        if ($transfer->relationLoaded('event') && $transfer->event) {
+            $data['event'] = [
+                'id' => $transfer->event->id,
+                'name' => $transfer->event->name,
             ];
         }
 

@@ -25,10 +25,12 @@ use Database\Seeders\SizeSeeder;
 use Database\Seeders\UserSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use Tests\Concerns\CreatesActiveEvents;
 use Tests\TestCase;
 
 class TransferTest extends TestCase
 {
+    use CreatesActiveEvents;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -83,6 +85,13 @@ class TransferTest extends TestCase
             'movement_type' => MovementType::TRANSFER_AVAILABLE->value,
             'qty' => 6,
             'reference_type' => 'transfer',
+        ]);
+
+        $event = $this->activeEventForLocation($bazar);
+
+        $this->assertDatabaseHas('transfer_transactions', [
+            'to_location_id' => $bazar->id,
+            'event_id' => $event->id,
         ]);
     }
 
@@ -160,16 +169,19 @@ class TransferTest extends TestCase
         $this->stockIn($itemOne, 10);
         $this->stockIn($itemTwo, 8);
 
-        $this->actingAsGudang()->postJson('/api/transfers', [
-            'from_location_id' => $warehouse->id,
-            'to_location_id' => $bazar->id,
-            'transfer_date' => now()->toDateString(),
-            'note' => null,
-            'items' => [
-                $this->transferItemPayload($itemOne->id, ['qty' => 2]),
-                $this->transferItemPayload($itemTwo->id, ['qty' => 3]),
-            ],
-        ])->assertCreated();
+        $this->actingAsGudang()->postJson('/api/transfers', $this->transferPayload(
+            $warehouse->id,
+            $bazar->id,
+            $itemOne->id,
+            ['qty' => 2],
+        ))->assertCreated();
+
+        $this->actingAsGudang()->postJson('/api/transfers', $this->transferPayload(
+            $warehouse->id,
+            $bazar->id,
+            $itemTwo->id,
+            ['qty' => 3],
+        ))->assertCreated();
 
         $this->assertSame(2, StockMovement::query()
             ->where('reference_type', 'transfer')
@@ -180,17 +192,18 @@ class TransferTest extends TestCase
     public function test_cannot_transfer_to_same_location(): void
     {
         $item = $this->createCatalogItem();
-        $warehouse = $this->warehouse();
+        $bazar = $this->bazar();
+        $event = $this->activeEventForLocation($bazar);
 
         $this->stockIn($item, 5);
 
-        $response = $this->actingAsGudang()->postJson('/api/transfers', $this->transferPayload(
-            $warehouse->id,
-            $warehouse->id,
-            $item->id,
+        $response = $this->actingAsGudang()->postJson('/api/transfers', array_merge(
+            $this->transferPayload($bazar->id, $bazar->id, $item->id),
+            ['event_id' => $event->id],
         ));
 
-        $response->assertUnprocessable();
+        $response->assertUnprocessable()
+            ->assertJsonPath('success', false);
     }
 
     public function test_only_authorized_roles_can_transfer(): void
@@ -247,9 +260,12 @@ class TransferTest extends TestCase
         string $itemId,
         array $itemOverrides = [],
     ): array {
+        $toLocation = Location::query()->findOrFail($toLocationId);
+        $event = $this->activeEventForLocation($toLocation);
+
         return [
             'from_location_id' => $fromLocationId,
-            'to_location_id' => $toLocationId,
+            'event_id' => $event->id,
             'transfer_date' => now()->toDateString(),
             'note' => null,
             'items' => [

@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Enums\BazarAdjustType;
+use App\Models\Event;
 use App\Models\Item;
 use App\Models\Location;
 use App\Models\TransferTransaction;
@@ -209,7 +210,7 @@ class DistribusiPage extends Page implements HasForms, HasTable
         if ($this->activeTab === 'riwayat') {
             return $table
                 ->query(fn (): Builder => TransferTransaction::query()
-                    ->with(['fromLocation', 'toLocation', 'transferItems'])
+                    ->with(['fromLocation', 'toLocation', 'event', 'transferItems'])
                     ->when($this->historyDateFrom, fn (Builder $q) => $q->whereDate('transfer_date', '>=', $this->historyDateFrom))
                     ->when($this->historyDateTo, fn (Builder $q) => $q->whereDate('transfer_date', '<=', $this->historyDateTo))
                     ->latest('transfer_date'))
@@ -229,6 +230,9 @@ class DistribusiPage extends Page implements HasForms, HasTable
                             return $distribusi->isReturnTransfer($record) ? 'RETUR' : 'TRANSFER';
                         })
                         ->color(fn (TransferTransaction $record) => $distribusi->isReturnTransfer($record) ? 'warning' : 'info'),
+                    Tables\Columns\TextColumn::make('event.name')
+                        ->label('Event')
+                        ->placeholder('—'),
                     Tables\Columns\TextColumn::make('toLocation.location_name')
                         ->label('Lokasi'),
                     Tables\Columns\TextColumn::make('total_qty')
@@ -264,7 +268,7 @@ class DistribusiPage extends Page implements HasForms, HasTable
 
         return $table
             ->query(fn (): Builder => TransferTransaction::query()
-                ->with(['fromLocation', 'toLocation', 'transferItems'])
+                ->with(['fromLocation', 'toLocation', 'event', 'transferItems'])
                 ->whereHas('fromLocation', fn (Builder $q) => $q->where('location_type', 'central_warehouse'))
                 ->latest('transfer_date'))
             ->columns([
@@ -343,14 +347,19 @@ class DistribusiPage extends Page implements HasForms, HasTable
                 ->modalHeading('Transfer Stok Baru')
                 ->modalSubmitActionLabel('Simpan Transfer')
                 ->form([
-                    Forms\Components\Select::make('to_location_id')
-                        ->label('Lokasi Tujuan')
+                    Forms\Components\Select::make('event_id')
+                        ->label('Event Tujuan')
                         ->options(
-                            Location::query()
+                            Event::query()
                                 ->where('status', 'active')
-                                ->where('location_type', '!=', 'central_warehouse')
-                                ->orderBy('location_name')
-                                ->pluck('location_name', 'id'),
+                                ->with('location')
+                                ->orderBy('name')
+                                ->get()
+                                ->mapWithKeys(
+                                    fn (Event $event): array => [
+                                        $event->id => $event->name.' — '.$event->location->location_name,
+                                    ],
+                                ),
                         )
                         ->searchable()
                         ->required(),
@@ -431,10 +440,13 @@ class DistribusiPage extends Page implements HasForms, HasTable
                         ->columns(2),
                 ])
                 ->action(function (array $data) use ($warehouseId): void {
+                    $event = Event::query()->with('location')->findOrFail($data['event_id']);
+
                     try {
                         app(TransferService::class)->createTransfer([
                             'from_location_id' => $warehouseId,
-                            'to_location_id' => $data['to_location_id'],
+                            'to_location_id' => $event->location_id,
+                            'event_id' => $event->id,
                             'transfer_date' => $data['transfer_date'],
                             'items' => $data['items'],
                         ], auth()->user());

@@ -26,10 +26,12 @@ use Database\Seeders\UserSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
+use Tests\Concerns\CreatesActiveEvents;
 use Tests\TestCase;
 
 class StockOpnameTest extends TestCase
 {
+    use CreatesActiveEvents;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -241,9 +243,11 @@ class StockOpnameTest extends TestCase
 
         $this->stockIn($item, 10);
 
+        $event = $this->activeEventForLocation($bazar);
+
         $this->actingAsGudang()->postJson('/api/transfers', [
             'from_location_id' => $warehouse->id,
-            'to_location_id' => $bazar->id,
+            'event_id' => $event->id,
             'transfer_date' => now()->toDateString(),
             'items' => [[
                 'item_id' => $item->id,
