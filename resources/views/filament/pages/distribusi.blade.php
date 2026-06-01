@@ -214,7 +214,6 @@
                     <tr>
                         <th>Lokasi</th>
                         <th>Tipe</th>
-                        <th>Periode Aktif</th>
                         <th>PIC</th>
                         <th>Dikirim</th>
                         <th>Sisa</th>
@@ -227,13 +226,6 @@
                         <tr>
                             <td class="font-semibold">{{ $row['location_name'] }}</td>
                             <td><span class="rounded-full border border-[#D1DAE5] bg-[#DDE4EC]/60 px-2 py-0.5 text-[9px] font-bold uppercase">{{ $row['location_type_label'] }}</span></td>
-                            <td class="text-xs">
-                                @if ($row['start_date'] || $row['end_date'])
-                                    {{ $row['start_date'] ?? '—' }} – {{ $row['end_date'] ?? '—' }}
-                                @else
-                                    —
-                                @endif
-                            </td>
                             <td>{{ $row['pic_name'] }}</td>
                             <td class="aksana-mono">{{ $row['dikirim'] }}</td>
                             <td class="aksana-mono font-bold">{{ $row['sisa'] }}</td>

@@ -44,10 +44,6 @@ class LocationResource extends Resource
                 Forms\Components\Textarea::make('address')
                     ->label('Alamat')
                     ->columnSpanFull(),
-                Forms\Components\DatePicker::make('start_date')
-                    ->label('Tanggal Mulai'),
-                Forms\Components\DatePicker::make('end_date')
-                    ->label('Tanggal Selesai'),
                 Forms\Components\Select::make('status')
                     ->label('Status')
                     ->options(self::locationStatusOptions())
@@ -87,14 +83,6 @@ class LocationResource extends Resource
                         'cancelled' => 'gray',
                         default => 'gray',
                     }),
-                Tables\Columns\TextColumn::make('start_date')
-                    ->label('Mulai')
-                    ->date()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('end_date')
-                    ->label('Selesai')
-                    ->date()
-                    ->sortable(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('location_type')

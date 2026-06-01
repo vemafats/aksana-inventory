@@ -107,8 +107,6 @@ class DistribusiService
                     'location_name' => $location->location_name,
                     'location_type' => $location->location_type->value,
                     'location_type_label' => $location->location_type->label(),
-                    'start_date' => $location->start_date?->format('d M Y'),
-                    'end_date' => $location->end_date?->format('d M Y'),
                     'pic_name' => $pic?->user?->name ?? '—',
                     'dikirim' => $dikirim,
                     'terjual' => $terjual,
