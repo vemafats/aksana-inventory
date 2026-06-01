@@ -284,8 +284,11 @@ class DistribusiPage extends Page implements HasForms, HasTable
                     ->sortable(),
                 Tables\Columns\TextColumn::make('fromLocation.location_name')
                     ->label('Asal'),
+                Tables\Columns\TextColumn::make('event.name')
+                    ->label('Event')
+                    ->placeholder('—'),
                 Tables\Columns\TextColumn::make('toLocation.location_name')
-                    ->label('Tujuan')
+                    ->label('Lokasi')
                     ->weight('semibold'),
                 Tables\Columns\TextColumn::make('total_qty')
                     ->label('Qty')
