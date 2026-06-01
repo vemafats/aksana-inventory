@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 
 import '../../../core/auth/auth_provider.dart';
 import '../data/stock_opname_service.dart';
+// stockOpnameServiceProvider didefinisikan di opname_session_provider.dart
+import 'opname_session_provider.dart' show stockOpnameServiceProvider;
 
 class StockOpnameState {
   final Map<String, dynamic>? session;
@@ -45,9 +47,6 @@ class StockOpnameState {
         awaitingValidation: awaitingValidation ?? this.awaitingValidation,
       );
 }
-
-final stockOpnameServiceProvider =
-    Provider<StockOpnameService>((ref) => StockOpnameService());
 
 class StockOpnameNotifier extends StateNotifier<StockOpnameState> {
   StockOpnameNotifier(this._service, this._dio) : super(const StockOpnameState());
@@ -102,33 +101,6 @@ class StockOpnameNotifier extends StateNotifier<StockOpnameState> {
         isLoading: false,
         errorMessage: 'Gagal membuat sesi',
       );
-      return false;
-    }
-  }
-
-  Future<bool> addScannedItem(Map<String, dynamic> catalog) async {
-    final sessionId = state.session?['id']?.toString();
-    final itemId = catalog['id']?.toString();
-    if (sessionId == null || itemId == null) return false;
-
-    final summary = catalog['stock_summary'];
-    int systemQty = 0;
-    if (summary is Map) {
-      systemQty = (summary['total_available'] as num?)?.toInt() ?? 0;
-    }
-
-    try {
-      await _service.addItem(
-        _dio,
-        sessionId,
-        itemId: itemId,
-        physicalAvailableQty: systemQty,
-      );
-      final full = await _service.fetchSession(_dio, sessionId);
-      state = state.copyWith(session: full, clearError: true);
-      return true;
-    } catch (_) {
-      state = state.copyWith(errorMessage: 'Gagal menambah item');
       return false;
     }
   }

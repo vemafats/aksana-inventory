@@ -27,6 +27,8 @@ class StockOpnameService {
     return _mapData(res.data);
   }
 
+  // Field name sesuai backend: physical_available_qty + damaged_qty
+  // system_qty TIDAK dikirim — backend hitung sendiri dari stock_balances
   Future<void> addItem(
     Dio dio,
     String sessionId, {

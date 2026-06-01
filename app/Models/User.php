@@ -8,6 +8,7 @@ use Filament\Panel;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -61,6 +62,13 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasOne(LocationAssignment::class, 'user_id')
             ->where('is_active', true)
             ->with('location');
+    }
+
+    public function events(): BelongsToMany
+    {
+        return $this->belongsToMany(Event::class, 'event_user')
+            ->withPivot('role_in_event')
+            ->withTimestamps();
     }
 
     protected function activeLocation(): Attribute

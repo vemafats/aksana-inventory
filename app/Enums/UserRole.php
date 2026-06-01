@@ -41,6 +41,11 @@ enum UserRole: string
         return in_array($this, [self::OWNER, self::ADMIN, self::ADMIN_GUDANG]);
     }
 
+    public function canManageEvents(): bool
+    {
+        return in_array($this, [self::OWNER, self::ADMIN], true);
+    }
+
     public function canSell(): bool
     {
         return in_array($this, [self::OWNER, self::ADMIN, self::PIC_BAZAR, self::SALES]);

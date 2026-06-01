@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CatalogController;
 use App\Http\Controllers\Api\CatalogQrCodeController;
 use App\Http\Controllers\Api\EmployeeController;
+use App\Http\Controllers\Api\EventController;
 use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\PhotoController;
 use App\Http\Controllers\Api\ReportController;
@@ -43,6 +44,13 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function (): void {
     Route::post('/transfers', [TransferController::class, 'store']);
     Route::get('/transfers', [TransferController::class, 'index']);
     Route::get('/transfers/{transfer}', [TransferController::class, 'show']);
+
+    Route::get('/events', [EventController::class, 'index']);
+    Route::get('/events/my-active', [EventController::class, 'myActive']);
+    Route::post('/events', [EventController::class, 'store']);
+    Route::get('/events/{event}', [EventController::class, 'show']);
+    Route::put('/events/{event}', [EventController::class, 'update']);
+    Route::post('/events/{event}/end', [EventController::class, 'end']);
 
     Route::get('/stock-opnames/active', [StockOpnameController::class, 'getActive']);
     Route::post('/stock-opnames', [StockOpnameController::class, 'store']);

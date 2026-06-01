@@ -68,6 +68,11 @@ class Location extends Model
         return $this->hasMany(StockOpnameTransaction::class);
     }
 
+    public function events(): HasMany
+    {
+        return $this->hasMany(Event::class);
+    }
+
     public function isActive(): bool
     {
         return $this->status === LocationStatus::ACTIVE;

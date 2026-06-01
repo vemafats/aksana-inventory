@@ -23,13 +23,20 @@
         @endforeach
     </div>
 
-    <div class="aksana-tabs mb-6 flex flex-wrap gap-2">
-        @foreach ([
+    @php
+        $distribusiTabs = [
             'transfer_keluar' => ['icon' => 'heroicon-m-arrow-up-right', 'label' => 'Transfer Keluar'],
             'retur_masuk' => ['icon' => 'heroicon-m-arrow-uturn-left', 'label' => 'Retur Masuk'],
             'lokasi' => ['icon' => 'heroicon-m-map-pin', 'label' => 'Lokasi Penjualan'],
-            'riwayat' => ['icon' => 'heroicon-m-arrow-path', 'label' => 'Riwayat'],
-        ] as $tab => $meta)
+        ];
+        if ($this->canManageEvents()) {
+            $distribusiTabs['event'] = ['icon' => 'heroicon-m-calendar-days', 'label' => 'Event'];
+        }
+        $distribusiTabs['riwayat'] = ['icon' => 'heroicon-m-arrow-path', 'label' => 'Riwayat'];
+    @endphp
+
+    <div class="aksana-tabs mb-6 flex flex-wrap gap-2">
+        @foreach ($distribusiTabs as $tab => $meta)
             <button
                 type="button"
                 wire:click="$set('activeTab', '{{ $tab }}')"
@@ -250,6 +257,34 @@
                     @endforeach
                 </tbody>
             </table>
+        </div>
+    @endif
+
+    @if ($activeTab === 'event' && $this->canManageEvents())
+        <div class="aksana-panel space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h3 class="text-sm font-semibold text-[#070D1E]">Aktivasi Event</h3>
+                    <p class="text-xs text-[#49586B]">
+                        Kelola periode penjualan sementara per lokasi (bazar, outlet, toko) dan penugasan petugas.
+                    </p>
+                </div>
+                <a
+                    href="{{ \App\Filament\Resources\EventResource::getUrl('create') }}"
+                    class="aksana-tab aksana-tab-active text-[10px]"
+                >
+                    + BUAT EVENT
+                </a>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <a
+                    href="{{ \App\Filament\Resources\EventResource::getUrl('index') }}"
+                    class="inline-flex items-center gap-2 rounded-lg border border-[#D1DAE5] bg-white px-4 py-2 text-xs font-bold uppercase tracking-wide text-[#070D1E] hover:bg-[#F8F9FB]"
+                >
+                    <x-heroicon-m-calendar-days class="h-4 w-4" />
+                    Kelola Event
+                </a>
+            </div>
         </div>
     @endif
 

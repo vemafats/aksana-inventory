@@ -5,6 +5,12 @@ import '../../../core/auth/auth_provider.dart';
 import '../../../core/opname/active_opname_provider.dart';
 import '../data/stock_opname_service.dart';
 
+// ─── Provider tunggal (dihapus dari stock_opname_provider.dart) ──────────────
+final stockOpnameServiceProvider =
+    Provider<StockOpnameService>((ref) => StockOpnameService());
+
+// ─── State ───────────────────────────────────────────────────────────────────
+
 class OpnameSessionState {
   final Map<String, dynamic>? session;
   final List<Map<String, dynamic>> locationStock;
@@ -65,6 +71,8 @@ class OpnameSessionState {
       );
 }
 
+// ─── Notifier ─────────────────────────────────────────────────────────────────
+
 class OpnameSessionNotifier extends StateNotifier<OpnameSessionState> {
   OpnameSessionNotifier(
     this._service,
@@ -85,11 +93,11 @@ class OpnameSessionNotifier extends StateNotifier<OpnameSessionState> {
     try {
       final session = await _service.fetchSession(_dio, _sessionId);
       final stock = await _loadStockForSession(session);
+      final status = session['validation_status']?.toString() ?? '';
       state = OpnameSessionState(
         session: session,
         locationStock: stock,
-        awaitingValidation:
-            session['validation_status'] == 'pending_validation',
+        awaitingValidation: status == 'pending_validation',
       );
       await refreshActiveOpname(_read);
     } catch (_) {
@@ -138,11 +146,10 @@ class OpnameSessionNotifier extends StateNotifier<OpnameSessionState> {
       state = state.copyWith(session: session, clearError: true);
       return true;
     } on DioException catch (e) {
-      state = state.copyWith(
-        errorMessage: e.response?.data is Map
-            ? e.response?.data['message']?.toString()
-            : 'Gagal menyimpan item',
-      );
+      final msg = e.response?.data is Map
+          ? e.response?.data['message']?.toString()
+          : null;
+      state = state.copyWith(errorMessage: msg ?? 'Gagal menyimpan item');
       return false;
     } catch (_) {
       state = state.copyWith(errorMessage: 'Gagal menyimpan item');
@@ -171,8 +178,11 @@ class OpnameSessionNotifier extends StateNotifier<OpnameSessionState> {
   }
 }
 
+// ─── Provider ─────────────────────────────────────────────────────────────────
+
 final opnameSessionProvider = StateNotifierProvider.autoDispose
-    .family<OpnameSessionNotifier, OpnameSessionState, String>((ref, sessionId) {
+    .family<OpnameSessionNotifier, OpnameSessionState, String>(
+        (ref, sessionId) {
   return OpnameSessionNotifier(
     ref.watch(stockOpnameServiceProvider),
     ref.watch(apiClientProvider).dio,
@@ -181,8 +191,7 @@ final opnameSessionProvider = StateNotifierProvider.autoDispose
   );
 });
 
-final stockOpnameServiceProvider =
-    Provider<StockOpnameService>((ref) => StockOpnameService());
+// ─── Helper functions ─────────────────────────────────────────────────────────
 
 Future<String?> createOpnameSession(
   T Function<T>(ProviderListenable<T> provider) read,
@@ -206,7 +215,7 @@ Future<String?> createOpnameSession(
 Future<String?> fetchActiveOpnameSessionId(
   T Function<T>(ProviderListenable<T> provider) read,
 ) async {
-  final active =
-      await read(stockOpnameServiceProvider).getActive(read(apiClientProvider).dio);
+  final active = await read(stockOpnameServiceProvider)
+      .getActive(read(apiClientProvider).dio);
   return active?['id']?.toString();
 }

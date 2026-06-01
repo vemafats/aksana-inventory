@@ -93,6 +93,7 @@ class _OpnameSessionScreenState extends ConsumerState<OpnameSessionScreen> {
             TextField(
               controller: physicalController,
               keyboardType: TextInputType.number,
+              autofocus: true,
               style: AppTextStyles.monoBold.copyWith(fontSize: 28),
               textAlign: TextAlign.center,
               decoration: InputDecoration(
@@ -156,11 +157,20 @@ class _OpnameSessionScreenState extends ConsumerState<OpnameSessionScreen> {
     );
     if (!mounted) return;
     if (!ok) {
-      final err = ref.read(opnameSessionProvider(widget.sessionId)).errorMessage;
+      final err =
+          ref.read(opnameSessionProvider(widget.sessionId)).errorMessage;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(err ?? 'Gagal menyimpan item'),
           backgroundColor: AppColors.danger,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Item tersimpan'),
+          backgroundColor: AppColors.success,
+          duration: Duration(seconds: 1),
         ),
       );
     }
@@ -195,8 +205,12 @@ class _OpnameSessionScreenState extends ConsumerState<OpnameSessionScreen> {
       }
     }
 
-    final isPending = state.awaitingValidation ||
-        state.session?['validation_status'] == 'pending_validation';
+    // isPending hanya true jika status benar-benar pending_validation
+    final status = state.session?['validation_status']?.toString() ?? '';
+    final isPending =
+        state.awaitingValidation || status == 'pending_validation';
+    final isDraft = status == 'draft' || status.isEmpty;
+
     final canSubmit = items.isNotEmpty && !isPending && !state.isSubmitting;
 
     return Scaffold(
@@ -233,6 +247,8 @@ class _OpnameSessionScreenState extends ConsumerState<OpnameSessionScreen> {
                             progress: progress,
                           ),
                           const SizedBox(height: 16),
+
+                          // Status banner
                           if (isPending)
                             Container(
                               padding: const EdgeInsets.all(12),
@@ -242,43 +258,72 @@ class _OpnameSessionScreenState extends ConsumerState<OpnameSessionScreen> {
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(color: AppColors.border),
                               ),
-                              child: Text(
-                                'Menunggu validasi dari Owner/Admin.',
-                                style: AppTextStyles.cardSubtitle.copyWith(
-                                  fontSize: 12,
-                                ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.hourglass_top,
+                                      size: 16, color: AppColors.warning),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Menunggu validasi dari Owner/Admin.',
+                                      style:
+                                          AppTextStyles.cardSubtitle.copyWith(
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          if (items.isEmpty)
+
+                          if (isDraft && items.isEmpty)
                             Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 24),
-                              child: Text(
-                                'Belum ada item. Tap + SCAN ITEM untuk mulai.',
-                                textAlign: TextAlign.center,
-                                style: AppTextStyles.cardSubtitle.copyWith(
-                                  fontSize: 13,
-                                ),
+                              padding: const EdgeInsets.symmetric(vertical: 32),
+                              child: Column(
+                                children: [
+                                  const Icon(Icons.qr_code_scanner,
+                                      size: 48, color: AppColors.muted),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    'Belum ada item.',
+                                    style: AppTextStyles.cardTitle
+                                        .copyWith(fontSize: 15),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Tap tombol + SCAN ITEM di bawah untuk mulai.',
+                                    textAlign: TextAlign.center,
+                                    style: AppTextStyles.cardSubtitle
+                                        .copyWith(fontSize: 13),
+                                  ),
+                                ],
                               ),
                             )
                           else
                             ...items.map((row) => _OpnameItemRow(data: row)),
+
                           const SizedBox(height: 12),
                           _SummaryRow(
                             match: match,
                             lost: lost,
                             damaged: damaged,
                           ),
+
                           if (state.errorMessage != null) ...[
                             const SizedBox(height: 12),
                             Text(
                               state.errorMessage!,
-                              style: const TextStyle(color: AppColors.danger),
+                              style:
+                                  const TextStyle(color: AppColors.danger),
                             ),
                           ],
                         ],
                       ),
                     ),
                   ),
+
+                  // Bottom action buttons — tampil selama session masih draft
                   if (!isPending)
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -291,8 +336,10 @@ class _OpnameSessionScreenState extends ConsumerState<OpnameSessionScreen> {
                             label: const Text('+ SCAN ITEM'),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppColors.voidBlack,
-                              side: const BorderSide(color: AppColors.border),
-                              minimumSize: const Size(double.infinity, 52),
+                              side:
+                                  const BorderSide(color: AppColors.border),
+                              minimumSize:
+                                  const Size(double.infinity, 52),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -319,7 +366,8 @@ class _OpnameSessionScreenState extends ConsumerState<OpnameSessionScreen> {
                                             content: Text(
                                               'Dikirim untuk validasi',
                                             ),
-                                            backgroundColor: AppColors.success,
+                                            backgroundColor:
+                                                AppColors.success,
                                           ),
                                         );
                                       }
@@ -354,6 +402,8 @@ class _OpnameSessionScreenState extends ConsumerState<OpnameSessionScreen> {
     );
   }
 }
+
+// ─── Progress Card ──────────────────────────────────────────────────────────
 
 class _ProgressCard extends StatelessWidget {
   final int scanned;
@@ -402,6 +452,8 @@ class _ProgressCard extends StatelessWidget {
     );
   }
 }
+
+// ─── Item Row ────────────────────────────────────────────────────────────────
 
 class _OpnameItemRow extends StatelessWidget {
   final Map<String, dynamic> data;
@@ -453,7 +505,7 @@ class _OpnameItemRow extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'system ${FormatUtils.formatQty(system)} · fisik ${FormatUtils.formatQty(counted)}',
+                  'sistem ${FormatUtils.formatQty(system)} · fisik ${FormatUtils.formatQty(counted)}',
                   style: AppTextStyles.monoMuted,
                 ),
               ],
@@ -471,6 +523,8 @@ class _OpnameItemRow extends StatelessWidget {
     );
   }
 }
+
+// ─── Summary Row ─────────────────────────────────────────────────────────────
 
 class _SummaryRow extends StatelessWidget {
   final int match;
@@ -508,6 +562,8 @@ class _SummaryRow extends StatelessWidget {
     );
   }
 }
+
+// ─── Scanner Page ─────────────────────────────────────────────────────────────
 
 class _OpnameScannerPage extends ConsumerStatefulWidget {
   const _OpnameScannerPage();
@@ -608,7 +664,8 @@ class _OpnameScannerPageState extends ConsumerState<_OpnameScannerPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Gagal memuat data: ${e.message ?? e.toString()}'),
+          content:
+              Text('Gagal memuat data: ${e.message ?? e.toString()}'),
           backgroundColor: AppColors.danger,
         ),
       );
@@ -657,6 +714,8 @@ class _OpnameScannerPageState extends ConsumerState<_OpnameScannerPage> {
     );
   }
 }
+
+// ─── Stat Card ───────────────────────────────────────────────────────────────
 
 class _StatCard extends StatelessWidget {
   final String label;

@@ -70,6 +70,11 @@ class DistribusiPage extends Page implements HasForms, HasTable
         return $user !== null && $user->role->canTransfer();
     }
 
+    public function canManageEvents(): bool
+    {
+        return auth()->user()?->role->canManageEvents() ?? false;
+    }
+
     public function mount(): void
     {
         $this->historyDateFrom = now()->subDays(6)->toDateString();
