@@ -109,7 +109,7 @@ class CartItemRow extends ConsumerWidget {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  FormatUtils.formatPrice(item.bazarSellingPrice * item.qty),
+                  FormatUtils.formatPriceFull(item.bazarSellingPrice * item.qty),
                   style: AppTextStyles.monoBold,
                 ),
               ],

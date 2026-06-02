@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../theme/app_colors.dart';
 
@@ -18,6 +19,13 @@ class FormatUtils {
       return 'Rp ${_trimTrailingZeros((p / 1000).toStringAsFixed(2))}RB';
     }
     return 'Rp ${p.toStringAsFixed(0)}';
+  }
+
+  static String formatPriceFull(dynamic value) {
+    if (value == null) return 'Rp 0';
+    final num n = num.tryParse(value.toString()) ?? 0;
+    final formatter = NumberFormat.decimalPattern('id_ID');
+    return 'Rp ${formatter.format(n.round())}';
   }
 
   static String _trimTrailingZeros(String value) {

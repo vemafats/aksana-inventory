@@ -263,12 +263,12 @@ class _SalesSummaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _summaryRow('SUBTOTAL', FormatUtils.formatPrice(subtotal), muted: true),
+          _summaryRow('SUBTOTAL', FormatUtils.formatPriceFull(subtotal), muted: true),
           if (discount > 0) ...[
             const SizedBox(height: 8),
             _summaryRow(
               'DISKON BAZAR',
-              '-${FormatUtils.formatPrice(discount)}',
+              '-${FormatUtils.formatPriceFull(discount)}',
               valueColor: AppColors.warning,
               muted: true,
             ),
@@ -339,7 +339,7 @@ class _SalesSummaryCard extends StatelessWidget {
             const SizedBox(height: 8),
             _summaryRow(
               'TOTAL DISKON',
-              '-${FormatUtils.formatPrice(totalDiscount)}',
+              '-${FormatUtils.formatPriceFull(totalDiscount)}',
               valueColor: AppColors.warning,
               muted: true,
             ),
@@ -361,7 +361,7 @@ class _SalesSummaryCard extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                FormatUtils.formatPrice(grandTotal),
+                FormatUtils.formatPriceFull(grandTotal),
                 style: AppTextStyles.monoLarge.copyWith(fontSize: 28),
               ),
             ],
