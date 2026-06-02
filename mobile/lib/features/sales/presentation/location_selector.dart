@@ -2,22 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/auth/auth_provider.dart';
+import '../../../core/event/active_event.dart';
+import '../../../core/event/active_event_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import 'sales_provider.dart';
 
-final selectedLocationProvider =
-    StateProvider<Map<String, dynamic>?>((ref) => null);
-
 String resolveLocationName(WidgetRef ref) {
-  final selected = ref.watch(selectedLocationProvider);
-  if (selected != null) {
-    final name = selected['location_name']?.toString();
-    if (name != null && name.isNotEmpty) return name;
-  }
+  final eventState = ref.watch(activeEventNotifierProvider);
+  final fromEvent = eventState.selectedEvent?.locationName;
+  if (fromEvent != null && fromEvent.isNotEmpty) return fromEvent;
+
   final auth = ref.watch(authProvider);
   final fromAuth = auth.locationName ?? auth.user?['location_name']?.toString();
   if (fromAuth != null && fromAuth.isNotEmpty) return fromAuth;
+
   final cart = ref.watch(salesCartProvider);
   if (cart.selectedLocationName != null &&
       cart.selectedLocationName!.isNotEmpty) {
@@ -27,15 +26,15 @@ String resolveLocationName(WidgetRef ref) {
 }
 
 String? resolveLocationId(WidgetRef ref) {
-  final selected = ref.read(selectedLocationProvider);
-  if (selected != null) {
-    final id = selected['id']?.toString();
-    if (id != null && id.isNotEmpty) return id;
-  }
+  final eventState = ref.read(activeEventNotifierProvider);
+  final fromEvent = eventState.selectedEvent?.locationId;
+  if (fromEvent != null && fromEvent.isNotEmpty) return fromEvent;
+
   final auth = ref.read(authProvider);
   if (auth.locationId != null && auth.locationId!.isNotEmpty) {
     return auth.locationId;
   }
+
   final cart = ref.read(salesCartProvider);
   if (cart.selectedLocationId != null && cart.selectedLocationId!.isNotEmpty) {
     return cart.selectedLocationId;
@@ -43,17 +42,11 @@ String? resolveLocationId(WidgetRef ref) {
   return null;
 }
 
-void applyLocationSelection(WidgetRef ref, Map<String, dynamic> loc) {
-  final id = loc['id']?.toString() ?? '';
-  final name = loc['location_name']?.toString() ??
-      loc['name']?.toString() ??
-      '—';
-  ref.read(selectedLocationProvider.notifier).state = loc;
-  ref.read(salesCartProvider.notifier).setSelectedLocation(id, name);
-  ref.read(authProvider.notifier).setActiveLocation(
-        id,
-        name,
-        type: loc['location_type']?.toString(),
+void applyEventSelection(WidgetRef ref, ActiveEvent event) {
+  ref.read(activeEventNotifierProvider.notifier).selectEvent(event);
+  ref.read(salesCartProvider.notifier).setSelectedLocation(
+        event.locationId,
+        event.locationName,
       );
 }
 
@@ -68,28 +61,21 @@ Future<void> showLocationSelector(
   WidgetRef ref, {
   VoidCallback? onLocationChanged,
 }) async {
-  final service = ref.read(salesServiceProvider);
   final dio = ref.read(apiClientProvider).dio;
-  List<Map<String, dynamic>> locations;
-  try {
-    locations = await service.fetchLocations(dio);
-  } catch (_) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Gagal memuat daftar lokasi'),
-          backgroundColor: AppColors.danger,
-        ),
-      );
-    }
-    return;
+  var eventState = ref.read(activeEventNotifierProvider);
+
+  if (eventState.events.isEmpty && !eventState.isLoading) {
+    await ref.read(activeEventNotifierProvider.notifier).fetchMyActiveEvents(dio);
+    eventState = ref.read(activeEventNotifierProvider);
   }
 
   if (!context.mounted) return;
-  if (locations.isEmpty) {
+
+  final events = eventState.events;
+  if (events.isEmpty) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Tidak ada lokasi penjualan aktif'),
+        content: Text('Tidak ada event aktif. Hubungi Owner/Admin.'),
         backgroundColor: AppColors.warning,
       ),
     );
@@ -97,6 +83,8 @@ Future<void> showLocationSelector(
   }
 
   final currentId = resolveLocationId(ref);
+  final selectedEventId =
+      ref.read(activeEventNotifierProvider).selectedEvent?.eventId;
 
   await showModalBottomSheet<void>(
     context: context,
@@ -110,32 +98,34 @@ Future<void> showLocationSelector(
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Text('Pilih Lokasi', style: AppTextStyles.cardTitle),
+            child: Text('Pilih Event', style: AppTextStyles.cardTitle),
           ),
-          ...locations.map((loc) {
-            final id = loc['id']?.toString() ?? '';
-            final name = loc['location_name']?.toString() ??
-                loc['name']?.toString() ??
-                '—';
-            final type = loc['location_type']?.toString() ?? '';
+          ...events.map((event) {
+            final subtitle = [
+              if (event.locationName.isNotEmpty) event.locationName,
+              if (event.roleInEvent.isNotEmpty) event.roleInEvent,
+            ].join(' · ');
+            final isSelected = selectedEventId == event.eventId ||
+                (selectedEventId == null && currentId == event.locationId);
             return ListTile(
-              title: Text(name),
-              subtitle: type.isNotEmpty
-                  ? Text(type, style: AppTextStyles.monoMuted)
+              title: Text(event.eventName),
+              subtitle: subtitle.isNotEmpty
+                  ? Text(subtitle, style: AppTextStyles.monoMuted)
                   : null,
-              trailing: currentId == id
+              trailing: isSelected
                   ? const Icon(Icons.check, color: AppColors.success)
                   : null,
               onTap: () {
-                final hadCartItems = ref.read(salesCartProvider).items.isNotEmpty;
-                applyLocationSelection(ref, loc);
+                final hadCartItems =
+                    ref.read(salesCartProvider).items.isNotEmpty;
+                applyEventSelection(ref, event);
                 Navigator.pop(ctx);
                 onLocationChanged?.call();
                 if (hadCartItems && context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text(
-                        'Perhatian: stok tersedia di lokasi yang dipilih. '
+                        'Perhatian: stok tersedia di lokasi event yang dipilih. '
                         'Pastikan item sudah di-transfer ke lokasi ini.',
                       ),
                       backgroundColor: AppColors.warning,
@@ -218,7 +208,7 @@ Future<void> showInsufficientStockSheet(
                 ),
               ),
               child: const Text(
-                'GANTI LOKASI',
+                'GANTI EVENT',
                 style: TextStyle(color: AppColors.voidBlack),
               ),
             ),

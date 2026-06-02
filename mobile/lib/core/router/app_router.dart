@@ -17,12 +17,12 @@ import '../../features/profile/presentation/profile_screen.dart';
 final routerProvider = Provider<GoRouter>((ref) {
   final auth = ref.watch(authProvider);
   return GoRouter(
-    initialLocation: '/scan',
+    initialLocation: '/stock',
     redirect: (context, state) {
       final loggedIn = auth.isAuthenticated;
       final goingLogin = state.matchedLocation == '/login';
       if (!loggedIn && !goingLogin) return '/login';
-      if (loggedIn && goingLogin) return '/scan';
+      if (loggedIn && goingLogin) return '/stock';
       return null;
     },
     routes: [

@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/api_client.dart';
+import '../event/active_event.dart';
+import '../event/active_event_provider.dart';
 
 final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());
 
@@ -45,7 +49,8 @@ class AuthState {
     String? locationType,
     String? nik,
     String? position,
-  }) => AuthState(
+  }) =>
+      AuthState(
         isAuthenticated: isAuthenticated ?? this.isAuthenticated,
         token: token ?? this.token,
         user: user ?? this.user,
@@ -61,8 +66,18 @@ class AuthState {
 
 class AuthNotifier extends StateNotifier<AuthState> {
   final ApiClient _api;
-  AuthNotifier(this._api) : super(const AuthState()) {
+  final Ref _ref;
+
+  AuthNotifier(this._api, this._ref) : super(const AuthState()) {
     _init();
+  }
+
+  void _fetchActiveEventsNonBlocking() {
+    unawaited(
+      _ref
+          .read(activeEventNotifierProvider.notifier)
+          .fetchMyActiveEvents(_api.dio),
+    );
   }
 
   Future<void> _init() async {
@@ -74,12 +89,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final meData = meRes.data['data'];
       if (meData is! Map) {
         state = state.copyWith(isAuthenticated: true, token: token);
+        _fetchActiveEventsNonBlocking();
         return;
       }
       _applyMeData(
         Map<String, dynamic>.from(meData),
         token: token,
       );
+      _fetchActiveEventsNonBlocking();
     } catch (_) {
       state = state.copyWith(isAuthenticated: true, token: token);
     }
@@ -124,6 +141,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           user: Map<String, dynamic>.from(data['user']),
           isLoading: false,
         );
+        _fetchActiveEventsNonBlocking();
         return true;
       }
 
@@ -139,6 +157,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         position: profile['position']?.toString(),
         isLoading: false,
       );
+      _fetchActiveEventsNonBlocking();
       return true;
     } catch (e) {
       state = state.copyWith(
@@ -177,16 +196,25 @@ class AuthNotifier extends StateNotifier<AuthState> {
     );
   }
 
+  /// Event location overrides assignment-based /me location when user selects an event.
+  void setActiveLocationFromEvent(ActiveEvent event) {
+    setActiveLocation(
+      event.locationId,
+      event.locationName,
+      type: event.locationType,
+    );
+  }
+
   Future<void> logout() async {
     try {
       await _api.dio.post('/logout');
     } catch (_) {}
+    _ref.read(activeEventNotifierProvider.notifier).clearEvents();
     await _api.clearToken();
     state = const AuthState();
   }
 }
 
-final authProvider =
-    StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  return AuthNotifier(ref.watch(apiClientProvider));
+final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
+  return AuthNotifier(ref.watch(apiClientProvider), ref);
 });

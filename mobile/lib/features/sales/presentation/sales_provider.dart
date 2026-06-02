@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -91,7 +92,12 @@ class SalesCartNotifier extends StateNotifier<SalesCartState> {
 
   double get grandTotal {
     final total = subtotal - state.bazarDiscount - state.manualDiscount;
-    return total < 0 ? 0 : total;
+    final safeGrandTotal = total < 0 ? 0.0 : total;
+    debugPrint(
+      'subtotal=$subtotal, bazarDiscount=${state.bazarDiscount}, '
+      'manualDiscount=${state.manualDiscount}, grandTotal=$safeGrandTotal',
+    );
+    return safeGrandTotal;
   }
 
   void setSelectedLocation(String id, String name) {
@@ -160,6 +166,7 @@ class SalesCartNotifier extends StateNotifier<SalesCartState> {
 
   void setManualDiscount(double value) {
     final safeValue = value < 0 ? 0.0 : value;
+    debugPrint('setManualDiscount=$safeValue');
     state = state.copyWith(manualDiscount: safeValue, clearError: true);
   }
 
