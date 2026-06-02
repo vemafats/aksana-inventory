@@ -8,8 +8,10 @@ use App\Services\StockOpnameService;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use LogicException;
+use Throwable;
 
 class StokOpnamePage extends Page
 {
@@ -125,6 +127,47 @@ class StokOpnamePage extends Page
         } catch (InvalidArgumentException|LogicException $exception) {
             Notification::make()
                 ->title($exception->getMessage())
+                ->danger()
+                ->send();
+        }
+    }
+
+    public function cancelSession(string $id): void
+    {
+        if (! $this->canValidate()) {
+            Notification::make()
+                ->title('Hanya Owner dan Admin yang bisa membatalkan sesi opname.')
+                ->danger()
+                ->send();
+
+            return;
+        }
+
+        try {
+            $session = StockOpnameTransaction::query()->findOrFail($id);
+
+            if ($session->validation_status !== 'draft') {
+                Notification::make()
+                    ->title('Hanya sesi draft yang bisa dibatalkan')
+                    ->danger()
+                    ->send();
+
+                return;
+            }
+
+            DB::transaction(function () use ($session): void {
+                $session->stockOpnameItems()->delete();
+                $session->delete();
+            });
+
+            Notification::make()
+                ->title('Sesi opname draft berhasil dibatalkan')
+                ->success()
+                ->send();
+        } catch (Throwable $exception) {
+            Notification::make()
+                ->title('Gagal membatalkan sesi opname')
+                ->body($exception->getMessage())
                 ->danger()
                 ->send();
         }

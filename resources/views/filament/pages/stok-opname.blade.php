@@ -69,7 +69,7 @@
                     MENUNGGU VALIDASI
                 </span>
                 @else
-                <span style="background:#DBEAFE; color:#1D4ED8;
+                <span style="background:#E5E7EB; color:#49586B;
                     font-size:10px; font-weight:700; padding:2px 8px;
                     border-radius:20px;">
                     DRAFT
@@ -83,7 +83,20 @@
                     ->timezone('Asia/Jakarta')->format('d M Y · H:i') }}
             </p>
         </div>
-        @if($session->validation_status === 'pending_validation' && $this->canValidate())
+        @if($session->validation_status === 'draft' && $this->canValidate())
+        <div style="display:flex; gap:8px;">
+            <button
+                wire:click="cancelSession('{{ $session->id }}')"
+                wire:confirm="Batalkan sesi opname draft ini? Sesi akan dihapus permanen."
+                type="button"
+                style="padding:8px 16px; border:1px solid #F04040;
+                    color:#F04040; background:white; border-radius:8px;
+                    font-size:12px; font-weight:700; cursor:pointer;
+                    text-transform:uppercase;">
+                BATALKAN DRAFT
+            </button>
+        </div>
+        @elseif($session->validation_status === 'pending_validation' && $this->canValidate())
         <div style="display:flex; gap:8px;">
             <button
                 wire:click="rejectSession('{{ $session->id }}')"
