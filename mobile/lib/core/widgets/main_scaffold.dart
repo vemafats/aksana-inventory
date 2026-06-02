@@ -1,17 +1,60 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+import '../auth/auth_provider.dart';
+import '../event/active_event.dart';
+import '../event/active_event_provider.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 
-class MainScaffold extends StatelessWidget {
+class MainScaffold extends ConsumerStatefulWidget {
   final Widget child;
   const MainScaffold({super.key, required this.child});
 
+  @override
+  ConsumerState<MainScaffold> createState() => _MainScaffoldState();
+}
+
+class _MainScaffoldState extends ConsumerState<MainScaffold> {
+  void _maybeFetchEvents() {
+    final auth = ref.read(authProvider);
+    if (!auth.isAuthenticated) return;
+
+    final eventState = ref.read(activeEventNotifierProvider);
+    final initiated = ref.read(eventsFetchInitiatedProvider);
+    if (initiated || eventState.isLoading || eventState.events.isNotEmpty) {
+      return;
+    }
+
+    ref.read(eventsFetchInitiatedProvider.notifier).state = true;
+    unawaited(
+      ref
+          .read(activeEventNotifierProvider.notifier)
+          .fetchMyActiveEvents(ref.read(apiClientProvider).dio),
+    );
+  }
+
+  void _maybeAutoSelectSingleEvent(ActiveEventState? prev, ActiveEventState next) {
+    if (prev?.isLoading != true || next.isLoading) return;
+    if (next.events.length != 1 || next.selectedEvent != null) return;
+
+    final event = next.events.first;
+    ref.read(activeEventNotifierProvider.notifier).selectEvent(event);
+    ref.read(authProvider.notifier).setActiveLocation(
+          event.locationId,
+          event.locationName,
+          type: event.locationType,
+        );
+  }
+
   int _currentIndex(BuildContext context) {
     final loc = GoRouterState.of(context).matchedLocation;
-    if (loc.startsWith('/scan'))    return 0;
-    if (loc.startsWith('/sales'))  return 1;
-    if (loc.startsWith('/stock'))  return 2;
+    if (loc.startsWith('/scan')) return 0;
+    if (loc.startsWith('/sales')) return 1;
+    if (loc.startsWith('/stock')) return 2;
     if (loc.startsWith('/reports')) return 3;
     if (loc.startsWith('/profile')) return 4;
     return 0;
@@ -19,10 +62,17 @@ class MainScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<ActiveEventState>(activeEventNotifierProvider, _maybeAutoSelectSingleEvent);
+
+    final auth = ref.watch(authProvider);
+    if (auth.isAuthenticated) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _maybeFetchEvents());
+    }
+
     final idx = _currentIndex(context);
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: child,
+      body: widget.child,
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           color: AppColors.card,
@@ -35,21 +85,41 @@ class MainScaffold extends StatelessWidget {
             height: 56,
             child: Row(
               children: [
-                _Tab(icon: Icons.qr_code_scanner_rounded,
-                    label: 'SCAN',  index: 0, current: idx,
-                    onTap: () => context.go('/scan')),
-                _Tab(icon: Icons.shopping_bag_outlined,
-                    label: 'JUAL',  index: 1, current: idx,
-                    onTap: () => context.go('/sales')),
-                _Tab(icon: Icons.inventory_2_outlined,
-                    label: 'STOK',  index: 2, current: idx,
-                    onTap: () => context.go('/stock')),
-                _Tab(icon: Icons.show_chart_rounded,
-                    label: 'STAT',  index: 3, current: idx,
-                    onTap: () => context.go('/reports')),
-                _Tab(icon: Icons.person_outline_rounded,
-                    label: 'AKUN',  index: 4, current: idx,
-                    onTap: () => context.go('/profile')),
+                _Tab(
+                  icon: Icons.qr_code_scanner_rounded,
+                  label: 'SCAN',
+                  index: 0,
+                  current: idx,
+                  onTap: () => context.go('/scan'),
+                ),
+                _Tab(
+                  icon: Icons.shopping_bag_outlined,
+                  label: 'JUAL',
+                  index: 1,
+                  current: idx,
+                  onTap: () => context.go('/sales'),
+                ),
+                _Tab(
+                  icon: Icons.inventory_2_outlined,
+                  label: 'STOK',
+                  index: 2,
+                  current: idx,
+                  onTap: () => context.go('/stock'),
+                ),
+                _Tab(
+                  icon: Icons.show_chart_rounded,
+                  label: 'STAT',
+                  index: 3,
+                  current: idx,
+                  onTap: () => context.go('/reports'),
+                ),
+                _Tab(
+                  icon: Icons.person_outline_rounded,
+                  label: 'AKUN',
+                  index: 4,
+                  current: idx,
+                  onTap: () => context.go('/profile'),
+                ),
               ],
             ),
           ),
@@ -64,8 +134,13 @@ class _Tab extends StatelessWidget {
   final String label;
   final int index, current;
   final VoidCallback onTap;
-  const _Tab({required this.icon, required this.label,
-      required this.index, required this.current, required this.onTap});
+  const _Tab({
+    required this.icon,
+    required this.label,
+    required this.index,
+    required this.current,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -80,8 +155,7 @@ class _Tab extends StatelessWidget {
           children: [
             Icon(icon, size: 22, color: color),
             const SizedBox(height: 3),
-            Text(label,
-                style: AppTextStyles.tabLabel.copyWith(color: color)),
+            Text(label, style: AppTextStyles.tabLabel.copyWith(color: color)),
           ],
         ),
       ),

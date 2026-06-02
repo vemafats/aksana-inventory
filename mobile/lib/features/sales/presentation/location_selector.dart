@@ -44,6 +44,11 @@ String? resolveLocationId(WidgetRef ref) {
 
 void applyEventSelection(WidgetRef ref, ActiveEvent event) {
   ref.read(activeEventNotifierProvider.notifier).selectEvent(event);
+  ref.read(authProvider.notifier).setActiveLocation(
+        event.locationId,
+        event.locationName,
+        type: event.locationType,
+      );
   ref.read(salesCartProvider.notifier).setSelectedLocation(
         event.locationId,
         event.locationName,

@@ -1,13 +1,13 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../auth/auth_provider.dart';
 import 'active_event.dart';
 
-class ActiveEventNotifier extends StateNotifier<ActiveEventState> {
-  ActiveEventNotifier(this._ref) : super(const ActiveEventState());
+/// Prevents re-fetching events on every tab switch in [MainScaffold].
+final eventsFetchInitiatedProvider = StateProvider<bool>((ref) => false);
 
-  final Ref _ref;
+class ActiveEventNotifier extends StateNotifier<ActiveEventState> {
+  ActiveEventNotifier() : super(const ActiveEventState());
 
   Future<void> fetchMyActiveEvents(Dio dio) async {
     state = state.copyWith(isLoading: true);
@@ -30,15 +30,8 @@ class ActiveEventNotifier extends StateNotifier<ActiveEventState> {
       }
 
       state = ActiveEventState(events: events, isLoading: false);
-
-      if (events.length == 1) {
-        selectEvent(events.first);
-      }
-    } on DioException catch (e) {
+    } on DioException catch (_) {
       state = state.copyWith(isLoading: false);
-      if (e.response?.statusCode == 401) {
-        await _ref.read(apiClientProvider).clearToken();
-      }
     } catch (_) {
       state = state.copyWith(isLoading: false);
     }
@@ -46,7 +39,6 @@ class ActiveEventNotifier extends StateNotifier<ActiveEventState> {
 
   void selectEvent(ActiveEvent event) {
     state = state.copyWith(selectedEvent: event);
-    _ref.read(authProvider.notifier).setActiveLocationFromEvent(event);
   }
 
   void clearEvents() {
@@ -56,5 +48,5 @@ class ActiveEventNotifier extends StateNotifier<ActiveEventState> {
 
 final activeEventNotifierProvider =
     StateNotifierProvider<ActiveEventNotifier, ActiveEventState>((ref) {
-  return ActiveEventNotifier(ref);
+  return ActiveEventNotifier();
 });

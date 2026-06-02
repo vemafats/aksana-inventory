@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/auth/auth_provider.dart';
+import '../../../core/event/active_event_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/screen_header.dart';
@@ -31,6 +32,8 @@ class ProfileScreen extends ConsumerWidget {
             onPressed: () async {
               Navigator.pop(ctx);
               await ref.read(authProvider.notifier).logout();
+              ref.read(activeEventNotifierProvider.notifier).clearEvents();
+              ref.read(eventsFetchInitiatedProvider.notifier).state = false;
             },
             child: const Text(
               'Keluar',
