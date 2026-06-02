@@ -37,6 +37,7 @@ class SalesCartState {
   final String? errorMessage;
   final bool isSuccess;
   final double bazarDiscount;
+  final double manualDiscount;
   final String? selectedLocationId;
   final String? selectedLocationName;
 
@@ -47,6 +48,7 @@ class SalesCartState {
     this.errorMessage,
     this.isSuccess = false,
     this.bazarDiscount = 0,
+    this.manualDiscount = 0,
     this.selectedLocationId,
     this.selectedLocationName,
   });
@@ -58,6 +60,7 @@ class SalesCartState {
     String? errorMessage,
     bool? isSuccess,
     double? bazarDiscount,
+    double? manualDiscount,
     String? selectedLocationId,
     String? selectedLocationName,
     bool clearError = false,
@@ -69,6 +72,7 @@ class SalesCartState {
         errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
         isSuccess: isSuccess ?? this.isSuccess,
         bazarDiscount: bazarDiscount ?? this.bazarDiscount,
+        manualDiscount: manualDiscount ?? this.manualDiscount,
         selectedLocationId: selectedLocationId ?? this.selectedLocationId,
         selectedLocationName:
             selectedLocationName ?? this.selectedLocationName,
@@ -85,7 +89,10 @@ class SalesCartNotifier extends StateNotifier<SalesCartState> {
   double get subtotal =>
       state.items.fold(0, (sum, item) => sum + item.lineTotal);
 
-  double get grandTotal => subtotal - state.bazarDiscount;
+  double get grandTotal {
+    final total = subtotal - state.bazarDiscount - state.manualDiscount;
+    return total < 0 ? 0 : total;
+  }
 
   void setSelectedLocation(String id, String name) {
     state = state.copyWith(
@@ -151,6 +158,11 @@ class SalesCartNotifier extends StateNotifier<SalesCartState> {
     state = state.copyWith(paymentMethod: method, clearError: true);
   }
 
+  void setManualDiscount(double value) {
+    final safeValue = value < 0 ? 0.0 : value;
+    state = state.copyWith(manualDiscount: safeValue, clearError: true);
+  }
+
   void clear() => state = const SalesCartState();
 
   Future<bool> checkout(
@@ -168,8 +180,9 @@ class SalesCartNotifier extends StateNotifier<SalesCartState> {
           DateTime.now(),
         ),
         'payment_method': state.paymentMethod,
-        'transaction_discount_type': 'none',
-        'transaction_discount_value': 0,
+        'transaction_discount_type':
+            state.manualDiscount > 0 ? 'nominal' : 'none',
+        'transaction_discount_value': state.manualDiscount,
         'items': state.items
             .map(
               (item) => {

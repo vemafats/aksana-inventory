@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/auth/auth_provider.dart';
+import '../../../core/event/active_event.dart';
+import '../../../core/event/active_event_provider.dart';
 import '../../../core/opname/active_opname_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -12,8 +15,48 @@ import 'location_selector.dart';
 import 'sales_provider.dart';
 import 'widgets/cart_item_row.dart';
 
-class SalesScreen extends ConsumerWidget {
+class SalesScreen extends ConsumerStatefulWidget {
   const SalesScreen({super.key});
+
+  @override
+  ConsumerState<SalesScreen> createState() => _SalesScreenState();
+}
+
+class _SalesScreenState extends ConsumerState<SalesScreen> {
+  bool _autoPickerShown = false;
+  late final TextEditingController _discountController;
+
+  @override
+  void initState() {
+    super.initState();
+    _discountController = TextEditingController();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowEventPicker());
+  }
+
+  @override
+  void dispose() {
+    _discountController.dispose();
+    super.dispose();
+  }
+
+  void _maybeShowEventPicker() {
+    if (_autoPickerShown || !mounted) return;
+
+    final eventState = ref.read(activeEventNotifierProvider);
+    final locationId = resolveLocationId(ref);
+
+    final needsPicker = eventState.hasMultipleEvents &&
+        eventState.selectedEvent == null;
+
+    final needsPickerForEvents = eventState.hasEvents &&
+        (locationId == null || locationId.isEmpty) &&
+        eventState.selectedEvent == null;
+
+    if (needsPicker || needsPickerForEvents) {
+      _autoPickerShown = true;
+      showLocationSelector(context, ref);
+    }
+  }
 
   String _locationHeaderLabel(String? locationName) {
     if (locationName == null || locationName.isEmpty) return 'LOKASI';
@@ -21,16 +64,12 @@ class SalesScreen extends ConsumerWidget {
   }
 
   Future<void> _checkout(BuildContext context, WidgetRef ref) async {
-    final auth = ref.read(authProvider);
-    var locationId = auth.locationId;
-
-    if (locationId == null || locationId.isEmpty) {
-      locationId = resolveLocationId(ref);
-    }
+    final notifier = ref.read(salesCartProvider.notifier);
+    var locationId = resolveLocationId(ref);
 
     if (locationId == null || locationId.isEmpty) {
       await showLocationSelector(context, ref);
-      locationId = ref.read(authProvider).locationId ?? resolveLocationId(ref);
+      locationId = resolveLocationId(ref);
       if (locationId == null || !context.mounted) return;
     }
 
@@ -48,7 +87,7 @@ class SalesScreen extends ConsumerWidget {
       return;
     }
 
-    final success = await ref.read(salesCartProvider.notifier).checkout(
+    final success = await notifier.checkout(
           ref.read(apiClientProvider).dio,
           locationId: locationId,
         );
@@ -56,6 +95,8 @@ class SalesScreen extends ConsumerWidget {
     if (!context.mounted) return;
 
     if (success) {
+      notifier.clear();
+      _discountController.clear();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Transaksi berhasil'),
@@ -78,16 +119,31 @@ class SalesScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final auth = ref.watch(authProvider);
+  Widget build(BuildContext context) {
+    ref.listen<ActiveEventState>(activeEventNotifierProvider, (prev, next) {
+      if (!_autoPickerShown &&
+          next.hasMultipleEvents &&
+          next.selectedEvent == null &&
+          !next.isLoading) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _maybeShowEventPicker();
+        });
+      }
+    });
+
     final cart = ref.watch(salesCartProvider);
     final notifier = ref.read(salesCartProvider.notifier);
     final subtotal = notifier.subtotal;
     final grandTotal = notifier.grandTotal;
+    final manualDiscount = cart.manualDiscount;
+    final totalDiscount = cart.bazarDiscount + cart.manualDiscount;
     final isEmpty = cart.items.isEmpty;
-    final locationId = auth.locationId;
-    final locationLabel = _locationHeaderLabel(auth.locationName);
-    final needsLocationPicker = locationId == null || locationId.isEmpty;
+    final locationId = resolveLocationId(ref);
+    final locationLabel = _locationHeaderLabel(resolveLocationName(ref));
+    final eventState = ref.watch(activeEventNotifierProvider);
+    final needsLocationPicker = locationId == null ||
+        locationId.isEmpty ||
+        eventState.hasMultipleEvents;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -105,12 +161,12 @@ class SalesScreen extends ConsumerWidget {
                       title: 'Transaksi Jual',
                     ),
                   ),
-                  if (needsLocationPicker)
+                  if (needsLocationPicker || eventState.hasMultipleEvents)
                     TextButton.icon(
                       onPressed: () => showLocationSelector(context, ref),
                       icon: const Icon(Icons.swap_horiz, size: 16),
                       label: Text(
-                        'Pilih',
+                        eventState.hasMultipleEvents ? 'Event' : 'Pilih',
                         style: AppTextStyles.cardSubtitle.copyWith(
                           fontSize: 12,
                           color: AppColors.voidBlack,
@@ -148,10 +204,14 @@ class SalesScreen extends ConsumerWidget {
             _SalesSummaryCard(
               subtotal: subtotal,
               discount: cart.bazarDiscount,
+              manualDiscount: manualDiscount,
+              totalDiscount: totalDiscount,
               grandTotal: grandTotal,
               paymentMethod: cart.paymentMethod,
               isLoading: cart.isLoading,
               isEmpty: isEmpty,
+              discountController: _discountController,
+              onManualDiscountChanged: notifier.setManualDiscount,
               onPaymentChanged: notifier.setPaymentMethod,
               onCheckout: () => _checkout(context, ref),
             ),
@@ -165,20 +225,28 @@ class SalesScreen extends ConsumerWidget {
 class _SalesSummaryCard extends StatelessWidget {
   final double subtotal;
   final double discount;
+  final double manualDiscount;
+  final double totalDiscount;
   final double grandTotal;
   final String paymentMethod;
   final bool isLoading;
   final bool isEmpty;
+  final TextEditingController discountController;
+  final ValueChanged<double> onManualDiscountChanged;
   final ValueChanged<String> onPaymentChanged;
   final VoidCallback onCheckout;
 
   const _SalesSummaryCard({
     required this.subtotal,
     required this.discount,
+    required this.manualDiscount,
+    required this.totalDiscount,
     required this.grandTotal,
     required this.paymentMethod,
     required this.isLoading,
     required this.isEmpty,
+    required this.discountController,
+    required this.onManualDiscountChanged,
     required this.onPaymentChanged,
     required this.onCheckout,
   });
@@ -201,6 +269,77 @@ class _SalesSummaryCard extends StatelessWidget {
             _summaryRow(
               'DISKON BAZAR',
               '-${FormatUtils.formatPrice(discount)}',
+              valueColor: AppColors.warning,
+              muted: true,
+            ),
+          ],
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Text(
+                'DISKON',
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.5,
+                  color: Colors.white.withValues(alpha: 0.6),
+                ),
+              ),
+              const Spacer(),
+              SizedBox(
+                width: 130,
+                height: 36,
+                child: TextField(
+                  controller: discountController,
+                  keyboardType: TextInputType.number,
+                  textAlign: TextAlign.right,
+                  style: AppTextStyles.mono.copyWith(
+                    color: Colors.white,
+                    fontSize: 12,
+                  ),
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  decoration: InputDecoration(
+                    isDense: true,
+                    filled: true,
+                    fillColor: Colors.white.withValues(alpha: 0.1),
+                    hintText: manualDiscount > 0 ? manualDiscount.toInt().toString() : '0',
+                    hintStyle: AppTextStyles.mono.copyWith(
+                      color: Colors.white.withValues(alpha: 0.5),
+                      fontSize: 12,
+                    ),
+                    prefixText: 'Rp ',
+                    prefixStyle: AppTextStyles.mono.copyWith(
+                      color: Colors.white.withValues(alpha: 0.5),
+                      fontSize: 12,
+                    ),
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  onChanged: (value) {
+                    final parsed = double.tryParse(value) ?? 0;
+                    onManualDiscountChanged(parsed);
+                  },
+                ),
+              ),
+            ],
+          ),
+          if (totalDiscount > 0) ...[
+            const SizedBox(height: 8),
+            _summaryRow(
+              'TOTAL DISKON',
+              '-${FormatUtils.formatPrice(totalDiscount)}',
               valueColor: AppColors.warning,
               muted: true,
             ),
