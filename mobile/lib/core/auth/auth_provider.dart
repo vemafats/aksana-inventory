@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/api_client.dart';
 
@@ -111,23 +110,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<bool> login(String email, String password) async {
-    debugPrint('[AUTH] login() called with $email');
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
-      debugPrint('[AUTH] Step 1: calling POST /login...');
       final res = await _api.dio.post('/login',
           data: {'email': email, 'password': password});
-      debugPrint('[AUTH] Step 2: login OK, token received');
       final data = res.data['data'];
       await _api.setToken(data['token']);
 
-      debugPrint('[AUTH] Step 3: calling GET /me...');
       final meRes = await _api.dio.get('/me');
-      debugPrint('[AUTH] Step 4: /me OK');
       final meData = meRes.data['data'];
       if (meData is! Map) {
-        debugPrint(
-            '[AUTH] Step 5: setting isLoading=false, isAuthenticated=true');
         state = state.copyWith(
           isAuthenticated: true,
           token: data['token'],
@@ -138,7 +130,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
       }
 
       final profile = Map<String, dynamic>.from(meData);
-      debugPrint('[AUTH] Step 5: setting isLoading=false, isAuthenticated=true');
       state = state.copyWith(
         isAuthenticated: true,
         token: data['token'],
@@ -152,7 +143,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
       return true;
     } catch (e) {
-      debugPrint('[AUTH] ERROR: ${e.toString()}');
       state = state.copyWith(
         isLoading: false,
         errorMessage: _loginErrorMessage(e),
