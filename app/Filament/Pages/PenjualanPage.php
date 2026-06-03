@@ -8,6 +8,7 @@ use App\Enums\PaymentMethod;
 use App\Models\SalesItem;
 use App\Models\SalesTransaction;
 use App\Services\ReportService;
+use App\Support\TimezoneQuery;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
@@ -41,7 +42,7 @@ class PenjualanPage extends Page implements HasTable
 
     public function mount(): void
     {
-        $this->historyDate = now()->toDateString();
+        $this->historyDate = TimezoneQuery::todayDateString();
     }
 
     /**
@@ -49,24 +50,27 @@ class PenjualanPage extends Page implements HasTable
      */
     public function getRingkasanStats(): array
     {
-        $today = now()->toDateString();
-        $sevenDaysAgo = now()->subDays(6)->startOfDay();
+        $today = TimezoneQuery::todayDateString();
+        $sevenDaysAgo = now(TimezoneQuery::TIMEZONE)->subDays(6)->startOfDay();
 
-        $todaySales = (float) SalesTransaction::query()
-            ->whereDate('transaction_date', $today)
-            ->sum('grand_total');
+        $todaySalesQuery = SalesTransaction::query();
+        TimezoneQuery::whereDateEquals($todaySalesQuery, 'transaction_date', $today);
+        $todaySales = (float) $todaySalesQuery->sum('grand_total');
 
         $sevenDaySales = (float) SalesTransaction::query()
             ->where('transaction_date', '>=', $sevenDaysAgo)
             ->sum('grand_total');
 
         $itemsSold24h = (int) SalesItem::query()
-            ->whereHas('salesTransaction', fn (Builder $q) => $q->where('transaction_date', '>=', now()->subDay()))
+            ->whereHas(
+                'salesTransaction',
+                fn (Builder $q) => $q->where('transaction_date', '>=', now(TimezoneQuery::TIMEZONE)->subDay()),
+            )
             ->sum('qty');
 
-        $transactionCount = SalesTransaction::query()
-            ->whereDate('transaction_date', $today)
-            ->count();
+        $transactionCountQuery = SalesTransaction::query();
+        TimezoneQuery::whereDateEquals($transactionCountQuery, 'transaction_date', $today);
+        $transactionCount = $transactionCountQuery->count();
 
         $avgBasket = $transactionCount > 0 ? $todaySales / $transactionCount : 0.0;
 
@@ -81,8 +85,8 @@ class PenjualanPage extends Page implements HasTable
     public function getSalesByLocation(): Collection
     {
         return app(ReportService::class)->salesByLocation(auth()->user(), [
-            'date_from' => now()->toDateString(),
-            'date_to' => now()->toDateString(),
+            'date_from' => TimezoneQuery::todayDateString(),
+            'date_to' => TimezoneQuery::todayDateString(),
         ]);
     }
 
@@ -91,10 +95,11 @@ class PenjualanPage extends Page implements HasTable
      */
     public function getPaymentBreakdown(): array
     {
-        $today = now()->toDateString();
+        $today = TimezoneQuery::todayDateString();
 
-        $rows = SalesTransaction::query()
-            ->whereDate('transaction_date', $today)
+        $rowsQuery = SalesTransaction::query();
+        TimezoneQuery::whereDateEquals($rowsQuery, 'transaction_date', $today);
+        $rows = $rowsQuery
             ->selectRaw('payment_method, SUM(grand_total) as total, COUNT(*) as trx_count')
             ->groupBy('payment_method')
             ->get();
@@ -137,8 +142,8 @@ class PenjualanPage extends Page implements HasTable
     public function getTopProducts(): Collection
     {
         return app(ReportService::class)->bestSellingProducts(auth()->user(), [
-            'date_from' => now()->subDays(30)->toDateString(),
-            'date_to' => now()->toDateString(),
+            'date_from' => now(TimezoneQuery::TIMEZONE)->subDays(30)->toDateString(),
+            'date_to' => TimezoneQuery::todayDateString(),
             'limit' => 20,
         ]);
     }
@@ -150,7 +155,11 @@ class PenjualanPage extends Page implements HasTable
                 ->with(['location', 'salesUser', 'salesItems'])
                 ->when(
                     $this->historyDate,
-                    fn (Builder $query) => $query->whereDate('transaction_date', $this->historyDate),
+                    fn (Builder $query) => TimezoneQuery::whereDateEquals(
+                        $query,
+                        'transaction_date',
+                        $this->historyDate,
+                    ),
                 )
                 ->latest('transaction_date'))
             ->columns([

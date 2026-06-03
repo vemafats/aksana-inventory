@@ -9,6 +9,7 @@ use App\Models\Location;
 use App\Models\TransferTransaction;
 use App\Services\DistribusiService;
 use App\Services\TransferService;
+use App\Support\TimezoneQuery;
 use Filament\Actions\Action;
 use Filament\Forms;
 use Filament\Forms\Concerns\InteractsWithForms;
@@ -78,9 +79,9 @@ class DistribusiPage extends Page implements HasForms, HasTable
 
     public function mount(): void
     {
-        $this->historyDateFrom = now()->subDays(6)->toDateString();
-        $this->historyDateTo = now()->toDateString();
-        $this->returnDate = now()->toDateString();
+        $this->historyDateFrom = now(TimezoneQuery::TIMEZONE)->subDays(6)->toDateString();
+        $this->historyDateTo = TimezoneQuery::todayDateString();
+        $this->returnDate = TimezoneQuery::todayDateString();
         $this->returnRef = app(TransferService::class)->generateReturnNumber();
     }
 
@@ -199,7 +200,7 @@ class DistribusiPage extends Page implements HasForms, HasTable
         $this->returnLines = [];
         $this->returnNote = '';
         $this->returnPicName = null;
-        $this->returnDate = now()->toDateString();
+        $this->returnDate = TimezoneQuery::todayDateString();
         $this->returnRef = app(TransferService::class)->generateReturnNumber();
     }
 
@@ -211,8 +212,14 @@ class DistribusiPage extends Page implements HasForms, HasTable
             return $table
                 ->query(fn (): Builder => TransferTransaction::query()
                     ->with(['fromLocation', 'toLocation', 'event', 'transferItems'])
-                    ->when($this->historyDateFrom, fn (Builder $q) => $q->whereDate('transfer_date', '>=', $this->historyDateFrom))
-                    ->when($this->historyDateTo, fn (Builder $q) => $q->whereDate('transfer_date', '<=', $this->historyDateTo))
+                    ->when(
+                        $this->historyDateFrom,
+                        fn (Builder $q) => TimezoneQuery::whereDateFrom($q, 'transfer_date', $this->historyDateFrom),
+                    )
+                    ->when(
+                        $this->historyDateTo,
+                        fn (Builder $q) => TimezoneQuery::whereDateTo($q, 'transfer_date', $this->historyDateTo),
+                    )
                     ->latest('transfer_date'))
                 ->columns([
                     Tables\Columns\TextColumn::make('transfer_date')
