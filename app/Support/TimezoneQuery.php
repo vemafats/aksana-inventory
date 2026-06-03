@@ -50,6 +50,11 @@ class TimezoneQuery
         return now(self::TIMEZONE)->toDateString();
     }
 
+    public static function dateForDaysAgo(int $daysAgo = 0): string
+    {
+        return now(self::TIMEZONE)->subDays($daysAgo)->toDateString();
+    }
+
     private static function usesPostgresTimezone(): bool
     {
         return DB::connection()->getDriverName() === 'pgsql';

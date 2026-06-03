@@ -9,6 +9,7 @@ use App\Models\StockInItem;
 use App\Models\StockInTransaction;
 use App\Models\StockMovement;
 use App\Services\StockInService;
+use App\Support\TimezoneQuery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use InvalidArgumentException;
@@ -50,11 +51,19 @@ class StockInController extends Controller
             ->latest();
 
         if ($request->filled('date_from')) {
-            $query->whereDate('transaction_date', '>=', $request->date('date_from'));
+            TimezoneQuery::whereDateFrom(
+                $query,
+                'transaction_date',
+                $request->date('date_from')->toDateString(),
+            );
         }
 
         if ($request->filled('date_to')) {
-            $query->whereDate('transaction_date', '<=', $request->date('date_to'));
+            TimezoneQuery::whereDateTo(
+                $query,
+                'transaction_date',
+                $request->date('date_to')->toDateString(),
+            );
         }
 
         $transactions = $query->paginate(20);

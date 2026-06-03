@@ -13,6 +13,7 @@ use App\Models\StockBalance;
 use App\Models\StockMovement;
 use App\Models\TransferItem;
 use App\Models\TransferTransaction;
+use App\Support\TimezoneQuery;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -32,14 +33,14 @@ class DistribusiService
         $transferAktif = TransferTransaction::query()
             ->where('status', 'completed')
             ->where('from_location_id', $warehouseId)
-            ->where('transfer_date', '>=', now()->subDays(30)->toDateString())
+            ->where('transfer_date', '>=', TimezoneQuery::dateForDaysAgo(30))
             ->count();
 
         $itemAktif = (int) TransferItem::query()
             ->whereHas('transferTransaction', function ($query) use ($warehouseId): void {
                 $query->where('status', 'completed')
                     ->where('from_location_id', $warehouseId)
-                    ->where('transfer_date', '>=', now()->subDays(7)->toDateString());
+                    ->where('transfer_date', '>=', TimezoneQuery::dateForDaysAgo(7));
             })
             ->sum('qty');
 
@@ -47,7 +48,12 @@ class DistribusiService
             ->where('status', LocationStatus::ACTIVE->value)
             ->where('location_type', '!=', LocationType::CENTRAL_WAREHOUSE->value)
             ->whereNotNull('end_date')
-            ->whereDate('end_date', '<=', now()->addDays(3)->toDateString())
+
+            ->where(
+                'end_date',
+                '<=',
+                now(TimezoneQuery::TIMEZONE)->addDays(3)->toDateString(),
+            )
             ->whereHas('stockBalances', function ($query): void {
                 $query->where('stock_status', StockStatus::AVAILABLE->value)
                     ->where('qty', '>', 0);
@@ -56,7 +62,7 @@ class DistribusiService
 
         $returDamaged = StockMovement::query()
             ->where('movement_type', MovementType::AVAILABLE_TO_DAMAGED->value)
-            ->where('created_at', '>=', now()->subDays(30))
+            ->where('created_at', '>=', now(TimezoneQuery::TIMEZONE)->subDays(30))
             ->count();
 
         return [

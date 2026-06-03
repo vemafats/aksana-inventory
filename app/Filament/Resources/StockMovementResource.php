@@ -6,6 +6,7 @@ use App\Enums\MovementType;
 use App\Filament\Resources\StockMovementResource\Pages;
 use App\Models\Item;
 use App\Models\StockMovement;
+use App\Support\TimezoneQuery;
 use Filament\Forms\Components\DatePicker;
 use Filament\Resources\Resource;
 use Filament\Support\Enums\FontFamily;
@@ -119,11 +120,11 @@ class StockMovementResource extends Resource
                         return $query
                             ->when(
                                 filled($data['from'] ?? null),
-                                fn (Builder $q) => $q->whereDate('created_at', '>=', $data['from']),
+                                fn (Builder $q) => TimezoneQuery::whereDateFrom($q, 'created_at', $data['from']),
                             )
                             ->when(
                                 filled($data['until'] ?? null),
-                                fn (Builder $q) => $q->whereDate('created_at', '<=', $data['until']),
+                                fn (Builder $q) => TimezoneQuery::whereDateTo($q, 'created_at', $data['until']),
                             );
                     }),
             ])

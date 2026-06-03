@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Support\Carbon;
+use App\Support\TimezoneQuery;
 
 class Event extends Model
 {
@@ -71,11 +71,12 @@ class Event extends Model
      */
     public function scopeCurrentlyRunning(Builder $query): Builder
     {
-        $today = Carbon::today(config('app.timezone', 'Asia/Jakarta'))->toDateString();
+        $today = TimezoneQuery::todayDateString();
 
-        return $query
-            ->where('status', 'active')
-            ->whereDate('start_date', '<=', $today)
-            ->whereDate('end_date', '>=', $today);
+        $query->where('status', 'active');
+        TimezoneQuery::whereDateTo($query, 'start_date', $today);
+        TimezoneQuery::whereDateFrom($query, 'end_date', $today);
+
+        return $query;
     }
 }

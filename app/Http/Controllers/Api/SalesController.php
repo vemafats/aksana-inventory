@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Sales\StoreSalesRequest;
 use App\Models\SalesTransaction;
 use App\Services\SalesService;
+use App\Support\TimezoneQuery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use InvalidArgumentException;
@@ -56,11 +57,19 @@ class SalesController extends Controller
         }
 
         if ($request->filled('date_from')) {
-            $query->whereDate('transaction_date', '>=', $request->date('date_from'));
+            TimezoneQuery::whereDateFrom(
+                $query,
+                'transaction_date',
+                $request->date('date_from')->toDateString(),
+            );
         }
 
         if ($request->filled('date_to')) {
-            $query->whereDate('transaction_date', '<=', $request->date('date_to'));
+            TimezoneQuery::whereDateTo(
+                $query,
+                'transaction_date',
+                $request->date('date_to')->toDateString(),
+            );
         }
 
         if ($request->filled('payment_method')) {

@@ -13,7 +13,7 @@ use App\Models\SalesTransaction;
 use App\Models\StockBalance;
 use App\Models\User;
 use App\Support\StockReportCache;
-use Carbon\Carbon;
+use App\Support\TimezoneQuery;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -53,7 +53,7 @@ class ReportService
                 $lowStockCount = $this->countLowStockItems($locationIds);
 
                 $salesQuery = SalesTransaction::query();
-                $this->whereReportDate($salesQuery, 'transaction_date', $this->reportDateForDaysAgo());
+                TimezoneQuery::whereDateEquals($salesQuery, 'transaction_date', TimezoneQuery::dateForDaysAgo());
                 $this->applyLocationFilter($salesQuery, $locationIds);
 
                 return [
@@ -246,8 +246,8 @@ class ReportService
         [$dateFrom, $dateTo] = $this->resolveDateRange($filters);
 
         $transactionQuery = $this->salesTransactionQuery($filters, $user);
-        $this->whereReportDateFrom($transactionQuery, 'transaction_date', $dateFrom);
-        $this->whereReportDateTo($transactionQuery, 'transaction_date', $dateTo);
+        TimezoneQuery::whereDateFrom($transactionQuery, 'transaction_date', $dateFrom);
+        TimezoneQuery::whereDateTo($transactionQuery, 'transaction_date', $dateTo);
 
         $totalSales = (float) (clone $transactionQuery)->sum('grand_total');
         $transactionCount = (clone $transactionQuery)->count();
@@ -256,8 +256,8 @@ class ReportService
             ->join('sales_transactions', 'sales_items.sales_transaction_id', '=', 'sales_transactions.id');
 
         $this->applySalesTransactionFilters($cogsQuery, $filters, $user, 'sales_transactions');
-        $this->whereReportDateFrom($cogsQuery, 'sales_transactions.transaction_date', $dateFrom);
-        $this->whereReportDateTo($cogsQuery, 'sales_transactions.transaction_date', $dateTo);
+        TimezoneQuery::whereDateFrom($cogsQuery, 'sales_transactions.transaction_date', $dateFrom);
+        TimezoneQuery::whereDateTo($cogsQuery, 'sales_transactions.transaction_date', $dateTo);
 
         $totalCogs = (float) $cogsQuery->sum(DB::raw('sales_items.supplier_cost_snapshot * sales_items.qty'));
 
@@ -301,8 +301,8 @@ class ReportService
             ->groupBy('items.id', 'items.item_name', 'items.sku', 'items.barcode')
             ->orderByDesc('total_qty_sold');
 
-        $this->whereReportDateFrom($query, 'sales_transactions.transaction_date', $dateFrom);
-        $this->whereReportDateTo($query, 'sales_transactions.transaction_date', $dateTo);
+        TimezoneQuery::whereDateFrom($query, 'sales_transactions.transaction_date', $dateFrom);
+        TimezoneQuery::whereDateTo($query, 'sales_transactions.transaction_date', $dateTo);
 
         $this->applySalesTransactionFilters($query, $filters, $user, 'sales_transactions');
 
@@ -346,8 +346,8 @@ class ReportService
             ->groupBy('locations.id', 'locations.location_name', 'locations.location_type')
             ->orderByDesc('total_sales');
 
-        $this->whereReportDateFrom($query, 'sales_transactions.transaction_date', $dateFrom);
-        $this->whereReportDateTo($query, 'sales_transactions.transaction_date', $dateTo);
+        TimezoneQuery::whereDateFrom($query, 'sales_transactions.transaction_date', $dateFrom);
+        TimezoneQuery::whereDateTo($query, 'sales_transactions.transaction_date', $dateTo);
 
         $this->applySalesTransactionFilters($query, $filters, $user);
 
@@ -358,8 +358,8 @@ class ReportService
             $itemsSoldQuery = SalesItem::query()
                 ->join('sales_transactions', 'sales_items.sales_transaction_id', '=', 'sales_transactions.id')
                 ->where('sales_transactions.location_id', $row->location_id);
-            $this->whereReportDateFrom($itemsSoldQuery, 'sales_transactions.transaction_date', $dateFrom);
-            $this->whereReportDateTo($itemsSoldQuery, 'sales_transactions.transaction_date', $dateTo);
+            TimezoneQuery::whereDateFrom($itemsSoldQuery, 'sales_transactions.transaction_date', $dateFrom);
+            TimezoneQuery::whereDateTo($itemsSoldQuery, 'sales_transactions.transaction_date', $dateTo);
             $itemsSold = (int) $itemsSoldQuery->sum('sales_items.qty');
 
             $totalSales = (float) $row->total_sales;
@@ -398,8 +398,8 @@ class ReportService
             ->groupBy('users.id', 'users.name')
             ->orderByDesc('total_sales');
 
-        $this->whereReportDateFrom($query, 'sales_transactions.transaction_date', $dateFrom);
-        $this->whereReportDateTo($query, 'sales_transactions.transaction_date', $dateTo);
+        TimezoneQuery::whereDateFrom($query, 'sales_transactions.transaction_date', $dateFrom);
+        TimezoneQuery::whereDateTo($query, 'sales_transactions.transaction_date', $dateTo);
 
         $this->applySalesTransactionFilters($query, $filters, $user);
 
@@ -434,11 +434,11 @@ class ReportService
     public function mobileSummary(User $user): array
     {
         $locationIds = $this->resolveAccessibleLocationIds($user);
-        $today = $this->reportDateForDaysAgo();
-        $yesterday = $this->reportDateForDaysAgo(1);
+        $today = TimezoneQuery::dateForDaysAgo();
+        $yesterday = TimezoneQuery::dateForDaysAgo(1);
 
         $todayQuery = SalesTransaction::query();
-        $this->whereReportDate($todayQuery, 'transaction_date', $today);
+        TimezoneQuery::whereDateEquals($todayQuery, 'transaction_date', $today);
         $this->applyLocationFilter($todayQuery, $locationIds);
 
         $todaysNetSales = (float) (clone $todayQuery)->sum('grand_total');
@@ -446,7 +446,7 @@ class ReportService
 
         $itemsSoldToday = (int) SalesItem::query()
             ->whereHas('salesTransaction', function (Builder $query) use ($today, $locationIds): void {
-                $this->whereReportDate($query, 'transaction_date', $today);
+                TimezoneQuery::whereDateEquals($query, 'transaction_date', $today);
                 $this->applyLocationFilter($query, $locationIds);
             })
             ->sum('qty');
@@ -456,7 +456,7 @@ class ReportService
             : 0.0;
 
         $yesterdayQuery = SalesTransaction::query();
-        $this->whereReportDate($yesterdayQuery, 'transaction_date', $yesterday);
+        TimezoneQuery::whereDateEquals($yesterdayQuery, 'transaction_date', $yesterday);
         $this->applyLocationFilter($yesterdayQuery, $locationIds);
         $yesterdaySales = (float) $yesterdayQuery->sum('grand_total');
 
@@ -466,9 +466,9 @@ class ReportService
 
         $sevenDayTrend = [];
         for ($i = 6; $i >= 0; $i--) {
-            $date = $this->reportDateForDaysAgo($i);
+            $date = TimezoneQuery::dateForDaysAgo($i);
             $dayQuery = SalesTransaction::query();
-            $this->whereReportDate($dayQuery, 'transaction_date', $date);
+            TimezoneQuery::whereDateEquals($dayQuery, 'transaction_date', $date);
             $this->applyLocationFilter($dayQuery, $locationIds);
             $sevenDayTrend[] = [
                 'date' => $date,
@@ -487,7 +487,7 @@ class ReportService
             ->groupBy('items.sku', 'items.item_name')
             ->orderByDesc('qty_sold');
 
-        $this->whereReportDate($topSkuQuery, 'sales_transactions.transaction_date', $today);
+        TimezoneQuery::whereDateEquals($topSkuQuery, 'sales_transactions.transaction_date', $today);
 
         $this->applyLocationFilter($topSkuQuery, $locationIds, 'sales_transactions.location_id');
 
@@ -509,59 +509,6 @@ class ReportService
         ];
     }
 
-    private function reportTimezone(): string
-    {
-        return config('app.timezone', 'Asia/Jakarta');
-    }
-
-    private function reportDateForDaysAgo(int $daysAgo = 0): string
-    {
-        return Carbon::today($this->reportTimezone())
-            ->subDays($daysAgo)
-            ->toDateString();
-    }
-
-    private function whereReportDate(Builder $query, string $column, string $date): Builder
-    {
-        if ($this->usesPostgresDateTimezone()) {
-            return $query->whereRaw(
-                "DATE({$column} AT TIME ZONE ?) = ?",
-                [$this->reportTimezone(), $date],
-            );
-        }
-
-        return $query->whereDate($column, $date);
-    }
-
-    private function whereReportDateFrom(Builder $query, string $column, string $date): Builder
-    {
-        if ($this->usesPostgresDateTimezone()) {
-            return $query->whereRaw(
-                "DATE({$column} AT TIME ZONE ?) >= ?",
-                [$this->reportTimezone(), $date],
-            );
-        }
-
-        return $query->whereDate($column, '>=', $date);
-    }
-
-    private function whereReportDateTo(Builder $query, string $column, string $date): Builder
-    {
-        if ($this->usesPostgresDateTimezone()) {
-            return $query->whereRaw(
-                "DATE({$column} AT TIME ZONE ?) <= ?",
-                [$this->reportTimezone(), $date],
-            );
-        }
-
-        return $query->whereDate($column, '<=', $date);
-    }
-
-    private function usesPostgresDateTimezone(): bool
-    {
-        return DB::connection()->getDriverName() === 'pgsql';
-    }
-
     /**
      * @param  array<string, mixed>  $filters
      * @return array{0: string, 1: string}
@@ -570,11 +517,11 @@ class ReportService
     {
         $dateFrom = ! empty($filters['date_from'])
             ? (string) $filters['date_from']
-            : Carbon::today($this->reportTimezone())->startOfMonth()->toDateString();
+            : now(TimezoneQuery::TIMEZONE)->startOfMonth()->toDateString();
 
         $dateTo = ! empty($filters['date_to'])
             ? (string) $filters['date_to']
-            : $this->reportDateForDaysAgo();
+            : TimezoneQuery::dateForDaysAgo();
 
         return [$dateFrom, $dateTo];
     }
