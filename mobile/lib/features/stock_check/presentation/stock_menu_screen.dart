@@ -1,111 +1,16 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../core/auth/auth_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../core/utils/location_helpers.dart';
 
-class StockMenuScreen extends ConsumerStatefulWidget {
+class StockMenuScreen extends ConsumerWidget {
   const StockMenuScreen({super.key});
 
   @override
-  ConsumerState<StockMenuScreen> createState() => _StockMenuScreenState();
-}
-
-class _StockMenuScreenState extends ConsumerState<StockMenuScreen> {
-  bool _closeConfirmStep = false;
-
-  Future<void> _closeBazar() async {
-    final locationId = assignedLocationId(ref.read(authProvider).user);
-    if (locationId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lokasi belum tersedia')),
-      );
-      return;
-    }
-
-    if (!_closeConfirmStep) {
-      setState(() => _closeConfirmStep = true);
-      final first = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Tutup bazar?'),
-          content: const Text(
-            'Semua stok di lokasi ini harus sudah 0. Lanjutkan?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('BATAL'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('LANJUT'),
-            ),
-          ],
-        ),
-      );
-      if (first != true || !mounted) {
-        setState(() => _closeConfirmStep = false);
-        return;
-      }
-
-      final second = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Konfirmasi tutup bazar'),
-          content: const Text('Tap Tutup untuk menutup lokasi ini.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('BATAL'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('TUTUP'),
-            ),
-          ],
-        ),
-      );
-      setState(() => _closeConfirmStep = false);
-      if (second != true) return;
-    }
-
-    try {
-      await ref.read(apiClientProvider).dio.post(
-            '/locations/$locationId/close',
-          );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Bazar berhasil ditutup'),
-            backgroundColor: AppColors.success,
-          ),
-        );
-      }
-    } on DioException catch (e) {
-      if (!mounted) return;
-      final msg = e.response?.data is Map
-          ? e.response?.data['message']?.toString()
-          : 'Gagal menutup bazar';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(msg ?? 'Gagal menutup bazar'),
-          backgroundColor: AppColors.danger,
-        ),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final role = ref.watch(authProvider).role;
-    final showClose = canCloseBazar(role);
-
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -125,6 +30,11 @@ class _StockMenuScreenState extends ConsumerState<StockMenuScreen> {
                 onTap: () => context.push('/stock/stock-in'),
               ),
               _MenuTile(
+                icon: Icons.view_list_outlined,
+                label: 'Browse Item',
+                onTap: () => context.push('/stock/browse'),
+              ),
+              _MenuTile(
                 icon: Icons.search,
                 label: 'Cek Stok',
                 onTap: () async {
@@ -137,38 +47,15 @@ class _StockMenuScreenState extends ConsumerState<StockMenuScreen> {
                 },
               ),
               _MenuTile(
-                icon: Icons.fact_check_outlined,
-                label: 'Stok Opname',
-                onTap: () => context.push('/stock/stock-opname'),
-              ),
-              _MenuTile(
                 icon: Icons.keyboard_return,
                 label: 'Return Sisa',
                 onTap: () => context.push('/stock/return'),
               ),
-              const Spacer(),
-              if (showClose)
-                SizedBox(
-                  height: 48,
-                  child: OutlinedButton(
-                    onPressed: _closeBazar,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.danger,
-                      side: const BorderSide(color: AppColors.danger),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Text(
-                      'TUTUP BAZAR',
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.5,
-                      ),
-                    ),
-                  ),
-                ),
+              _MenuTile(
+                icon: Icons.fact_check_outlined,
+                label: 'Stok Opname',
+                onTap: () => context.push('/stock/stock-opname'),
+              ),
             ],
           ),
         ),

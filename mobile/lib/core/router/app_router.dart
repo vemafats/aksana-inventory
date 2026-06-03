@@ -6,6 +6,7 @@ import '../../features/auth/presentation/login_screen.dart';
 import '../../features/scan/presentation/scan_screen.dart';
 import '../../features/sales/presentation/sales_screen.dart';
 import '../../features/stock_in/presentation/stock_in_screen.dart';
+import '../../features/stock_check/presentation/browse_items_screen.dart';
 import '../../features/stock_check/presentation/stock_check_screen.dart';
 import '../../features/stock_check/presentation/stock_menu_screen.dart';
 import '../../features/stock_opname/presentation/opname_session_screen.dart';
@@ -52,6 +53,10 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: 'stock-in',
                 builder: (_, __) => const StockInScreen(),
+              ),
+              GoRoute(
+                path: 'browse',
+                builder: (_, __) => const BrowseItemsScreen(),
               ),
               GoRoute(
                 path: 'stock-opname',
