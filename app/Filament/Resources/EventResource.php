@@ -16,6 +16,8 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use InvalidArgumentException;
+use LogicException;
 
 class EventResource extends Resource
 {
@@ -158,12 +160,20 @@ class EventResource extends Resource
                     ->requiresConfirmation()
                     ->visible(fn (Event $record): bool => $record->status === 'active')
                     ->action(function (Event $record): void {
-                        app(EventService::class)->endEvent($record);
+                        try {
+                            app(EventService::class)->endEvent($record);
 
-                        Notification::make()
-                            ->title('Event diakhiri')
-                            ->success()
-                            ->send();
+                            Notification::make()
+                                ->title('Event diakhiri')
+                                ->success()
+                                ->send();
+                        } catch (LogicException|InvalidArgumentException $exception) {
+                            Notification::make()
+                                ->title('Tidak dapat mengakhiri event')
+                                ->body($exception->getMessage())
+                                ->danger()
+                                ->send();
+                        }
                     }),
             ])
             ->defaultSort('created_at', 'desc')

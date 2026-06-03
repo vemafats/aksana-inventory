@@ -3,13 +3,16 @@
 namespace App\Services;
 
 use App\Enums\LocationType;
+use App\Enums\StockStatus;
 use App\Models\Event;
 use App\Models\Location;
+use App\Models\StockBalance;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
+use LogicException;
 
 class EventService
 {
@@ -64,6 +67,22 @@ class EventService
 
     public function endEvent(Event $event): Event
     {
+        $remainingUnits = (int) StockBalance::query()
+            ->where('location_id', $event->location_id)
+            ->whereIn('stock_status', [
+                StockStatus::AVAILABLE->value,
+                StockStatus::DAMAGED->value,
+            ])
+            ->where('qty', '>', 0)
+            ->sum('qty');
+
+        if ($remainingUnits > 0) {
+            throw new LogicException(
+                'Tidak dapat mengakhiri event. Masih ada stok tersisa di lokasi. Lakukan return terlebih dahulu. '.
+                "Sisa stok: {$remainingUnits} unit",
+            );
+        }
+
         $event->update(['status' => 'ended']);
 
         return $event->refresh();

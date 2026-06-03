@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Transfer\StoreReturnRequest;
 use App\Http\Requests\Transfer\StoreTransferRequest;
 use App\Models\TransferTransaction;
 use App\Services\TransferService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use InvalidArgumentException;
+use LogicException;
 
 class TransferController extends Controller
 {
@@ -34,6 +36,33 @@ class TransferController extends Controller
             'success' => true,
             'message' => 'Transfer stok berhasil',
             'data' => $this->formatTransfer($transfer),
+        ], 201);
+    }
+
+    public function storeReturn(StoreReturnRequest $request): JsonResponse
+    {
+        $data = $request->validated();
+        $data['transfer_date'] = $data['return_date'];
+        unset($data['return_date']);
+
+        try {
+            $return = $this->transferService->createReturn(
+                $data,
+                $request->user(),
+            );
+        } catch (InvalidArgumentException|LogicException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => $exception->getMessage(),
+            ], 422);
+        }
+
+        $return->load(['fromLocation', 'toLocation', 'event', 'transferItems.item', 'createdBy']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Return berhasil',
+            'data' => $this->formatTransfer($return),
         ], 201);
     }
 

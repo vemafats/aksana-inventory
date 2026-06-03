@@ -41,6 +41,10 @@ class TransferService
      */
     public function createReturn(array $data, User $createdBy): TransferTransaction
     {
+        $this->assertNoActiveOpnameSession();
+
+        $data = $this->resolveEventOrigin($data);
+
         $warehouse = Location::query()
             ->where('location_type', LocationType::CENTRAL_WAREHOUSE->value)
             ->where('status', LocationStatus::ACTIVE->value)
@@ -128,6 +132,7 @@ class TransferService
                 'transferItems.item',
                 'fromLocation',
                 'toLocation',
+                'event',
                 'createdBy',
             ]);
         });
@@ -228,6 +233,7 @@ class TransferService
                     'transfer_number' => $this->generateReturnNumber(),
                     'from_location_id' => $data['from_location_id'],
                     'to_location_id' => $warehouseId,
+                    'event_id' => $data['event_id'] ?? null,
                     'transfer_date' => $data['transfer_date'],
                     'status' => 'completed',
                     'note' => $data['note'] ?? null,
@@ -310,6 +316,31 @@ class TransferService
                 'createdBy',
             ]);
         });
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function resolveEventOrigin(array $data): array
+    {
+        if (empty($data['event_id'])) {
+            return $data;
+        }
+
+        $event = Event::query()->find($data['event_id']);
+
+        if ($event === null) {
+            throw new InvalidArgumentException('Event tidak ditemukan.');
+        }
+
+        if ($event->status !== 'active') {
+            throw new InvalidArgumentException('Event tidak aktif.');
+        }
+
+        $data['from_location_id'] = $event->location_id;
+
+        return $data;
     }
 
     /**

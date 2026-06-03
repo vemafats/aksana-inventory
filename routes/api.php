@@ -42,6 +42,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function (): void {
     Route::put('/stock-in/{stockIn}/items/{item}', [StockInController::class, 'updateItemPrice']);
 
     Route::post('/transfers', [TransferController::class, 'store']);
+    Route::post('/returns', [TransferController::class, 'storeReturn']);
     Route::get('/transfers', [TransferController::class, 'index']);
     Route::get('/transfers/{transfer}', [TransferController::class, 'show']);
 
