@@ -197,6 +197,7 @@ class ReturnStockScreen extends ConsumerWidget {
                               state.isLoading
                           ? null
                           : () async {
+                              debugPrint('[RETURN] KIRIM RETURN tapped');
                               final ok = await notifier.submit(
                                 ref.read(apiClientProvider).dio,
                               );
@@ -209,6 +210,17 @@ class ReturnStockScreen extends ConsumerWidget {
                                   ),
                                 );
                                 context.pop();
+                              } else {
+                                final msg = ref
+                                        .read(returnStockProvider)
+                                        .errorMessage ??
+                                    'Gagal mengirim return';
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(msg),
+                                    backgroundColor: AppColors.danger,
+                                  ),
+                                );
                               }
                             },
                       child: state.isLoading
@@ -365,6 +377,7 @@ class _ReturnItemCard extends StatelessWidget {
                       label: 'GOOD',
                       labelColor: AppColors.success,
                       value: item.qtyGood,
+                      maxValue: item.maxAvailable - item.qtyDamaged,
                       onChanged: onGoodChanged,
                     ),
                   ),
@@ -374,6 +387,7 @@ class _ReturnItemCard extends StatelessWidget {
                       label: 'RUSAK',
                       labelColor: AppColors.warning,
                       value: item.qtyDamaged,
+                      maxValue: item.maxAvailable - item.qtyGood,
                       onChanged: onDamagedChanged,
                     ),
                   ),
@@ -392,16 +406,36 @@ class _ReturnItemCard extends StatelessWidget {
   }
 }
 
+class _MaxValueFormatter extends TextInputFormatter {
+  final int maxValue;
+
+  _MaxValueFormatter(this.maxValue);
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    if (newValue.text.isEmpty) return newValue;
+    final value = int.tryParse(newValue.text);
+    if (value == null) return oldValue;
+    if (value > maxValue) return oldValue;
+    return newValue;
+  }
+}
+
 class _QtyField extends StatefulWidget {
   final String label;
   final Color labelColor;
   final int value;
+  final int maxValue;
   final ValueChanged<int> onChanged;
 
   const _QtyField({
     required this.label,
     required this.labelColor,
     required this.value,
+    required this.maxValue,
     required this.onChanged,
   });
 
@@ -451,7 +485,10 @@ class _QtyFieldState extends State<_QtyField> {
         TextField(
           controller: _controller,
           keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            _MaxValueFormatter(widget.maxValue),
+          ],
           style: AppTextStyles.monoBold.copyWith(fontSize: 16),
           decoration: InputDecoration(
             filled: true,

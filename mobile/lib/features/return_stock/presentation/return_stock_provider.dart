@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -209,6 +210,7 @@ class ReturnStockNotifier extends StateNotifier<ReturnStockState> {
     }
 
     state = state.copyWith(isLoading: true, clearError: true, isSuccess: false);
+    debugPrint('[RETURN] submit() calling POST /returns...');
     try {
       await _service.createReturn({
         'event_id': state.eventId,
@@ -216,23 +218,46 @@ class ReturnStockNotifier extends StateNotifier<ReturnStockState> {
         'note': 'Return sisa event',
         'items': payloadItems,
       }, dio);
+      debugPrint('[RETURN] submit() success');
       state = const ReturnStockState(isSuccess: true);
       return true;
     } on DioException catch (e) {
+      final message = _dioErrorMessage(e);
+      debugPrint(
+        '[RETURN] submit() DioException status=${e.response?.statusCode} '
+        'message=$message',
+      );
       state = state.copyWith(
         isLoading: false,
-        errorMessage: e.response?.data is Map
-            ? e.response?.data['message']?.toString()
-            : 'Gagal membuat return',
+        errorMessage: message,
       );
       return false;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[RETURN] submit() error: $e');
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Gagal membuat return',
       );
       return false;
     }
+  }
+
+  String _dioErrorMessage(DioException e) {
+    final data = e.response?.data;
+    if (data is Map) {
+      final msg = data['message']?.toString();
+      if (msg != null && msg.isNotEmpty) return msg;
+    }
+    if (e.response?.statusCode == 404) {
+      return 'Endpoint return tidak ditemukan. Pastikan API sudah di-deploy.';
+    }
+    if (e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.receiveTimeout ||
+        e.type == DioExceptionType.sendTimeout ||
+        e.type == DioExceptionType.connectionError) {
+      return 'Tidak dapat terhubung ke server. Periksa koneksi internet.';
+    }
+    return e.message ?? 'Gagal membuat return';
   }
 
   void clear() {
