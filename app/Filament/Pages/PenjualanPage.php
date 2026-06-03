@@ -54,7 +54,7 @@ class PenjualanPage extends Page implements HasTable
         $sevenDaysAgo = now(TimezoneQuery::TIMEZONE)->subDays(6)->startOfDay();
 
         $todaySalesQuery = SalesTransaction::query();
-        TimezoneQuery::whereDateEquals($todaySalesQuery, 'transaction_date', $today);
+        TimezoneQuery::whereTimestampEquals($todaySalesQuery, 'transaction_date', $today);
         $todaySales = (float) $todaySalesQuery->sum('grand_total');
 
         $sevenDaySales = (float) SalesTransaction::query()
@@ -69,7 +69,7 @@ class PenjualanPage extends Page implements HasTable
             ->sum('qty');
 
         $transactionCountQuery = SalesTransaction::query();
-        TimezoneQuery::whereDateEquals($transactionCountQuery, 'transaction_date', $today);
+        TimezoneQuery::whereTimestampEquals($transactionCountQuery, 'transaction_date', $today);
         $transactionCount = $transactionCountQuery->count();
 
         $avgBasket = $transactionCount > 0 ? $todaySales / $transactionCount : 0.0;
@@ -98,7 +98,7 @@ class PenjualanPage extends Page implements HasTable
         $today = TimezoneQuery::todayDateString();
 
         $rowsQuery = SalesTransaction::query();
-        TimezoneQuery::whereDateEquals($rowsQuery, 'transaction_date', $today);
+        TimezoneQuery::whereTimestampEquals($rowsQuery, 'transaction_date', $today);
         $rows = $rowsQuery
             ->selectRaw('payment_method, SUM(grand_total) as total, COUNT(*) as trx_count')
             ->groupBy('payment_method')
@@ -155,7 +155,7 @@ class PenjualanPage extends Page implements HasTable
                 ->with(['location', 'salesUser', 'salesItems'])
                 ->when(
                     $this->historyDate,
-                    fn (Builder $query) => TimezoneQuery::whereDateEquals(
+                    fn (Builder $query) => TimezoneQuery::whereTimestampEquals(
                         $query,
                         'transaction_date',
                         $this->historyDate,

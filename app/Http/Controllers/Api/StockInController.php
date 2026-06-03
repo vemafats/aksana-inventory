@@ -51,7 +51,7 @@ class StockInController extends Controller
             ->latest();
 
         if ($request->filled('date_from')) {
-            TimezoneQuery::whereDateFrom(
+            TimezoneQuery::whereDateColumnFrom(
                 $query,
                 'transaction_date',
                 $request->date('date_from')->toDateString(),
@@ -59,7 +59,7 @@ class StockInController extends Controller
         }
 
         if ($request->filled('date_to')) {
-            TimezoneQuery::whereDateTo(
+            TimezoneQuery::whereDateColumnTo(
                 $query,
                 'transaction_date',
                 $request->date('date_to')->toDateString(),

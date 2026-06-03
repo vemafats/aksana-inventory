@@ -74,8 +74,8 @@ class Event extends Model
         $today = TimezoneQuery::todayDateString();
 
         $query->where('status', 'active');
-        TimezoneQuery::whereDateTo($query, 'start_date', $today);
-        TimezoneQuery::whereDateFrom($query, 'end_date', $today);
+        TimezoneQuery::whereDateColumnTo($query, 'start_date', $today);
+        TimezoneQuery::whereDateColumnFrom($query, 'end_date', $today);
 
         return $query;
     }

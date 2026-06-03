@@ -57,7 +57,7 @@ class SalesController extends Controller
         }
 
         if ($request->filled('date_from')) {
-            TimezoneQuery::whereDateFrom(
+            TimezoneQuery::whereTimestampFrom(
                 $query,
                 'transaction_date',
                 $request->date('date_from')->toDateString(),
@@ -65,7 +65,7 @@ class SalesController extends Controller
         }
 
         if ($request->filled('date_to')) {
-            TimezoneQuery::whereDateTo(
+            TimezoneQuery::whereTimestampTo(
                 $query,
                 'transaction_date',
                 $request->date('date_to')->toDateString(),

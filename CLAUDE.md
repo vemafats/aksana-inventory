@@ -211,12 +211,15 @@ POST /api/stock-opnames/{id}/reject   → tolak (Owner/Admin)
 
 ### Timezone Queries
 ```php
-// BENAR — gunakan helper:
-$this->whereReportDate($query, 'transaction_date', $today)
-// Yang menjalankan:
-->whereRaw("DATE(column AT TIME ZONE 'Asia/Jakarta') = ?", [$date])
+// TIMESTAMP (sales_transactions.transaction_date, stock_movements.created_at):
+TimezoneQuery::whereTimestampEquals($query, 'transaction_date', $today);
+// → DATE(column AT TIME ZONE 'Asia/Jakarta') = ?
 
-// SALAH:
+// DATE (transfer_transactions.transfer_date, stock_opname_transactions.opname_date):
+$query->where('transfer_date', '>=', $dateFrom);
+// JANGAN pakai AT TIME ZONE pada kolom DATE — akan geser 1 hari di PostgreSQL.
+
+// SALAH untuk TIMESTAMP:
 ->whereDate('transaction_date', $date)
 ```
 

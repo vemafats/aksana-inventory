@@ -214,11 +214,11 @@ class DistribusiPage extends Page implements HasForms, HasTable
                     ->with(['fromLocation', 'toLocation', 'event', 'transferItems'])
                     ->when(
                         $this->historyDateFrom,
-                        fn (Builder $q) => TimezoneQuery::whereDateFrom($q, 'transfer_date', $this->historyDateFrom),
+                        fn (Builder $q) => $q->where('transfer_date', '>=', $this->historyDateFrom),
                     )
                     ->when(
                         $this->historyDateTo,
-                        fn (Builder $q) => TimezoneQuery::whereDateTo($q, 'transfer_date', $this->historyDateTo),
+                        fn (Builder $q) => $q->where('transfer_date', '<=', $this->historyDateTo),
                     )
                     ->latest('transfer_date'))
                 ->columns([

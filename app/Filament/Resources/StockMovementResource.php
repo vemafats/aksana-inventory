@@ -120,11 +120,11 @@ class StockMovementResource extends Resource
                         return $query
                             ->when(
                                 filled($data['from'] ?? null),
-                                fn (Builder $q) => TimezoneQuery::whereDateFrom($q, 'created_at', $data['from']),
+                                fn (Builder $q) => TimezoneQuery::whereTimestampFrom($q, 'created_at', $data['from']),
                             )
                             ->when(
                                 filled($data['until'] ?? null),
-                                fn (Builder $q) => TimezoneQuery::whereDateTo($q, 'created_at', $data['until']),
+                                fn (Builder $q) => TimezoneQuery::whereTimestampTo($q, 'created_at', $data['until']),
                             );
                     }),
             ])
