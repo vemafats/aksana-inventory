@@ -1,6 +1,7 @@
-# Read version from pubspec.yaml
-$version = (Select-String -Path "pubspec.yaml" -Pattern "^version:\s*(.+)\+").Matches[0].Groups[1].Value
-$buildNumber = (Select-String -Path "pubspec.yaml" -Pattern "^version:\s*.+\+(\d+)").Matches[0].Groups[1].Value
+$versionLine = (Get-Content "pubspec.yaml" | Select-String "^version:\s*(.+)$").Matches[0].Groups[1].Value
+$parts = $versionLine -split '\+'
+$version = $parts[0]
+$buildNumber = $parts[1]
 flutter build apk --release
 $src = "build\app\outputs\flutter-apk\app-release.apk"
 $dest = "build\app\outputs\flutter-apk\aksana-v${version}+${buildNumber}.apk"

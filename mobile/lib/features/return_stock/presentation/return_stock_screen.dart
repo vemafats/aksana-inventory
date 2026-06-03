@@ -221,7 +221,7 @@ class ReturnStockScreen extends ConsumerWidget {
                               ),
                             )
                           : Text(
-                              'GENERATE SURAT RETURN',
+                              'KIRIM RETURN',
                               style: AppTextStyles.buttonPrimary,
                             ),
                     ),
