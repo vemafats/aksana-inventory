@@ -104,6 +104,19 @@
                         </div>
                         <p class="aksana-mono font-semibold">{{ \App\Filament\Pages\PenjualanPage::formatRupiah($payments['cash']['total'], true) }}</p>
                     </div>
+                    <div class="aksana-payment-card">
+                        <div
+                            class="aksana-payment-icon flex items-center justify-center"
+                            style="background:#DBEAFE;color:#1660ED;"
+                        >
+                            <x-heroicon-m-building-library class="h-4 w-4" />
+                        </div>
+                        <div class="flex-1">
+                            <p class="font-semibold">Transfer Bank</p>
+                            <p class="text-xs text-gray-500">{{ $payments['transfer']['count'] }} transaksi</p>
+                        </div>
+                        <p class="aksana-mono font-semibold">{{ \App\Filament\Pages\PenjualanPage::formatRupiah($payments['transfer']['total'], true) }}</p>
+                    </div>
                 </div>
             </div>
         </div>

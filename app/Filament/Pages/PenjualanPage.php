@@ -102,6 +102,7 @@ class PenjualanPage extends Page implements HasTable
         $breakdown = [
             'qris' => ['total' => 0.0, 'count' => 0],
             'cash' => ['total' => 0.0, 'count' => 0],
+            'transfer' => ['total' => 0.0, 'count' => 0],
         ];
 
         foreach ($rows as $row) {
@@ -115,6 +116,9 @@ class PenjualanPage extends Page implements HasTable
             } elseif ($method === PaymentMethod::CASH->value) {
                 $breakdown['cash']['total'] = (float) $row->total;
                 $breakdown['cash']['count'] = (int) $row->trx_count;
+            } elseif ($method === PaymentMethod::TRANSFER->value) {
+                $breakdown['transfer']['total'] = (float) $row->total;
+                $breakdown['transfer']['count'] = (int) $row->trx_count;
             }
         }
 
