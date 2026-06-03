@@ -126,6 +126,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               : Text('MASUK', style: AppTextStyles.buttonPrimary),
                         ),
                       ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'isLoading: ${auth.isLoading} | isAuth: ${auth.isAuthenticated} | error: ${auth.errorMessage ?? "none"}',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          color: AppColors.muted,
+                        ),
+                      ),
                       if (auth.errorMessage != null) ...[
                         const SizedBox(height: 12),
                         Text(

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -30,6 +31,7 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
     }
 
     ref.read(eventsFetchInitiatedProvider.notifier).state = true;
+    debugPrint('[SCAFFOLD] fetching events...');
     unawaited(
       ref
           .read(activeEventNotifierProvider.notifier)
@@ -65,6 +67,8 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
     ref.listen<ActiveEventState>(activeEventNotifierProvider, _maybeAutoSelectSingleEvent);
 
     final auth = ref.watch(authProvider);
+    debugPrint(
+        '[SCAFFOLD] build called, authenticated=${auth.isAuthenticated}');
     if (auth.isAuthenticated) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _maybeFetchEvents());
     }

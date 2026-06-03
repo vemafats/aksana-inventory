@@ -7,6 +7,9 @@ class ApiClient {
   late final Dio _dio;
   final _storage = const FlutterSecureStorage();
 
+  /// Token in memory — interceptor reads this synchronously, never awaits storage.
+  String? _token;
+
   ApiClient() {
     _dio = Dio(BaseOptions(
       baseUrl: baseUrl,
@@ -19,16 +22,16 @@ class ApiClient {
     ));
 
     _dio.interceptors.add(InterceptorsWrapper(
-      onRequest: (options, handler) async {
-        final token = await _storage.read(key: 'auth_token');
-        if (token != null) {
-          options.headers['Authorization'] = 'Bearer $token';
+      onRequest: (options, handler) {
+        if (_token != null) {
+          options.headers['Authorization'] = 'Bearer $_token';
         }
         return handler.next(options);
       },
-      onError: (error, handler) async {
+      onError: (error, handler) {
         if (error.response?.statusCode == 401) {
-          await _storage.delete(key: 'auth_token');
+          _token = null;
+          _storage.delete(key: 'auth_token');
         }
         return handler.next(error);
       },
@@ -37,12 +40,18 @@ class ApiClient {
 
   Dio get dio => _dio;
 
-  Future<void> setToken(String token) async =>
-      _storage.write(key: 'auth_token', value: token);
+  Future<void> setToken(String token) async {
+    _token = token;
+    await _storage.write(key: 'auth_token', value: token);
+  }
 
-  Future<void> clearToken() async =>
-      _storage.delete(key: 'auth_token');
+  Future<void> clearToken() async {
+    _token = null;
+    await _storage.delete(key: 'auth_token');
+  }
 
-  Future<String?> getToken() async =>
-      _storage.read(key: 'auth_token');
+  Future<String?> getToken() async {
+    _token = await _storage.read(key: 'auth_token');
+    return _token;
+  }
 }
