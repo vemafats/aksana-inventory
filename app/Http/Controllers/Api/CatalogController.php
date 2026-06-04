@@ -10,6 +10,7 @@ use App\Models\Item;
 use App\Services\CatalogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class CatalogController extends Controller
 {
@@ -74,6 +75,9 @@ class CatalogController extends Controller
         }
 
         $items = $query->latest()->paginate(20);
+        $items->getCollection()->transform(
+            fn (Item $item): array => $this->formatItem($item),
+        );
 
         return response()->json([
             'success' => true,
@@ -95,7 +99,7 @@ class CatalogController extends Controller
         return response()->json([
             'success' => true,
             'data' => array_merge(
-                $item->toArray(),
+                $this->formatItem($item),
                 ['stock_summary' => $this->buildStockSummary($item)],
             ),
         ]);
@@ -154,10 +158,31 @@ class CatalogController extends Controller
         return response()->json([
             'success' => true,
             'data' => array_merge(
-                $item->toArray(),
+                $this->formatItem($item),
                 ['stock_summary' => $this->buildStockSummary($item)],
             ),
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function formatItem(Item $item): array
+    {
+        return array_merge($item->toArray(), [
+            'catalog_photo_url' => $this->catalogPhotoUrl($item),
+        ]);
+    }
+
+    private function catalogPhotoUrl(Item $item): ?string
+    {
+        $path = $item->catalog_photo_path;
+
+        if (! is_string($path) || $path === '') {
+            return null;
+        }
+
+        return Storage::disk('public')->url($path);
     }
 
     /**

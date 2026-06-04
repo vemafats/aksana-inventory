@@ -22,6 +22,7 @@ class StockCheckScreen extends StatelessWidget {
     final color = item['color'] is Map ? item['color'] as Map : null;
     final hex = color?['hex_code']?.toString() ?? '#49586B';
     final abbr = _abbreviation(name);
+    final photoUrl = item['catalog_photo_url']?.toString().trim();
 
     final locations = _parseLocations(item);
     final total = locations.fold<int>(0, (s, l) => s + l.qty);
@@ -101,6 +102,20 @@ class StockCheckScreen extends StatelessWidget {
                         ],
                       ),
                     ),
+                    if (photoUrl != null && photoUrl.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.network(
+                          photoUrl,
+                          width: double.infinity,
+                          height: 200,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                              const SizedBox.shrink(),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     Text('DISTRIBUSI', style: AppTextStyles.sectionLabel),
                     const SizedBox(height: 10),

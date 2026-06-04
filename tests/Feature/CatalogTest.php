@@ -14,6 +14,7 @@ use Database\Seeders\ProductModelSeeder;
 use Database\Seeders\SizeSeeder;
 use Database\Seeders\UserSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class CatalogTest extends TestCase
@@ -100,7 +101,34 @@ class CatalogTest extends TestCase
 
         $response->assertOk()
             ->assertJsonPath('success', true)
-            ->assertJsonPath('data.barcode', $barcode);
+            ->assertJsonPath('data.barcode', $barcode)
+            ->assertJsonStructure([
+                'data' => ['catalog_photo_path', 'catalog_photo_url'],
+            ]);
+    }
+
+    public function test_find_by_barcode_includes_catalog_photo_url_when_path_set(): void
+    {
+        Storage::fake('public');
+
+        $create = $this->actingAsAdmin()
+            ->postJson('/api/catalogs', $this->catalogPayload());
+
+        $barcode = $create->json('data.barcode');
+        $itemId = $create->json('data.id');
+
+        \App\Models\Item::query()
+            ->whereKey($itemId)
+            ->update(['catalog_photo_path' => 'catalog-photos/test-item.jpg']);
+
+        $response = $this->actingAsAdmin()
+            ->getJson("/api/catalogs/by-barcode/{$barcode}");
+
+        $response->assertOk()
+            ->assertJsonPath('data.catalog_photo_path', 'catalog-photos/test-item.jpg');
+
+        $expectedUrl = Storage::disk('public')->url('catalog-photos/test-item.jpg');
+        $this->assertSame($expectedUrl, $response->json('data.catalog_photo_url'));
     }
 
     public function test_returns_404_for_unknown_barcode(): void
@@ -151,7 +179,11 @@ class CatalogTest extends TestCase
     /**
      * @return array<string, mixed>
      */
-    private function catalogPayload(): array
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    private function catalogPayload(array $overrides = []): array
     {
         $category = Category::where('code', 'SEP')->firstOrFail();
         $brand = Brand::where('name', 'Nike')->firstOrFail();
@@ -162,13 +194,13 @@ class CatalogTest extends TestCase
         $color = Color::where('name', 'Hitam')->firstOrFail();
         $size = Size::where('name', '40')->where('size_type', 'shoes')->firstOrFail();
 
-        return [
+        return array_merge([
             'category_id' => $category->id,
             'brand_id' => $brand->id,
             'model_id' => $model->id,
             'color_id' => $color->id,
             'size_id' => $size->id,
-        ];
+        ], $overrides);
     }
 
     private function actingAsAdmin(): static

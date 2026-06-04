@@ -184,9 +184,15 @@ class _BrowseItemsScreenState extends ConsumerState<BrowseItemsScreen> {
                           final qty =
                               BrowseItemsService.totalAvailableQty(item);
 
+                          final photoUrl =
+                              item['catalog_photo_url']?.toString().trim();
+
                           return _BrowseItemTile(
                             abbreviation: _abbreviation(name),
                             color: _parseColor(hex),
+                            catalogPhotoUrl: photoUrl != null && photoUrl.isNotEmpty
+                                ? photoUrl
+                                : null,
                             name: name,
                             subtitle: '$barcode · $category',
                             qty: qty,
@@ -208,6 +214,7 @@ class _BrowseItemsScreenState extends ConsumerState<BrowseItemsScreen> {
 class _BrowseItemTile extends StatelessWidget {
   final String abbreviation;
   final Color color;
+  final String? catalogPhotoUrl;
   final String name;
   final String subtitle;
   final int qty;
@@ -216,11 +223,66 @@ class _BrowseItemTile extends StatelessWidget {
   const _BrowseItemTile({
     required this.abbreviation,
     required this.color,
+    this.catalogPhotoUrl,
     required this.name,
     required this.subtitle,
     required this.qty,
     required this.onTap,
   });
+
+  Widget _abbreviationSquare() {
+    return Container(
+      width: 48,
+      height: 48,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        abbreviation,
+        style: GoogleFonts.inter(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+
+  Widget _leadingThumbnail() {
+    final url = catalogPhotoUrl;
+    if (url == null || url.isEmpty) {
+      return _abbreviationSquare();
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: Image.network(
+        url,
+        width: 48,
+        height: 48,
+        fit: BoxFit.cover,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) {
+            return child;
+          }
+          return Container(
+            width: 48,
+            height: 48,
+            color: AppColors.border,
+            alignment: Alignment.center,
+            child: const Icon(
+              Icons.image_outlined,
+              size: 20,
+              color: AppColors.muted,
+            ),
+          );
+        },
+        errorBuilder: (_, __, ___) => _abbreviationSquare(),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -233,23 +295,7 @@ class _BrowseItemTile extends StatelessWidget {
       ),
       child: ListTile(
         onTap: onTap,
-        leading: Container(
-          width: 42,
-          height: 42,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            abbreviation,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-            ),
-          ),
-        ),
+        leading: _leadingThumbnail(),
         title: Text(
           name,
           style: GoogleFonts.inter(
