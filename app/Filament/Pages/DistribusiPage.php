@@ -79,10 +79,23 @@ class DistribusiPage extends Page implements HasForms, HasTable
 
     public function mount(): void
     {
-        $this->historyDateFrom = now(TimezoneQuery::TIMEZONE)->subDays(6)->toDateString();
-        $this->historyDateTo = TimezoneQuery::todayDateString();
         $this->returnDate = TimezoneQuery::todayDateString();
         $this->returnRef = app(TransferService::class)->generateReturnNumber();
+    }
+
+    public function updatedActiveTab(): void
+    {
+        $this->resetTable();
+    }
+
+    public function updatedHistoryDateFrom(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedHistoryDateTo(): void
+    {
+        $this->resetPage();
     }
 
     /**

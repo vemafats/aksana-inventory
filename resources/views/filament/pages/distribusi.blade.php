@@ -287,7 +287,7 @@
                 <span class="text-[#49586B]">—</span>
                 <input type="date" wire:model.live="historyDateTo" class="rounded-lg border border-[#D1DAE5] px-2 py-1 text-sm aksana-mono" />
             </div>
-            <span class="text-xs text-[#49586B] aksana-mono">7 hari terakhir</span>
+            <span class="text-xs text-[#49586B]">Filter tanggal opsional — kosongkan untuk semua transaksi</span>
         </div>
         {{ $this->table }}
     @endif
