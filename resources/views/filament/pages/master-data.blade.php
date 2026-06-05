@@ -23,25 +23,25 @@
     <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
         <p class="text-sm text-[var(--aksana-muted)]">Kelola data referensi · 7 tabel master</p>
         @if ($selectedTab === 'categories')
-            <a href="{{ CategoryResource::getUrl('create') }}" class="aksana-tab aksana-tab-active text-[10px]">+ TAMBAH KATEGORI</a>
+            <a href="{{ CategoryResource::getUrl('create') }}" class="aksana-tab aksana-tab-active">+ TAMBAH KATEGORI</a>
         @elseif ($selectedTab === 'brands')
-            <a href="{{ BrandResource::getUrl('create') }}" class="aksana-tab aksana-tab-active text-[10px]">+ TAMBAH MERK</a>
+            <a href="{{ BrandResource::getUrl('create') }}" class="aksana-tab aksana-tab-active">+ TAMBAH MERK</a>
         @elseif ($selectedTab === 'models')
-            <a href="{{ ProductModelResource::getUrl('create') }}" class="aksana-tab aksana-tab-active text-[10px]">+ TAMBAH MODEL</a>
+            <a href="{{ ProductModelResource::getUrl('create') }}" class="aksana-tab aksana-tab-active">+ TAMBAH MODEL</a>
         @elseif ($selectedTab === 'colors')
-            <a href="{{ ColorResource::getUrl('create') }}" class="aksana-tab aksana-tab-active text-[10px]">+ TAMBAH WARNA</a>
+            <a href="{{ ColorResource::getUrl('create') }}" class="aksana-tab aksana-tab-active">+ TAMBAH WARNA</a>
         @elseif ($selectedTab === 'sizes')
-            <a href="{{ SizeResource::getUrl('create') }}" class="aksana-tab aksana-tab-active text-[10px]">+ TAMBAH UKURAN</a>
+            <a href="{{ SizeResource::getUrl('create') }}" class="aksana-tab aksana-tab-active">+ TAMBAH UKURAN</a>
         @elseif ($selectedTab === 'employees')
-            <a href="{{ UserResource::getUrl('create') }}" class="aksana-tab aksana-tab-active text-[10px]">+ TAMBAH KARYAWAN</a>
+            <a href="{{ UserResource::getUrl('create') }}" class="aksana-tab aksana-tab-active">+ TAMBAH KARYAWAN</a>
         @elseif ($selectedTab === 'locations')
-            <a href="{{ LocationResource::getUrl('create') }}" class="aksana-tab aksana-tab-active text-[10px]">+ TAMBAH LOKASI</a>
+            <a href="{{ LocationResource::getUrl('create') }}" class="aksana-tab aksana-tab-active">+ TAMBAH LOKASI</a>
         @endif
     </div>
 
     <div class="grid grid-cols-1 gap-4 lg:grid-cols-[240px_1fr]">
         <aside class="rounded-lg border border-[var(--aksana-border)] bg-white p-2">
-            <p class="mb-2 px-2 text-[10px] font-bold uppercase tracking-wider text-[var(--aksana-muted)]">
+            <p class="mb-2 px-2 text-[11px] font-bold uppercase tracking-[0.1em] text-[#3d4a5c]">
                 Tabel Master
             </p>
             <nav class="flex flex-col gap-1">
@@ -50,8 +50,8 @@
                         type="button"
                         wire:click="selectTab('{{ $key }}')"
                         @class([
-                            'flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-xs font-semibold transition',
-                            'bg-[var(--aksana-void)] text-white' => $selectedTab === $key,
+                            'aksana-master-tab flex w-full items-center gap-2 rounded-md text-left transition',
+                            'aksana-master-tab-active bg-[var(--aksana-void)] text-white' => $selectedTab === $key,
                             'text-[var(--aksana-void)] hover:bg-gray-100' => $selectedTab !== $key,
                         ])
                     >
@@ -76,8 +76,8 @@
             <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--aksana-border)] px-4 py-3">
                 <div class="flex items-center gap-2">
                     <x-heroicon-o-table-cells class="h-4 w-4 text-[var(--aksana-muted)]" />
-                    <h2 class="text-sm font-semibold text-[var(--aksana-void)]">{{ $this->getActiveTabLabel() }}</h2>
-                    <span class="text-xs text-[var(--aksana-muted)]">· {{ $this->getTabCount($selectedTab) }} entri</span>
+                    <h2 class="text-base font-bold text-[var(--aksana-void)]">{{ $this->getActiveTabLabel() }}</h2>
+                    <span class="text-[13px] font-medium text-[#3d4a5c]">· {{ $this->getTabCount($selectedTab) }} entri</span>
                 </div>
                 <input
                     type="search"
@@ -95,7 +95,7 @@
                             ->orderBy('name')
                             ->get();
                     @endphp
-                    <table class="aksana-table w-full text-sm">
+                    <table class="aksana-table w-full">
                         <thead>
                             <tr>
                                 <th>Kode</th>
@@ -111,7 +111,7 @@
                                     <td class="font-semibold">{{ $cat->name }}</td>
                                     <td class="text-[var(--aksana-muted)]">—</td>
                                     <td>
-                                        <a href="{{ CategoryResource::getUrl('edit', ['record' => $cat]) }}" class="text-xs font-semibold text-[var(--aksana-void)]">Edit</a>
+                                        <a href="{{ CategoryResource::getUrl('edit', ['record' => $cat]) }}" class="text-[13px] font-semibold text-[var(--aksana-void)]">Edit</a>
                                     </td>
                                 </tr>
                             @empty
@@ -126,7 +126,7 @@
                             ->orderBy('name')
                             ->get();
                     @endphp
-                    <table class="aksana-table w-full text-sm">
+                    <table class="aksana-table w-full">
                         <thead>
                             <tr>
                                 <th>Kode</th>
@@ -142,7 +142,7 @@
                                     <td class="font-semibold">{{ $brand->name }}</td>
                                     <td class="text-[var(--aksana-muted)]">—</td>
                                     <td>
-                                        <a href="{{ BrandResource::getUrl('edit', ['record' => $brand]) }}" class="text-xs font-semibold text-[var(--aksana-void)]">Edit</a>
+                                        <a href="{{ BrandResource::getUrl('edit', ['record' => $brand]) }}" class="text-[13px] font-semibold text-[var(--aksana-void)]">Edit</a>
                                     </td>
                                 </tr>
                             @empty
@@ -158,7 +158,7 @@
                             ->orderBy('name')
                             ->get();
                     @endphp
-                    <table class="aksana-table w-full text-sm">
+                    <table class="aksana-table w-full">
                         <thead>
                             <tr>
                                 <th>Kode</th>
@@ -174,7 +174,7 @@
                                     <td class="font-semibold">{{ $model->name }}</td>
                                     <td>{{ $model->category?->name ?? '—' }}</td>
                                     <td>
-                                        <a href="{{ ProductModelResource::getUrl('edit', ['record' => $model]) }}" class="text-xs font-semibold text-[var(--aksana-void)]">Edit</a>
+                                        <a href="{{ ProductModelResource::getUrl('edit', ['record' => $model]) }}" class="text-[13px] font-semibold text-[var(--aksana-void)]">Edit</a>
                                     </td>
                                 </tr>
                             @empty
@@ -189,7 +189,7 @@
                             ->orderBy('name')
                             ->get();
                     @endphp
-                    <table class="aksana-table w-full text-sm">
+                    <table class="aksana-table w-full">
                         <thead>
                             <tr>
                                 <th>Kode</th>
@@ -211,7 +211,7 @@
                                         </span>
                                     </td>
                                     <td>
-                                        <a href="{{ ColorResource::getUrl('edit', ['record' => $color]) }}" class="text-xs font-semibold text-[var(--aksana-void)]">Edit</a>
+                                        <a href="{{ ColorResource::getUrl('edit', ['record' => $color]) }}" class="text-[13px] font-semibold text-[var(--aksana-void)]">Edit</a>
                                     </td>
                                 </tr>
                             @empty
@@ -226,7 +226,7 @@
                             ->orderBy('sort_order')
                             ->get();
                     @endphp
-                    <table class="aksana-table w-full text-sm">
+                    <table class="aksana-table w-full">
                         <thead>
                             <tr>
                                 <th>Kode</th>
@@ -242,7 +242,7 @@
                                     <td class="font-semibold">{{ $size->name }}</td>
                                     <td>{{ match ($size->size_type) { 'clothing' => 'Pakaian', 'shoes' => 'Sepatu', default => $size->size_type ?? '—' } }}</td>
                                     <td>
-                                        <a href="{{ SizeResource::getUrl('edit', ['record' => $size]) }}" class="text-xs font-semibold text-[var(--aksana-void)]">Edit</a>
+                                        <a href="{{ SizeResource::getUrl('edit', ['record' => $size]) }}" class="text-[13px] font-semibold text-[var(--aksana-void)]">Edit</a>
                                     </td>
                                 </tr>
                             @empty
@@ -257,7 +257,7 @@
                             ->orderBy('name')
                             ->get();
                     @endphp
-                    <table class="aksana-table w-full text-sm">
+                    <table class="aksana-table w-full">
                         <thead>
                             <tr>
                                 <th>NIK</th>
@@ -273,7 +273,7 @@
                                     <td class="font-semibold">{{ $staff->name }}</td>
                                     <td>{{ $staff->role->label() }}</td>
                                     <td>
-                                        <a href="{{ UserResource::getUrl('edit', ['record' => $staff]) }}" class="text-xs font-semibold text-[var(--aksana-void)]">Edit</a>
+                                        <a href="{{ UserResource::getUrl('edit', ['record' => $staff]) }}" class="text-[13px] font-semibold text-[var(--aksana-void)]">Edit</a>
                                     </td>
                                 </tr>
                             @empty
@@ -288,7 +288,7 @@
                             ->orderBy('location_name')
                             ->get();
                     @endphp
-                    <table class="aksana-table w-full text-sm">
+                    <table class="aksana-table w-full">
                         <thead>
                             <tr>
                                 <th>Kode</th>
@@ -308,7 +308,7 @@
                                             : (LocationType::tryFrom((string) $location->location_type)?->label() ?? '—') }}
                                     </td>
                                     <td>
-                                        <a href="{{ LocationResource::getUrl('edit', ['record' => $location]) }}" class="text-xs font-semibold text-[var(--aksana-void)]">Edit</a>
+                                        <a href="{{ LocationResource::getUrl('edit', ['record' => $location]) }}" class="text-[13px] font-semibold text-[var(--aksana-void)]">Edit</a>
                                     </td>
                                 </tr>
                             @empty

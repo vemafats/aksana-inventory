@@ -92,7 +92,7 @@
 
 .fi-wi-stats-overview-stat-value {
     font-family: 'IBM Plex Mono', ui-monospace, monospace !important;
-    font-size: 1.75rem !important;
+    font-size: 1.875rem !important;
     font-weight: 700 !important;
     letter-spacing: -0.02em !important;
     color: var(--aksana-void) !important;
@@ -101,16 +101,17 @@
 .fi-wi-stats-overview-stat-label {
     font-family: 'Inter', sans-serif !important;
     text-transform: uppercase !important;
-    letter-spacing: 0.08em !important;
-    font-size: 10px !important;
+    letter-spacing: 0.1em !important;
+    font-size: 11px !important;
     font-weight: 700 !important;
-    color: var(--aksana-muted) !important;
+    color: #3d4a5c !important;
 }
 
 .fi-wi-stats-overview-stat-description {
-    font-family: 'IBM Plex Mono', ui-monospace, monospace !important;
-    font-size: 12px !important;
-    color: var(--aksana-muted) !important;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: #3d4a5c !important;
 }
 
 .fi-wi-stats-overview-stat-icon {
@@ -254,18 +255,19 @@
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.5rem 1rem;
+    padding: 0.625rem 1rem;
     border-radius: 6px;
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 600;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    color: var(--aksana-muted);
+    color: #3d4a5c;
 }
 
 .aksana-tab-active {
     background: var(--aksana-void);
     color: #fff;
+    font-weight: 700;
 }
 
 .aksana-stat-panel,
@@ -278,25 +280,26 @@
 
 .aksana-stat-label,
 .aksana-panel-title {
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--aksana-muted);
+    color: #3d4a5c;
 }
 
 .aksana-stat-value {
     font-family: 'IBM Plex Mono', ui-monospace, monospace;
-    font-size: 1.75rem;
+    font-size: 1.875rem;
     font-weight: 700;
     color: var(--aksana-void);
     margin-top: 0.25rem;
 }
 
 .aksana-stat-sub {
-    font-family: 'IBM Plex Mono', ui-monospace, monospace;
-    font-size: 12px;
-    color: var(--aksana-muted);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: #3d4a5c;
     margin-top: 0.25rem;
 }
 
@@ -337,18 +340,92 @@
 }
 
 .aksana-table thead th {
-    font-size: 10px;
-    font-weight: 700;
+    font-size: 12px;
+    font-weight: 600;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--aksana-muted);
+    color: #3d4a5c;
     padding-bottom: 0.5rem;
     border-bottom: 1px solid var(--aksana-border);
 }
 
 .aksana-table tbody td {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--aksana-void);
     padding: 0.65rem 0.5rem 0.65rem 0;
     border-bottom: 1px solid #edf1f3;
+}
+
+/* Master Data — sidebar tab list */
+.aksana-master-tab {
+    font-size: 13px;
+    font-weight: 600;
+    padding: 0.625rem 0.875rem;
+}
+
+.aksana-master-tab-active {
+    font-weight: 700;
+}
+
+/* Laporan Lengkap — report sections */
+.aksana-report-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--aksana-void);
+    margin: 0;
+}
+
+.aksana-report-section-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--aksana-void);
+}
+
+.aksana-report-stat-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #3d4a5c;
+    margin: 0 0 6px;
+}
+
+.aksana-report-stat-value {
+    font-size: 28px;
+    font-weight: 700;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    color: var(--aksana-void);
+    margin: 0;
+}
+
+.aksana-report-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.aksana-report-table thead th {
+    padding: 10px 16px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #3d4a5c;
+    background: #f8f9fb;
+}
+
+.aksana-report-table tbody td {
+    padding: 12px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--aksana-void);
+}
+
+.aksana-report-table tbody td.aksana-report-total {
+    font-weight: 700;
+    font-size: 14px;
 }
 
 .aksana-badge-success {
