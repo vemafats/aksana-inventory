@@ -87,7 +87,7 @@
     function printLabelModal() {
         return {
             selectedBarcode: '',
-            labelSize: '50x25',
+            labelSize: '40x20',
             qty: 1,
             printing: false,
             status: '',

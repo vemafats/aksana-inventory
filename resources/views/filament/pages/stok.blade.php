@@ -768,7 +768,8 @@
         <div class="absolute inset-0 bg-black/50" wire:click="closePrintModal"></div>
 
         <div
-            class="relative z-10 w-full max-w-md rounded-xl border border-[var(--aksana-border)] bg-white p-6 shadow-xl"
+            class="relative z-10 w-full rounded-xl border border-[var(--aksana-border)] bg-white p-6 shadow-xl"
+            style="min-width:420px; max-width:480px;"
             wire:ignore
             x-data="printLabelModal()"
             @click.stop
@@ -840,11 +841,11 @@
                     <p><span class="font-medium">Qty:</span> <span x-text="qty"></span> lembar</p>
                 </div>
 
-                <div class="mt-4 flex gap-3">
+                <div style="display:flex; gap:12px; margin-top:16px;">
                     <button
                         type="button"
                         @click="$wire.closePrintModal()"
-                        style="flex:1; padding:12px; border:1px solid #d1d5db; border-radius:8px; background:white; cursor:pointer; font-size:13px; font-weight:600; color:#49586B;"
+                        style="flex:1; padding:14px 20px; border:1px solid #d1d5db; border-radius:10px; background:white; cursor:pointer; font-weight:600; font-size:14px; color:#49586B;"
                     >
                         Batal
                     </button>
@@ -852,11 +853,11 @@
                         type="button"
                         @click="printLabel()"
                         :disabled="!selectedBarcode || printing"
-                        style="flex:1; padding:12px; border-radius:8px; color:white; font-size:13px; font-weight:600; cursor:pointer; border:none; display:inline-flex; align-items:center; justify-content:center; gap:6px;"
-                        :style="!selectedBarcode || printing ? 'background:#9ca3af; cursor:not-allowed;' : 'background:#070D1E;'"
+                        style="flex:1; padding:14px 20px; border:none; border-radius:10px; color:white; font-weight:600; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; min-width:0;"
+                        :style="!selectedBarcode || printing ? 'background:#9ca3af; cursor:not-allowed;' : 'background:#1a1a2e;'"
                     >
-                        <x-heroicon-o-printer class="h-4 w-4" style="color:white;" />
-                        <span x-text="printing ? 'Mencetak...' : 'CETAK'"></span>
+                        <span x-show="!printing" style="display:flex; align-items:center; gap:6px;">🖨️ CETAK</span>
+                        <span x-show="printing">Mencetak...</span>
                     </button>
                 </div>
 
