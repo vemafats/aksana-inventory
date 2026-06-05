@@ -8,6 +8,16 @@
         'http://localhost:9100/available',
     ];
 
+    const ZPL_TEMPLATE_40x30 =
+        '^XA\n^CI28\n^PW320\n^LL240\n^LH0,0\n^FO50,220^A0N,22,22^FD{CODE}^FS\n^FO72,30^BQN,2,8^FDMA,{CODE}^FS\n^PQ{QTY}\n^XZ';
+
+    const ZPL_TEMPLATE_50x25 =
+        '^XA\n^CI28\n^PW400\n^LL200\n^LH0,0\n^FO10,10^A0N,32,32^FD{CODE}^FS\n^FO10,55^BQN,2,4^FDMA,{CODE}^FS\n^PQ{QTY}\n^XZ';
+
+    function zplStorageKey(size) {
+        return 'aksana_zpl_' + size;
+    }
+
     function parsePrinterFromAvailable(text) {
         console.log('[ZPL] Parsing available response:', text);
 
@@ -139,28 +149,55 @@
             statusSuccess: false,
             showZplEditor: false,
             customZpl: '',
+            savedTemplates: {},
+            saveConfirm: false,
 
             getDefaultZpl(size) {
-                const code = '{CODE}';
                 if (size === '40x30') {
-                    return '^XA\n^CI28\n^PW320\n^LL240\n^LH0,0\n^FO10,10^A0N,28,28^FD' + code + '^FS\n^FO10,50^BQN,2,3^FDMA,' + code + '^FS\n^PQ{QTY}\n^XZ';
+                    return ZPL_TEMPLATE_40x30;
                 }
 
-                return '^XA\n^CI28\n^PW400\n^LL200\n^LH0,0\n^FO10,10^A0N,32,32^FD' + code + '^FS\n^FO10,55^BQN,2,4^FDMA,' + code + '^FS\n^PQ{QTY}\n^XZ';
+                return ZPL_TEMPLATE_50x25;
+            },
+
+            loadSavedZpl(size) {
+                const key = zplStorageKey(size);
+                const saved = localStorage.getItem(key);
+
+                if (saved) {
+                    this.savedTemplates[size] = saved;
+                    console.log('[ZPL] Loaded saved template for', size);
+                    return saved;
+                }
+
+                return this.getDefaultZpl(size);
+            },
+
+            saveZpl() {
+                const key = zplStorageKey(this.labelSize);
+                localStorage.setItem(key, this.customZpl);
+                this.savedTemplates[this.labelSize] = this.customZpl;
+                this.saveConfirm = true;
+                console.log('[ZPL] Saved template for', this.labelSize);
+                setTimeout(() => {
+                    this.saveConfirm = false;
+                }, 2000);
             },
 
             resetZpl() {
+                const key = zplStorageKey(this.labelSize);
+                localStorage.removeItem(key);
+                delete this.savedTemplates[this.labelSize];
                 this.customZpl = this.getDefaultZpl(this.labelSize);
+                console.log('[ZPL] Reset template to default for', this.labelSize);
             },
 
             init() {
                 this.open = true;
-                this.customZpl = this.getDefaultZpl(this.labelSize);
+                this.customZpl = this.loadSavedZpl(this.labelSize);
 
                 this.$watch('labelSize', (val) => {
-                    if (!this.showZplEditor || this.customZpl === '' || this.customZpl === this.getDefaultZpl(val === '40x30' ? '50x25' : '40x30')) {
-                        this.customZpl = this.getDefaultZpl(val);
-                    }
+                    this.customZpl = this.loadSavedZpl(val);
                 });
 
                 this.$watch('open', (val) => {
@@ -169,29 +206,24 @@
                         return;
                     }
 
-                    if (this.customZpl === '') {
-                        this.customZpl = this.getDefaultZpl(this.labelSize);
-                    }
+                    this.customZpl = this.loadSavedZpl(this.labelSize);
                 });
             },
 
             generateZPL() {
                 const code = this.selectedBarcode;
-                let template;
+                const saved = localStorage.getItem(zplStorageKey(this.labelSize));
+                let template = saved || this.getDefaultZpl(this.labelSize);
 
-                if (this.showZplEditor && this.customZpl.trim() !== '') {
+                if (this.customZpl.trim() !== '') {
                     template = this.customZpl;
-                } else if (this.labelSize === '40x30') {
-                    template = '^XA\n^CI28\n^PW320\n^LL240\n^LH0,0\n^FO10,10^A0N,28,28^FD{CODE}^FS\n^FO10,50^BQN,2,3^FDMA,{CODE}^FS\n^PQ{QTY}\n^XZ';
-                } else {
-                    template = '^XA\n^CI28\n^PW400\n^LL200\n^LH0,0\n^FO10,10^A0N,32,32^FD{CODE}^FS\n^FO10,55^BQN,2,4^FDMA,{CODE}^FS\n^PQ{QTY}\n^XZ';
                 }
 
                 const zpl = template
                     .replace(/\{CODE\}/g, code)
                     .replace(/\{QTY\}/g, this.qty.toString());
 
-                console.log('[ZPL] generateZPL labelSize:', this.labelSize, 'code:', code, 'qty:', this.qty, 'custom:', this.showZplEditor);
+                console.log('[ZPL] generateZPL labelSize:', this.labelSize, 'code:', code, 'qty:', this.qty, 'fromSaved:', !!saved);
 
                 return zpl;
             },

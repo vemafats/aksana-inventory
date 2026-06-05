@@ -760,7 +760,7 @@
 </div>
 </div>
 
-<script src="{{ asset('js/zebra-print-label.js') }}?v=4"></script>
+<script src="{{ asset('js/zebra-print-label.js') }}?v=5"></script>
 
 @if ($showPrintModal)
     <div
@@ -782,7 +782,7 @@
                         <h3 style="margin:0; font-size:18px; font-weight:700;">Cetak Label QR Code</h3>
                         <p style="margin:4px 0 0; font-size:13px; color:#6b7280;">Zebra GC420 · Browser Print (localhost:9100)</p>
                     </div>
-                    <button @click="$wire.closePrintModal()" type="button" style="background:none; border:none; cursor:pointer; padding:4px;">
+                    <button @click="open = false" type="button" style="background:none; border:none; cursor:pointer; padding:4px;">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </button>
                 </div>
@@ -833,12 +833,16 @@
                             style="width:100%; height:200px; font-family:'IBM Plex Mono',monospace; font-size:12px; padding:10px; border:1px solid #d1d5db; border-radius:8px; resize:vertical; line-height:1.5; background:#f9fafb;"
                             spellcheck="false"></textarea>
                         <div style="display:flex; gap:8px; margin-top:6px;">
+                            <button @click="saveZpl()" type="button"
+                                style="padding:6px 12px; font-size:11px; border:1px solid #d1d5db; border-radius:6px; background:#1a1a2e; color:white; cursor:pointer; font-weight:600;">
+                                Simpan Template
+                            </button>
                             <button @click="resetZpl()" type="button"
                                 style="padding:6px 12px; font-size:11px; border:1px solid #d1d5db; border-radius:6px; background:white; cursor:pointer; color:#6b7280;">
                                 Reset Default
                             </button>
-                            <span style="font-size:11px; color:#9ca3af; line-height:28px;">
-                                Template digunakan saat cetak
+                            <span x-show="saveConfirm" x-transition style="font-size:11px; color:#16a34a; line-height:28px;">
+                                ✓ Tersimpan
                             </span>
                         </div>
                     </div>
@@ -846,12 +850,14 @@
 
                 <div style="display:flex; gap:12px; margin-top:20px;">
                     <button @click="open = false" type="button"
-                        style="flex:1; padding:14px; border:1px solid #d1d5db; border-radius:10px; background:white; color:#374151; cursor:pointer; font-weight:600; font-size:14px; text-align:center;">
+                        style="flex:1 !important; padding:14px !important; border:1px solid #d1d5db !important; border-radius:10px !important; background:#ffffff !important; background-color:#ffffff !important; color:#374151 !important; cursor:pointer !important; font-weight:600 !important; font-size:14px !important; text-align:center !important; box-shadow:none !important;">
                         Batal
                     </button>
                     <button @click="printLabel()" type="button" x-bind:disabled="!selectedBarcode || printing"
-                        style="flex:1; padding:14px; border:1px solid #d1d5db; border-radius:10px; font-weight:600; font-size:14px; text-align:center; cursor:pointer;"
-                        x-bind:style="!selectedBarcode || printing ? 'background:#e5e7eb; color:#9ca3af; cursor:not-allowed; border-color:#e5e7eb;' : 'background:white; color:#374151;'">
+                        style="flex:1 !important; padding:14px !important; border-radius:10px !important; font-weight:600 !important; font-size:14px !important; text-align:center !important; box-shadow:none !important;"
+                        x-bind:style="!selectedBarcode || printing
+                            ? 'flex:1; padding:14px; border:1px solid #e5e7eb; border-radius:10px; background:#e5e7eb !important; background-color:#e5e7eb !important; color:#9ca3af !important; cursor:not-allowed !important; font-weight:600; font-size:14px; text-align:center; box-shadow:none;'
+                            : 'flex:1; padding:14px; border:1px solid #d1d5db !important; border-radius:10px; background:#ffffff !important; background-color:#ffffff !important; color:#374151 !important; cursor:pointer !important; font-weight:600; font-size:14px; text-align:center; box-shadow:none;'">
                         <span x-show="!printing">Cetak</span>
                         <span x-show="printing">Mencetak...</span>
                     </button>
