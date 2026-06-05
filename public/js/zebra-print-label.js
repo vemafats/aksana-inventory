@@ -1,8 +1,133 @@
 /**
- * Zebra GC420 label printing via Browser Print (localhost:9100).
- * Label sizes: 40×20 mm (320×160 dots) and 50×25 mm (400×200 dots) at 203 dpi.
+ * Zebra GC420 label printing via Browser Print (port 9100).
+ * Registers window.printLabelModal() for Alpine x-data="printLabelModal()".
  */
 (function (global) {
+    const AVAILABLE_PATHS = [
+        'http://127.0.0.1:9100/available',
+        'http://localhost:9100/available',
+    ];
+
+    function parsePrinterFromAvailable(text) {
+        console.log('[ZPL] Parsing available response:', text);
+
+        try {
+            const data = JSON.parse(text);
+
+            if (Array.isArray(data)) {
+                console.log('[ZPL] Parsed as array, count:', data.length);
+                return data[0] ?? null;
+            }
+
+            if (data && Array.isArray(data.printer)) {
+                console.log('[ZPL] Parsed printer array, count:', data.printer.length);
+                return data.printer[0] ?? null;
+            }
+
+            if (data && Array.isArray(data.deviceList)) {
+                console.log('[ZPL] Parsed deviceList, count:', data.deviceList.length);
+                return data.deviceList[0] ?? null;
+            }
+
+            if (data && typeof data === 'object') {
+                console.log('[ZPL] Parsed as single printer object:', JSON.stringify(data));
+                return data;
+            }
+        } catch (parseError) {
+            console.log('[ZPL] Response is not JSON, using plain text as device name');
+        }
+
+        const trimmed = String(text ?? '').trim();
+        if (trimmed === '') {
+            return null;
+        }
+
+        return { name: trimmed, uid: trimmed };
+    }
+
+    async function fetchAvailable() {
+        let lastError = null;
+
+        for (const url of AVAILABLE_PATHS) {
+            try {
+                console.log('[ZPL] Step 1: GET', url);
+                const response = await fetch(url, { method: 'GET', mode: 'cors' });
+                const body = await response.text();
+
+                console.log('[ZPL] Available status:', response.status);
+                console.log('[ZPL] Available body:', body);
+
+                if (!response.ok) {
+                    lastError = new Error('HTTP ' + response.status + ' from ' + url);
+                    continue;
+                }
+
+                const baseUrl = url.replace(/\/available$/, '');
+                const printer = parsePrinterFromAvailable(body);
+
+                if (!printer) {
+                    lastError = new Error('Tidak ada printer terdeteksi dari ' + url);
+                    continue;
+                }
+
+                console.log('[ZPL] Selected printer:', JSON.stringify(printer));
+                return { baseUrl, printer, raw: body };
+            } catch (error) {
+                console.log('[ZPL] Available fetch error for', url, ':', error.message);
+                lastError = error;
+            }
+        }
+
+        throw new Error('Browser Print tidak merespon. ' + (lastError?.message ?? 'Cek aplikasi Zebra Browser Print.'));
+    }
+
+    async function tryWrite(baseUrl, zpl, printer) {
+        const writeUrl = baseUrl + '/write';
+        const attempts = [
+            {
+                label: 'plain text body',
+                init: { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: zpl },
+            },
+            {
+                label: 'JSON device+data',
+                init: {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ device: printer, data: zpl }),
+                },
+            },
+            {
+                label: 'query param device',
+                init: {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: zpl,
+                    url: writeUrl + '?device=' + encodeURIComponent(printer?.name || printer?.uid || String(printer)),
+                },
+            },
+        ];
+
+        for (const attempt of attempts) {
+            const url = attempt.url ?? writeUrl;
+            try {
+                console.log('[ZPL] Step 3: POST', url, '(' + attempt.label + ')');
+                const response = await fetch(url, attempt.init);
+                const responseText = await response.text().catch(() => '');
+
+                console.log('[ZPL] Write status:', response.status, 'response:', responseText);
+
+                if (response.ok) {
+                    console.log('[ZPL] Write succeeded via', attempt.label);
+                    return true;
+                }
+            } catch (error) {
+                console.log('[ZPL] Write error (' + attempt.label + '):', error.message);
+            }
+        }
+
+        return false;
+    }
+
     function printLabelModal() {
         return {
             open: false,
@@ -15,6 +140,8 @@
 
             generateZPL() {
                 const code = this.selectedBarcode;
+                console.log('[ZPL] generateZPL labelSize:', this.labelSize, 'code:', code, 'qty:', this.qty);
+
                 if (this.labelSize === '40x20') {
                     return '^XA\n^CI28\n^PW320\n^LL160\n^LH0,0\n^FO10,10^A0N,28,28^FD' + code + '^FS\n^FO10,50^BQN,2,3^FDMA,' + code + '^FS\n^PQ' + this.qty + '\n^XZ';
                 }
@@ -24,6 +151,7 @@
 
             async printLabel() {
                 if (!this.selectedBarcode) {
+                    console.log('[ZPL] printLabel aborted: no barcode selected');
                     return;
                 }
 
@@ -32,75 +160,28 @@
                 this.statusSuccess = false;
 
                 try {
-                    console.log('[ZPL] Checking Browser Print...');
-                    const availRes = await fetch('http://127.0.0.1:9100/available');
-                    if (!availRes.ok) {
-                        throw new Error('Browser Print tidak merespon (status ' + availRes.status + ')');
-                    }
+                    console.log('[ZPL] printLabel started');
 
-                    const availText = await availRes.text();
-                    console.log('[ZPL] Available response:', availText);
+                    const { baseUrl, printer } = await fetchAvailable();
 
                     const zpl = this.generateZPL();
-                    console.log('[ZPL] Generated:', zpl);
+                    console.log('[ZPL] Generated ZPL:\n', zpl);
 
                     this.statusMsg = 'Mengirim ke printer...';
 
-                    let sent = false;
-
-                    try {
-                        const r = await fetch('http://127.0.0.1:9100/write', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'text/plain' },
-                            body: zpl,
-                        });
-                        if (r.ok) {
-                            sent = true;
-                            console.log('[ZPL] Plain text write OK');
-                        } else {
-                            console.log('[ZPL] Plain text write failed:', r.status);
-                        }
-                    } catch (e) {
-                        console.log('[ZPL] Plain text write error:', e.message);
-                    }
+                    const sent = await tryWrite(baseUrl, zpl, printer);
 
                     if (!sent) {
-                        try {
-                            let printer = null;
-                            try {
-                                printer = JSON.parse(availText);
-                                if (Array.isArray(printer)) {
-                                    printer = printer[0];
-                                }
-                            } catch (e) {
-                                printer = availText.trim();
-                            }
-                            const r = await fetch('http://127.0.0.1:9100/write', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ device: printer, data: zpl }),
-                            });
-                            if (r.ok) {
-                                sent = true;
-                                console.log('[ZPL] JSON write OK');
-                            } else {
-                                console.log('[ZPL] JSON write failed:', r.status);
-                            }
-                        } catch (e) {
-                            console.log('[ZPL] JSON write error:', e.message);
-                        }
-                    }
-
-                    if (!sent) {
-                        throw new Error('Gagal mengirim ke printer. Cek console F12.');
+                        throw new Error('Gagal mengirim ke printer. Cek console F12 untuk detail.');
                     }
 
                     this.statusMsg = 'Berhasil! ' + this.qty + ' label dikirim ke printer.';
                     this.statusSuccess = true;
-                } catch (e) {
-                    this.statusMsg = e.message;
+                    console.log('[ZPL] printLabel completed successfully');
+                } catch (error) {
+                    this.statusMsg = error?.message ?? 'Terjadi kesalahan saat mencetak.';
                     this.statusSuccess = false;
-                    console.error('[ZPL] Error:', e);
+                    console.error('[ZPL] printLabel error:', error);
                 } finally {
                     this.printing = false;
                 }
@@ -109,4 +190,6 @@
     }
 
     global.printLabelModal = printLabelModal;
+
+    console.log('[ZPL] zebra-print-label.js loaded, printLabelModal ready');
 })(window);

@@ -760,6 +760,8 @@
 </div>
 </div>
 
+<script src="{{ asset('js/zebra-print-label.js') }}?v=2"></script>
+
 @if ($showPrintModal)
     <div
         class="fixed inset-0 z-[100] flex items-center justify-center p-4"
@@ -839,5 +841,4 @@
     </div>
 @endif
 
-<script src="{{ asset('js/zebra-print-label.js') }}"></script>
 </x-filament-panels::page>
