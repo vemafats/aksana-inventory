@@ -58,6 +58,18 @@
             @endforeach
         </div>
 
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <p class="text-xs text-[#3d4a5c]">Cetak label QR langsung ke printer Zebra ZD230 (ZPL).</p>
+            <button
+                type="button"
+                wire:click="openPrintModal"
+                class="inline-flex items-center gap-2 rounded-md border border-[var(--aksana-border)] bg-white px-4 py-2 text-[13px] font-semibold text-[var(--aksana-void)] transition hover:bg-gray-50"
+            >
+                <x-heroicon-o-printer class="h-4 w-4" />
+                Cetak QR Code
+            </button>
+        </div>
+
         {{-- Total Semua Stok per Item --}}
         <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
             <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
@@ -747,4 +759,116 @@
 
 </div>
 </div>
+
+@if ($showPrintModal)
+    <div
+        class="fixed inset-0 z-[100] flex items-center justify-center p-4"
+        wire:keydown.escape.window="closePrintModal"
+    >
+        <div class="absolute inset-0 bg-black/50" wire:click="closePrintModal"></div>
+
+        <div
+            class="relative z-10 w-full max-w-md rounded-xl border border-[var(--aksana-border)] bg-white p-6 shadow-xl"
+            x-data="printLabelModal()"
+            @click.stop
+        >
+            <div class="mb-5 flex items-start justify-between gap-3">
+                <div>
+                    <h3 class="text-base font-bold text-[var(--aksana-void)]">Cetak Label QR Code</h3>
+                    <p class="mt-1 text-[13px] text-[#3d4a5c]">Zebra ZD230 · Browser Print (localhost:9100)</p>
+                </div>
+                <button
+                    type="button"
+                    wire:click="closePrintModal"
+                    class="flex h-8 w-8 items-center justify-center rounded-md border border-[var(--aksana-border)] text-[var(--aksana-muted)] hover:bg-gray-50"
+                    title="Tutup"
+                >
+                    <x-heroicon-o-x-mark class="h-4 w-4" />
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="mb-1.5 block text-[11px] font-bold uppercase tracking-[0.08em] text-[#3d4a5c]">Item</label>
+                    <select
+                        x-ref="itemSelect"
+                        x-model="selectedBarcode"
+                        class="w-full rounded-md border border-[var(--aksana-border)] px-3 py-2.5 text-[13px] text-[var(--aksana-void)]"
+                    >
+                        <option value="">-- Pilih Item --</option>
+                        @foreach ($printableItems ?? [] as $item)
+                            <option value="{{ $item->barcode }}">{{ $item->item_name }} ({{ $item->barcode }})</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div>
+                    <label class="mb-1.5 block text-[11px] font-bold uppercase tracking-[0.08em] text-[#3d4a5c]">Ukuran Label</label>
+                    <div class="flex flex-wrap gap-4 text-[13px] text-[var(--aksana-void)]">
+                        <label class="inline-flex items-center gap-2">
+                            <input type="radio" x-model="labelSize" value="40x20" class="rounded-full border-gray-300">
+                            40 × 20 mm
+                        </label>
+                        <label class="inline-flex items-center gap-2">
+                            <input type="radio" x-model="labelSize" value="50x25" class="rounded-full border-gray-300">
+                            50 × 25 mm
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="mb-1.5 block text-[11px] font-bold uppercase tracking-[0.08em] text-[#3d4a5c]">Jumlah Cetak</label>
+                    <input
+                        type="number"
+                        x-model.number="qty"
+                        min="1"
+                        max="100"
+                        class="w-full rounded-md border border-[var(--aksana-border)] px-3 py-2.5 text-[13px] text-[var(--aksana-void)]"
+                    >
+                </div>
+
+                <div
+                    x-show="selectedBarcode"
+                    x-cloak
+                    class="rounded-lg border border-[var(--aksana-border)] bg-[#f8f9fb] px-4 py-3 text-[13px] text-[#3d4a5c]"
+                >
+                    <p class="font-semibold text-[var(--aksana-void)]">Preview</p>
+                    <p class="mt-1"><span class="font-medium">Kode item:</span> <span x-text="selectedBarcode" class="font-mono"></span></p>
+                    <p><span class="font-medium">QR data:</span> <span x-text="selectedBarcode" class="font-mono"></span></p>
+                    <p><span class="font-medium">Ukuran:</span> <span x-text="labelSize === '40x20' ? '40 × 20 mm' : '50 × 25 mm'"></span></p>
+                    <p><span class="font-medium">Qty:</span> <span x-text="qty"></span> lembar</p>
+                </div>
+
+                <div class="flex gap-2 pt-1">
+                    <button
+                        type="button"
+                        wire:click="closePrintModal"
+                        class="flex-1 rounded-md border border-[var(--aksana-border)] px-4 py-2.5 text-[13px] font-semibold text-[#3d4a5c] hover:bg-gray-50"
+                    >
+                        Batal
+                    </button>
+                    <button
+                        type="button"
+                        @click="printLabel()"
+                        :disabled="!selectedBarcode || printing"
+                        class="flex-1 rounded-md bg-[var(--aksana-void)] px-4 py-2.5 text-[13px] font-bold uppercase tracking-wide text-white transition disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        <span x-show="!printing">Cetak</span>
+                        <span x-show="printing">Mencetak...</span>
+                    </button>
+                </div>
+
+                <div
+                    x-show="status"
+                    x-cloak
+                    :class="statusClass"
+                    class="text-[13px]"
+                    x-text="status"
+                ></div>
+            </div>
+        </div>
+    </div>
+@endif
+
+<script src="{{ asset('js/zebra-print-label.js') }}"></script>
 </x-filament-panels::page>

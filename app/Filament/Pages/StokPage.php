@@ -108,6 +108,14 @@ class StokPage extends Page
 
     public string $editStockInSuccess = '';
 
+    public string $printItemBarcode = '';
+
+    public string $printLabelSize = '50x25';
+
+    public int $printQty = 1;
+
+    public bool $showPrintModal = false;
+
     public static function canAccess(): bool
     {
         $user = auth()->user();
@@ -138,6 +146,49 @@ class StokPage extends Page
     public function isOwner(): bool
     {
         return auth()->user()?->role === UserRole::OWNER;
+    }
+
+    public function openPrintModal(): void
+    {
+        $this->showPrintModal = true;
+        $this->printItemBarcode = '';
+        $this->printLabelSize = '50x25';
+        $this->printQty = 1;
+    }
+
+    public function closePrintModal(): void
+    {
+        $this->showPrintModal = false;
+    }
+
+    /**
+     * @return list<array{barcode: string, item_name: string}>
+     */
+    public function searchPrintItems(string $search = ''): array
+    {
+        $query = Item::query()
+            ->where('is_active', true)
+            ->select('barcode', 'item_name')
+            ->orderBy('item_name');
+
+        $term = trim($search);
+
+        if ($term !== '') {
+            $like = '%'.$term.'%';
+            $query->where(fn ($q) => $q
+                ->where('item_name', 'like', $like)
+                ->orWhere('barcode', 'like', $like));
+        }
+
+        return $query
+            ->limit(50)
+            ->get()
+            ->map(fn (Item $item): array => [
+                'barcode' => $item->barcode,
+                'item_name' => $item->item_name,
+            ])
+            ->values()
+            ->all();
     }
 
     public function toggleCostView(): void
@@ -656,6 +707,11 @@ class StokPage extends Page
                 ->where('is_active', true)
                 ->orderBy('item_name')
                 ->get(['id', 'item_name', 'barcode', 'sku']),
+            'printableItems' => Item::query()
+                ->where('is_active', true)
+                ->select('barcode', 'item_name')
+                ->orderBy('item_name')
+                ->get(),
             'centralWarehouse' => Location::query()
                 ->where('location_type', LocationType::CENTRAL_WAREHOUSE->value)
                 ->where('status', 'active')
