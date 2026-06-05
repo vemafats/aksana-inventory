@@ -248,9 +248,8 @@ class _CartItemRowState extends ConsumerState<CartItemRow> {
                 onTap: _onPhotoTap,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: SizedBox(
-                    height: 120,
-                    width: double.infinity,
+                  child: AspectRatio(
+                    aspectRatio: 16 / 9,
                     child: _buildThumbnail(item),
                   ),
                 ),
@@ -299,6 +298,7 @@ class _CartItemRowState extends ConsumerState<CartItemRow> {
           file,
           fit: BoxFit.cover,
           width: double.infinity,
+          height: double.infinity,
         );
       }
     }
@@ -309,6 +309,7 @@ class _CartItemRowState extends ConsumerState<CartItemRow> {
         url,
         fit: BoxFit.cover,
         width: double.infinity,
+        height: double.infinity,
         errorBuilder: (_, __, ___) => _photoPlaceholder(),
       );
     }
@@ -318,6 +319,8 @@ class _CartItemRowState extends ConsumerState<CartItemRow> {
 
   Widget _photoPlaceholder() {
     return Container(
+      width: double.infinity,
+      height: double.infinity,
       color: AppColors.background,
       alignment: Alignment.center,
       child: const Icon(Icons.image_not_supported_outlined,
