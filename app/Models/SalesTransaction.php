@@ -78,4 +78,9 @@ class SalesTransaction extends Model
     {
         return $this->belongsTo(User::class, 'created_by');
     }
+
+    public function photo(): BelongsTo
+    {
+        return $this->belongsTo(Photo::class, 'photo_id');
+    }
 }

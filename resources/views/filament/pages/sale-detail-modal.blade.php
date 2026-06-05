@@ -26,6 +26,20 @@
         </div>
     </div>
 
+    @if ($transaction->photo?->photo_path)
+        @php
+            $photoUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($transaction->photo->photo_path);
+        @endphp
+        <div>
+            <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Foto Transaksi</p>
+            <img
+                src="{{ $photoUrl }}"
+                alt="Foto transaksi {{ $transaction->sales_number }}"
+                class="mt-2 max-w-full rounded-lg border border-gray-200"
+            />
+        </div>
+    @endif
+
     <div>
         <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Item</p>
         <table class="w-full text-sm">

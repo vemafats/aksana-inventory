@@ -152,7 +152,7 @@ class PenjualanPage extends Page implements HasTable
     {
         return $table
             ->query(fn (): Builder => SalesTransaction::query()
-                ->with(['location', 'salesUser', 'salesItems'])
+                ->with(['location', 'salesUser', 'salesItems', 'photo'])
                 ->when(
                     $this->historyDate,
                     fn (Builder $query) => TimezoneQuery::whereTimestampEquals(
@@ -187,6 +187,12 @@ class PenjualanPage extends Page implements HasTable
                     ->formatStateUsing(fn (float|int|string|null $state): string => FormatHelper::price($state))
                     ->weight('bold')
                     ->fontFamily(FontFamily::Mono),
+                Tables\Columns\TextColumn::make('photo_id')
+                    ->label('Foto')
+                    ->alignCenter()
+                    ->icon(fn (?string $state): ?string => filled($state) ? 'heroicon-o-camera' : null)
+                    ->tooltip(fn (?string $state): ?string => filled($state) ? 'Ada foto transaksi' : null)
+                    ->color('gray'),
                 Tables\Columns\TextColumn::make('payment_method')
                     ->label('Bayar')
                     ->formatStateUsing(fn (PaymentMethod $state): string => $state->label())
@@ -203,7 +209,7 @@ class PenjualanPage extends Page implements HasTable
                     ->label('Detail')
                     ->modalHeading(fn (SalesTransaction $record): string => $record->sales_number)
                     ->modalContent(fn (SalesTransaction $record) => view('filament.pages.sale-detail-modal', [
-                        'transaction' => $record->load(['location', 'salesUser', 'salesItems.item']),
+                        'transaction' => $record->load(['location', 'salesUser', 'salesItems.item', 'photo']),
                     ])),
             ])
             ->defaultSort('transaction_date', 'desc')
