@@ -184,7 +184,7 @@ class PenjualanPage extends Page implements HasTable
                     ->fontFamily(FontFamily::Mono),
                 Tables\Columns\TextColumn::make('grand_total')
                     ->label('Total')
-                    ->money('IDR')
+                    ->formatStateUsing(fn (float|int|string|null $state): string => FormatHelper::price($state))
                     ->weight('bold')
                     ->fontFamily(FontFamily::Mono),
                 Tables\Columns\TextColumn::make('payment_method')
@@ -226,10 +226,6 @@ class PenjualanPage extends Page implements HasTable
 
     public static function formatRupiah(float $amount, bool $compact = false): string
     {
-        if ($compact) {
-            return FormatHelper::price($amount);
-        }
-
-        return 'Rp '.number_format($amount, 0, ',', '.');
+        return FormatHelper::price($amount);
     }
 }

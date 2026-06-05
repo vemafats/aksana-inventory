@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Enums\StockStatus;
 use App\Filament\Resources\StockResource\Pages;
+use App\Helpers\FormatHelper;
 use App\Models\StockBalance;
 use App\Services\PasswordVerificationService;
 use Filament\Resources\Resource;
@@ -85,13 +86,13 @@ class StockResource extends Resource
                     }),
                 Tables\Columns\TextColumn::make('supplier_cost')
                     ->label('Harga Modal')
-                    ->money('IDR')
+                    ->formatStateUsing(fn (float|int|string|null $state): string => FormatHelper::price($state))
                     ->state(fn (StockBalance $record): float => (float) $record->item->latest_supplier_cost)
                     ->fontFamily(FontFamily::Mono)
                     ->visible($showCost),
                 Tables\Columns\TextColumn::make('total_supplier_cost')
                     ->label('Total Modal')
-                    ->money('IDR')
+                    ->formatStateUsing(fn (float|int|string|null $state): string => FormatHelper::price($state))
                     ->state(fn (StockBalance $record): float => $record->qty * (float) $record->item->latest_supplier_cost)
                     ->fontFamily(FontFamily::Mono)
                     ->visible($showCost),
