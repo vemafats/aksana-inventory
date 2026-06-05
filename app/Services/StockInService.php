@@ -22,6 +22,7 @@ class StockInService
     public function __construct(
         private readonly StockBalanceService $stockBalanceService,
         private readonly StockMovementService $stockMovementService,
+        private readonly PricePropagationService $pricePropagationService,
     ) {}
 
     /**
@@ -164,6 +165,8 @@ class StockInService
                         'latest_base_margin_value' => $itemData['base_margin_value'],
                         'latest_base_selling_price' => $itemData['base_selling_price'],
                     ]);
+
+                    $this->pricePropagationService->propagatePriceToTransfers($item->fresh());
                 }
 
                 $totalReceived += $itemData['qty_received'];
@@ -217,6 +220,11 @@ class StockInService
                     'latest_base_margin_value' => $marginValue,
                     'latest_base_selling_price' => $baseSellingPrice,
                 ]);
+
+                $itemModel = $item->item()->first();
+                if ($itemModel !== null) {
+                    $this->pricePropagationService->propagatePriceToTransfers($itemModel->fresh());
+                }
             }
 
             if ($photoId !== null) {

@@ -474,7 +474,7 @@ class TransferService
         throw new \RuntimeException('Gagal menghasilkan transfer_number yang unik.');
     }
 
-    private function resolveBazarSellingPrice(
+    public function resolveBazarSellingPrice(
         BazarAdjustType $adjustType,
         float $baseSellingPrice,
         float $adjustValue,
