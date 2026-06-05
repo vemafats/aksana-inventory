@@ -11,6 +11,9 @@ class CartItem {
   final String sku;
   final double bazarSellingPrice;
   final int qty;
+  final String? photoId;
+  final String? photoUrl;
+  final String? localPhotoPath;
 
   const CartItem({
     required this.itemId,
@@ -18,14 +21,28 @@ class CartItem {
     required this.sku,
     required this.bazarSellingPrice,
     this.qty = 1,
+    this.photoId,
+    this.photoUrl,
+    this.localPhotoPath,
   });
 
-  CartItem copyWith({int? qty}) => CartItem(
+  CartItem copyWith({
+    int? qty,
+    String? photoId,
+    String? photoUrl,
+    String? localPhotoPath,
+    bool clearPhoto = false,
+  }) =>
+      CartItem(
         itemId: itemId,
         itemName: itemName,
         sku: sku,
         bazarSellingPrice: bazarSellingPrice,
         qty: qty ?? this.qty,
+        photoId: clearPhoto ? null : (photoId ?? this.photoId),
+        photoUrl: clearPhoto ? null : (photoUrl ?? this.photoUrl),
+        localPhotoPath:
+            clearPhoto ? null : (localPhotoPath ?? this.localPhotoPath),
       );
 
   double get lineTotal => bazarSellingPrice * qty;
@@ -170,6 +187,24 @@ class SalesCartNotifier extends StateNotifier<SalesCartState> {
     state = state.copyWith(manualDiscount: safeValue, clearError: true);
   }
 
+  void setItemPhoto(
+    String itemId, {
+    String? photoId,
+    String? photoUrl,
+    String? localPath,
+  }) {
+    final index = state.items.indexWhere((item) => item.itemId == itemId);
+    if (index < 0) return;
+
+    final updated = List<CartItem>.from(state.items);
+    updated[index] = updated[index].copyWith(
+      photoId: photoId,
+      photoUrl: photoUrl,
+      localPhotoPath: localPath,
+    );
+    state = state.copyWith(items: updated, clearError: true);
+  }
+
   void clear() => state = const SalesCartState();
 
   Future<bool> checkout(
@@ -201,6 +236,16 @@ class SalesCartNotifier extends StateNotifier<SalesCartState> {
             )
             .toList(),
       };
+
+      String? transactionPhotoId;
+      for (final item in state.items) {
+        if (item.photoId != null && item.photoId!.isNotEmpty) {
+          transactionPhotoId = item.photoId;
+        }
+      }
+      if (transactionPhotoId != null) {
+        payload['photo_id'] = transactionPhotoId;
+      }
 
       await _service.createTransaction(payload, dio);
       state = const SalesCartState(isSuccess: true);
