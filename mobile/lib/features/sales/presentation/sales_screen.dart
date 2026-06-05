@@ -63,6 +63,13 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
     return locationName.trim().toUpperCase();
   }
 
+  Future<void> _onRefresh() async {
+    await ref.read(authProvider.notifier).fetchProfile();
+    await ref.read(activeEventNotifierProvider.notifier).fetchMyActiveEvents(
+          ref.read(apiClientProvider).dio,
+        );
+  }
+
   Future<void> _checkout(BuildContext context, WidgetRef ref) async {
     final notifier = ref.read(salesCartProvider.notifier);
     var locationId = resolveLocationId(ref);
@@ -179,27 +186,37 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
             ),
             const SizedBox(height: 16),
             Expanded(
-              child: isEmpty
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Text(
-                          'Belum ada item. Scan dari tab SCAN.',
-                          textAlign: TextAlign.center,
-                          style: AppTextStyles.cardSubtitle.copyWith(
-                            fontSize: 13,
+              child: RefreshIndicator(
+                onRefresh: _onRefresh,
+                child: isEmpty
+                    ? SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.35,
+                          child: Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Text(
+                                'Belum ada item. Scan dari tab SCAN.',
+                                textAlign: TextAlign.center,
+                                style: AppTextStyles.cardSubtitle.copyWith(
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
                           ),
                         ),
+                      )
+                    : ListView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: cart.items.length,
+                        itemBuilder: (context, index) {
+                          final item = cart.items[index];
+                          return CartItemRow(item: item);
+                        },
                       ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: cart.items.length,
-                      itemBuilder: (context, index) {
-                        final item = cart.items[index];
-                        return CartItemRow(item: item);
-                      },
-                    ),
+              ),
             ),
             _SalesSummaryCard(
               subtotal: subtotal,
@@ -263,12 +280,12 @@ class _SalesSummaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _summaryRow('SUBTOTAL', FormatUtils.formatPriceFull(subtotal), muted: true),
+          _summaryRow('SUBTOTAL', FormatUtils.formatPrice(subtotal), muted: true),
           if (discount > 0) ...[
             const SizedBox(height: 8),
             _summaryRow(
               'DISKON BAZAR',
-              '-${FormatUtils.formatPriceFull(discount)}',
+              '-${FormatUtils.formatPrice(discount)}',
               valueColor: AppColors.warning,
               muted: true,
             ),
@@ -339,7 +356,7 @@ class _SalesSummaryCard extends StatelessWidget {
             const SizedBox(height: 8),
             _summaryRow(
               'TOTAL DISKON',
-              '-${FormatUtils.formatPriceFull(totalDiscount)}',
+              '-${FormatUtils.formatPrice(totalDiscount)}',
               valueColor: AppColors.warning,
               muted: true,
             ),
@@ -361,7 +378,7 @@ class _SalesSummaryCard extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                FormatUtils.formatPriceFull(grandTotal),
+                FormatUtils.formatPrice(grandTotal),
                 style: AppTextStyles.monoLarge.copyWith(fontSize: 28),
               ),
             ],

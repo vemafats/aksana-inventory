@@ -144,19 +144,33 @@ class _BrowseItemsScreenState extends ConsumerState<BrowseItemsScreen> {
           Expanded(
             child: state.isLoading && state.items.isEmpty
                 ? const Center(child: CircularProgressIndicator())
-                : state.items.isEmpty
-                    ? Center(
-                        child: Text(
-                          'Tidak ada item ditemukan',
-                          style: AppTextStyles.cardSubtitle,
-                        ),
-                      )
-                    : ListView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                        itemCount: state.items.length +
-                            (state.isLoadingMore ? 1 : 0),
-                        itemBuilder: (context, index) {
+                : RefreshIndicator(
+                    onRefresh: () =>
+                        ref.read(browseItemsProvider.notifier).loadItems(),
+                    child: state.items.isEmpty
+                        ? ListView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            children: [
+                              SizedBox(
+                                height:
+                                    MediaQuery.of(context).size.height * 0.4,
+                                child: Center(
+                                  child: Text(
+                                    'Tidak ada item ditemukan',
+                                    style: AppTextStyles.cardSubtitle,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        : ListView.builder(
+                            controller: _scrollController,
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding:
+                                const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                            itemCount: state.items.length +
+                                (state.isLoadingMore ? 1 : 0),
+                            itemBuilder: (context, index) {
                           if (index >= state.items.length) {
                             return const Padding(
                               padding: EdgeInsets.all(16),
@@ -204,6 +218,7 @@ class _BrowseItemsScreenState extends ConsumerState<BrowseItemsScreen> {
                           );
                         },
                       ),
+                  ),
           ),
         ],
       ),

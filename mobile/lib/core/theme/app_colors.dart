@@ -22,6 +22,5 @@ class AppColors {
     return voidBlack;
   }
 
-  static String formatQty(int qty) =>
-      qty.toString().padLeft(2, '0');
+  static String formatQty(int qty) => qty.toString();
 }

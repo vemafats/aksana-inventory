@@ -222,7 +222,7 @@ class _CartItemRowState extends ConsumerState<CartItemRow> {
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      FormatUtils.formatPriceFull(
+                      FormatUtils.formatPrice(
                         item.bazarSellingPrice * item.qty,
                       ),
                       style: AppTextStyles.monoBold,
@@ -231,7 +231,7 @@ class _CartItemRowState extends ConsumerState<CartItemRow> {
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             if (_isUploadingPhoto)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 12),
@@ -249,31 +249,39 @@ class _CartItemRowState extends ConsumerState<CartItemRow> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: SizedBox(
-                    height: 80,
+                    height: 120,
                     width: double.infinity,
                     child: _buildThumbnail(item),
                   ),
                 ),
               )
             else
-              TextButton.icon(
-                onPressed: _capturePhoto,
-                icon: const Icon(
-                  Icons.camera_alt_outlined,
-                  size: 18,
-                  color: AppColors.muted,
-                ),
-                label: Text(
-                  'Tambah Foto',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.muted,
-                  ),
-                ),
-                style: TextButton.styleFrom(
+              SizedBox(
+                height: 36,
+                child: Align(
                   alignment: Alignment.centerLeft,
-                  padding: EdgeInsets.zero,
+                  child: TextButton.icon(
+                    onPressed: _capturePhoto,
+                    icon: const Icon(
+                      Icons.camera_alt_outlined,
+                      size: 18,
+                      color: AppColors.muted,
+                    ),
+                    label: Text(
+                      'Tambah Foto',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.muted,
+                      ),
+                    ),
+                    style: TextButton.styleFrom(
+                      alignment: Alignment.centerLeft,
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(0, 36),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
                 ),
               ),
           ],
