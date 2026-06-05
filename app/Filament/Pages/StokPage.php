@@ -686,10 +686,52 @@ class StokPage extends Page
         ];
     }
 
+    /**
+     * @return list<array{label: string, value: string, sub: string, warn: bool, danger?: bool}>
+     */
+    public function getRingkasanStatCards(): array
+    {
+        $cards = [
+            [
+                'label' => 'Total SKU',
+                'value' => number_format($this->totalSku),
+                'sub' => 'item aktif di katalog',
+                'warn' => false,
+            ],
+            [
+                'label' => 'Total Unit Stok',
+                'value' => number_format($this->totalUnits),
+                'sub' => 'unit available di seluruh lokasi',
+                'warn' => false,
+            ],
+        ];
+
+        if ($this->isOwner()) {
+            $cards[] = [
+                'label' => 'Nilai Inventory',
+                'value' => \App\Helpers\FormatHelper::price($this->totalCapitalValue),
+                'sub' => 'total harga modal stok available',
+                'warn' => false,
+            ];
+        }
+
+        $cards[] = [
+            'label' => 'Stok Kritis',
+            'value' => number_format($this->lowStockCount),
+            'sub' => 'item dengan stok ≤ 1 unit',
+            'warn' => $this->lowStockCount > 0,
+            'danger' => true,
+        ];
+
+        return $cards;
+    }
+
     private function refreshSummaryStats(): void
     {
         $this->totalSku = Item::query()->where('is_active', true)->count();
-        $this->totalUnits = (int) StockBalance::query()->sum('qty');
+        $this->totalUnits = (int) StockBalance::query()
+            ->where('stock_status', 'available')
+            ->sum('qty');
         $this->locationCount = Location::query()->where('status', 'active')->count();
         $this->categoryCount = Category::query()->where('is_active', true)->count();
         $this->lowStockCount = StockBalance::query()

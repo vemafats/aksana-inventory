@@ -262,6 +262,7 @@
                             <tr>
                                 <th>NIK</th>
                                 <th>Nama</th>
+                                <th>Email</th>
                                 <th>Role</th>
                                 <th>Aksi</th>
                             </tr>
@@ -271,13 +272,14 @@
                                 <tr>
                                     <td class="aksana-mono">{{ $staff->nik ?? '—' }}</td>
                                     <td class="font-semibold">{{ $staff->name }}</td>
+                                    <td>{{ $staff->email }}</td>
                                     <td>{{ $staff->role->label() }}</td>
                                     <td>
                                         <a href="{{ UserResource::getUrl('edit', ['record' => $staff]) }}" class="text-[13px] font-semibold text-[var(--aksana-void)]">Edit</a>
                                     </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="4" class="py-6 text-center text-[var(--aksana-muted)]">Tidak ada data.</td></tr>
+                                <tr><td colspan="5" class="py-6 text-center text-[var(--aksana-muted)]">Tidak ada data.</td></tr>
                             @endforelse
                         </tbody>
                     </table>

@@ -40,29 +40,22 @@
     @if($activeTab === 'ringkasan')
     <div class="space-y-4">
         {{-- Stat cards --}}
-        <div class="grid grid-cols-4 gap-4">
-            <div class="bg-white border border-gray-200 rounded-lg p-4">
-                <p class="text-xs font-bold uppercase tracking-widest text-gray-400">TOTAL SKU</p>
-                <p class="text-3xl font-bold font-mono mt-1">{{ $totalSku ?? 0 }}</p>
-                <p class="text-xs font-mono text-gray-400 mt-1">katalog aktif</p>
-            </div>
-            <div class="bg-white border border-gray-200 rounded-lg p-4">
-                <p class="text-xs font-bold uppercase tracking-widest text-gray-400">TOTAL UNIT STOK</p>
-                <p class="text-3xl font-bold font-mono mt-1">{{ number_format($totalUnits ?? 0) }}</p>
-                <p class="text-xs font-mono text-gray-400 mt-1">across {{ $locationCount ?? 0 }} lokasi</p>
-            </div>
-            <div class="bg-white border border-gray-200 rounded-lg p-4">
-                <p class="text-xs font-bold uppercase tracking-widest text-gray-400">NILAI INVENTORY</p>
-                <p class="text-3xl font-bold font-mono mt-1">{{ \App\Helpers\FormatHelper::price($totalCapitalValue ?? 0) }}</p>
-                <p class="text-xs font-mono text-gray-400 mt-1">harga modal</p>
-            </div>
-            <div class="bg-white border border-gray-200 rounded-lg p-4">
-                <p class="text-xs font-bold uppercase tracking-widest text-gray-400">STOK KRITIS</p>
-                <p class="text-3xl font-bold font-mono mt-1 {{ ($lowStockCount ?? 0) > 0 ? 'text-red-500' : '' }}">
-                    {{ $lowStockCount ?? 0 }}
-                </p>
-                <p class="text-xs font-mono text-gray-400 mt-1">di bawah min</p>
-            </div>
+        <div @class([
+            'mb-2 grid grid-cols-1 gap-4 md:grid-cols-2',
+            'xl:grid-cols-4' => $this->isOwner(),
+            'xl:grid-cols-3' => ! $this->isOwner(),
+        ])>
+            @foreach ($this->getRingkasanStatCards() as $card)
+                <div class="aksana-stat-panel">
+                    <p class="aksana-stat-label">{{ $card['label'] }}</p>
+                    <p @class([
+                        'aksana-stat-value',
+                        'text-[#F59100]' => ($card['warn'] ?? false) && ! ($card['danger'] ?? false),
+                        'text-[#F04040]' => ($card['danger'] ?? false) && ($card['warn'] ?? false),
+                    ])>{{ $card['value'] }}</p>
+                    <p class="aksana-stat-sub">{{ $card['sub'] }}</p>
+                </div>
+            @endforeach
         </div>
 
         {{-- Total Semua Stok per Item --}}

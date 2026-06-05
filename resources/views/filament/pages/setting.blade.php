@@ -230,22 +230,24 @@
 
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
             @foreach ($this->getRoleDefinitions() as $roleKey => $role)
-                <div class="aksana-panel relative" wire:key="role-{{ $roleKey }}">
-                    <div class="absolute right-3 top-3 flex gap-1">
-                        <button type="button" wire:click="editRoleCard('{{ $roleKey }}')" class="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--aksana-border)] bg-gray-50 hover:bg-gray-100">
-                            <x-heroicon-o-pencil class="h-3.5 w-3.5 text-[var(--aksana-muted)]" />
-                        </button>
-                        <button type="button" wire:click="notifyRoleComingSoon" class="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--aksana-border)] bg-gray-50 hover:border-red-300">
-                            <x-heroicon-o-trash class="h-3.5 w-3.5 text-[var(--aksana-muted)]" />
-                        </button>
-                    </div>
-                    <div class="mb-3 flex items-start gap-3 pr-16">
-                        <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-gray-100">
-                            <x-heroicon-o-shield-check class="h-4 w-4 text-[var(--aksana-muted)]" />
+                <div class="aksana-panel" wire:key="role-{{ $roleKey }}">
+                    <div class="mb-3 flex items-start justify-between gap-4">
+                        <div class="flex min-w-0 flex-1 items-start gap-3">
+                            <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-gray-100">
+                                <x-heroicon-o-shield-check class="h-4 w-4 text-[var(--aksana-muted)]" />
+                            </div>
+                            <div class="min-w-0">
+                                <p class="font-bold text-[var(--aksana-void)]">{{ $role['label'] }}</p>
+                                <p class="text-xs text-[var(--aksana-muted)]">{{ $this->roleUserCount($roleKey) }} user</p>
+                            </div>
                         </div>
-                        <div>
-                            <p class="font-bold text-[var(--aksana-void)]">{{ $role['label'] }}</p>
-                            <p class="text-xs text-[var(--aksana-muted)]">{{ $this->roleUserCount($roleKey) }} user</p>
+                        <div class="ml-2 flex shrink-0 items-center gap-2">
+                            <button type="button" wire:click="editRoleCard('{{ $roleKey }}')" class="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--aksana-border)] bg-gray-50 hover:bg-gray-100" title="Edit">
+                                <x-heroicon-o-pencil class="h-3.5 w-3.5 text-[var(--aksana-muted)]" />
+                            </button>
+                            <button type="button" wire:click="notifyRoleComingSoon" class="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--aksana-border)] bg-gray-50 hover:border-red-300" title="Hapus">
+                                <x-heroicon-o-trash class="h-3.5 w-3.5 text-[var(--aksana-muted)]" />
+                            </button>
                         </div>
                     </div>
                     <p class="text-sm text-[var(--aksana-muted)]">{{ $role['description'] }}</p>

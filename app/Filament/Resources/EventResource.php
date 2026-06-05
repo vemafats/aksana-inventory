@@ -143,9 +143,26 @@ class EventResource extends Resource
                         'cancelled' => 'danger',
                         default => 'gray',
                     }),
-                Tables\Columns\TextColumn::make('users_count')
+                Tables\Columns\TextColumn::make('users')
                     ->label('Petugas')
-                    ->sortable(),
+                    ->html()
+                    ->state(function (Event $record): string {
+                        if ($record->users->isEmpty()) {
+                            return '—';
+                        }
+
+                        return $record->users
+                            ->map(function (User $user): string {
+                                $role = match ($user->pivot->role_in_event ?? '') {
+                                    'pic_bazar' => 'PIC Bazar',
+                                    'sales' => 'Sales',
+                                    default => (string) ($user->pivot->role_in_event ?? '—'),
+                                };
+
+                                return '<div>'.e($user->name).' ('.e($user->email).') — '.e($role).'</div>';
+                            })
+                            ->join('');
+                    }),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
@@ -177,7 +194,7 @@ class EventResource extends Resource
                     }),
             ])
             ->defaultSort('created_at', 'desc')
-            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['location'])->withCount('users'));
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['location', 'users']));
     }
 
     /**
