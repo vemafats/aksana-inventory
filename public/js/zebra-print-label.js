@@ -132,7 +132,7 @@
         return {
             open: false,
             selectedBarcode: '',
-            labelSize: '40x20',
+            labelSize: '40x30',
             qty: 1,
             printing: false,
             statusMsg: '',
@@ -142,8 +142,8 @@
 
             getDefaultZpl(size) {
                 const code = '{CODE}';
-                if (size === '40x20') {
-                    return '^XA\n^CI28\n^PW320\n^LL160\n^LH0,0\n^FO10,10^A0N,28,28^FD' + code + '^FS\n^FO10,50^BQN,2,3^FDMA,' + code + '^FS\n^PQ{QTY}\n^XZ';
+                if (size === '40x30') {
+                    return '^XA\n^CI28\n^PW320\n^LL240\n^LH0,0\n^FO10,10^A0N,28,28^FD' + code + '^FS\n^FO10,50^BQN,2,3^FDMA,' + code + '^FS\n^PQ{QTY}\n^XZ';
                 }
 
                 return '^XA\n^CI28\n^PW400\n^LL200\n^LH0,0\n^FO10,10^A0N,32,32^FD' + code + '^FS\n^FO10,55^BQN,2,4^FDMA,' + code + '^FS\n^PQ{QTY}\n^XZ';
@@ -154,16 +154,22 @@
             },
 
             init() {
+                this.open = true;
                 this.customZpl = this.getDefaultZpl(this.labelSize);
 
                 this.$watch('labelSize', (val) => {
-                    if (!this.showZplEditor || this.customZpl === '' || this.customZpl === this.getDefaultZpl(val === '40x20' ? '50x25' : '40x20')) {
+                    if (!this.showZplEditor || this.customZpl === '' || this.customZpl === this.getDefaultZpl(val === '40x30' ? '50x25' : '40x30')) {
                         this.customZpl = this.getDefaultZpl(val);
                     }
                 });
 
                 this.$watch('open', (val) => {
-                    if (val && this.customZpl === '') {
+                    if (!val) {
+                        this.$wire.closePrintModal();
+                        return;
+                    }
+
+                    if (this.customZpl === '') {
                         this.customZpl = this.getDefaultZpl(this.labelSize);
                     }
                 });
@@ -175,8 +181,8 @@
 
                 if (this.showZplEditor && this.customZpl.trim() !== '') {
                     template = this.customZpl;
-                } else if (this.labelSize === '40x20') {
-                    template = '^XA\n^CI28\n^PW320\n^LL160\n^LH0,0\n^FO10,10^A0N,28,28^FD{CODE}^FS\n^FO10,50^BQN,2,3^FDMA,{CODE}^FS\n^PQ{QTY}\n^XZ';
+                } else if (this.labelSize === '40x30') {
+                    template = '^XA\n^CI28\n^PW320\n^LL240\n^LH0,0\n^FO10,10^A0N,28,28^FD{CODE}^FS\n^FO10,50^BQN,2,3^FDMA,{CODE}^FS\n^PQ{QTY}\n^XZ';
                 } else {
                     template = '^XA\n^CI28\n^PW400\n^LL200\n^LH0,0\n^FO10,10^A0N,32,32^FD{CODE}^FS\n^FO10,55^BQN,2,4^FDMA,{CODE}^FS\n^PQ{QTY}\n^XZ';
                 }

@@ -760,7 +760,7 @@
 </div>
 </div>
 
-<script src="{{ asset('js/zebra-print-label.js') }}?v=3"></script>
+<script src="{{ asset('js/zebra-print-label.js') }}?v=4"></script>
 
 @if ($showPrintModal)
     <div
@@ -798,7 +798,7 @@
                 <label style="display:block; font-weight:600; font-size:13px; margin-bottom:6px;">Ukuran Label</label>
                 <div style="display:flex; gap:16px; margin-bottom:16px;">
                     <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:14px;">
-                        <input type="radio" x-model="labelSize" value="40x20"> 40 × 20 mm
+                        <input type="radio" x-model="labelSize" value="40x30"> 40 × 30 mm
                     </label>
                     <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:14px;">
                         <input type="radio" x-model="labelSize" value="50x25"> 50 × 25 mm
@@ -811,7 +811,7 @@
                 <div x-show="selectedBarcode" style="background:#f3f4f6; padding:12px; border-radius:8px; margin-bottom:16px; font-size:13px;">
                     <strong>Preview</strong><br>
                     Kode: <span x-text="selectedBarcode" style="font-family:monospace;"></span><br>
-                    Ukuran: <span x-text="labelSize === '40x20' ? '40 × 20 mm' : '50 × 25 mm'"></span><br>
+                    Ukuran: <span x-text="labelSize === '40x30' ? '40 × 30 mm' : '50 × 25 mm'"></span><br>
                     Qty: <span x-text="qty"></span> lembar
                 </div>
 
@@ -845,7 +845,7 @@
                 </div>
 
                 <div style="display:flex; gap:12px; margin-top:20px;">
-                    <button @click="$wire.closePrintModal()" type="button"
+                    <button @click="open = false" type="button"
                         style="flex:1; padding:14px; border:1px solid #d1d5db; border-radius:10px; background:white; color:#374151; cursor:pointer; font-weight:600; font-size:14px; text-align:center;">
                         Batal
                     </button>

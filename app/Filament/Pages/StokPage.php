@@ -110,7 +110,7 @@ class StokPage extends Page
 
     public string $printItemBarcode = '';
 
-    public string $printLabelSize = '40x20';
+    public string $printLabelSize = '40x30';
 
     public int $printQty = 1;
 
@@ -152,7 +152,7 @@ class StokPage extends Page
     {
         $this->showPrintModal = true;
         $this->printItemBarcode = '';
-        $this->printLabelSize = '40x20';
+        $this->printLabelSize = '40x30';
         $this->printQty = 1;
     }
 
