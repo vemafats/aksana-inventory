@@ -1,11 +1,9 @@
-@props([
-    'label',
-    'value',
-    'sub',
-    'icon' => 'heroicon-o-chart-bar',
-    'warn' => false,
-    'danger' => false,
-])
+@php
+    $icon = $icon ?? 'heroicon-o-chart-bar';
+    $sub = $sub ?? '';
+    $warn = $warn ?? false;
+    $danger = $danger ?? false;
+@endphp
 
 <div class="aksana-stat-panel">
     <div class="flex items-start gap-4">

@@ -46,14 +46,14 @@
             'xl:grid-cols-3' => ! $this->isOwner(),
         ])>
             @foreach ($this->getRingkasanStatCards() as $card)
-                <x-filament.components.aksana-stat-card
-                    :label="$card['label']"
-                    :value="$card['value']"
-                    :sub="$card['sub']"
-                    :icon="$card['icon']"
-                    :warn="$card['warn'] ?? false"
-                    :danger="$card['danger'] ?? false"
-                />
+                @include('filament.components.aksana-stat-card', [
+                    'label' => $card['label'],
+                    'value' => $card['value'],
+                    'sub' => $card['sub'],
+                    'icon' => $card['icon'],
+                    'warn' => $card['warn'] ?? false,
+                    'danger' => $card['danger'] ?? false,
+                ])
             @endforeach
         </div>
 

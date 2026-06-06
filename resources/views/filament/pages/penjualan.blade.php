@@ -51,12 +51,14 @@
                 ['label' => 'Item Terjual (24H)', 'value' => number_format($stats['items_sold_24h']), 'sub' => 'unit terjual', 'icon' => 'heroicon-o-shopping-bag'],
                 ['label' => 'Rata-rata Nota', 'value' => \App\Filament\Pages\PenjualanPage::formatRupiah($stats['avg_basket']), 'sub' => 'per transaksi hari ini', 'icon' => 'heroicon-o-receipt-percent'],
             ] as $card)
-                <x-filament.components.aksana-stat-card
-                    :label="$card['label']"
-                    :value="$card['value']"
-                    :sub="$card['sub']"
-                    :icon="$card['icon']"
-                />
+                @include('filament.components.aksana-stat-card', [
+                    'label' => $card['label'],
+                    'value' => $card['value'],
+                    'sub' => $card['sub'],
+                    'icon' => $card['icon'],
+                    'warn' => $card['warn'] ?? false,
+                    'danger' => $card['danger'] ?? false,
+                ])
             @endforeach
         </div>
 

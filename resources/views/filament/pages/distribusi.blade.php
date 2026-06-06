@@ -11,14 +11,14 @@
             ['label' => 'Menunggu Retur', 'value' => number_format($stats['menunggu_retur']), 'sub' => 'lokasi menjelang berakhir', 'icon' => 'heroicon-o-clock', 'warn' => $stats['menunggu_retur'] > 0],
             ['label' => 'Retur Damaged (30D)', 'value' => number_format($stats['retur_damaged']), 'sub' => 'perlu inspeksi', 'icon' => 'heroicon-o-exclamation-triangle', 'warn' => $stats['retur_damaged'] > 0, 'danger' => true],
         ] as $card)
-            <x-filament.components.aksana-stat-card
-                :label="$card['label']"
-                :value="$card['value']"
-                :sub="$card['sub']"
-                :icon="$card['icon']"
-                :warn="$card['warn'] ?? false"
-                :danger="$card['danger'] ?? false"
-            />
+            @include('filament.components.aksana-stat-card', [
+                'label' => $card['label'],
+                'value' => $card['value'],
+                'sub' => $card['sub'],
+                'icon' => $card['icon'],
+                'warn' => $card['warn'] ?? false,
+                'danger' => $card['danger'] ?? false,
+            ])
         @endforeach
     </div>
 
