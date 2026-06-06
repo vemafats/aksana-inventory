@@ -29,5 +29,46 @@
     <p class="mt-4 text-xs text-[var(--aksana-muted)]">
         {{ $summary['transaction_count'] }} transaksi · periode {{ $summary['period']['from'] }} s/d {{ $summary['period']['to'] }}
     </p>
+
+    <div class="mt-6 overflow-hidden rounded-lg border border-[var(--aksana-border)] bg-white">
+        <div class="border-b border-[var(--aksana-border)] px-4 py-3">
+            <h3 class="text-sm font-bold text-[var(--aksana-void)]">Gross Profit per Item</h3>
+            <p class="mt-1 text-xs text-[var(--aksana-muted)]">Breakdown berdasarkan snapshot harga modal per transaksi</p>
+        </div>
+        <div class="overflow-x-auto p-4">
+            <table class="aksana-table w-full text-sm">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Barcode</th>
+                        <th class="text-right">Qty</th>
+                        <th class="text-right">Penjualan</th>
+                        <th class="text-right">HPP</th>
+                        <th class="text-right">Profit</th>
+                        <th class="text-right">Margin %</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($perItemBreakdown as $row)
+                        <tr>
+                            <td class="font-semibold">{{ $row->item_name }}</td>
+                            <td class="aksana-mono text-[var(--aksana-muted)]">{{ $row->barcode }}</td>
+                            <td class="text-right font-mono">{{ number_format($row->total_qty) }}</td>
+                            <td class="text-right font-mono">{{ \App\Filament\Pages\LaporanGrossProfitPage::formatRupiah($row->total_revenue) }}</td>
+                            <td class="text-right font-mono">{{ \App\Filament\Pages\LaporanGrossProfitPage::formatRupiah($row->total_cost) }}</td>
+                            <td class="text-right font-mono {{ $row->profit >= 0 ? 'text-[#29A85A]' : 'text-[#F04040]' }}">
+                                {{ \App\Filament\Pages\LaporanGrossProfitPage::formatRupiah($row->profit) }}
+                            </td>
+                            <td class="text-right font-mono">{{ $row->margin }}%</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="7" class="py-6 text-center text-[var(--aksana-muted)]">Tidak ada data penjualan pada periode ini.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
 </x-filament-panels::page>
 
