@@ -22,24 +22,24 @@ class DashboardStatsWidget extends StatsOverviewWidget
         return [
             Stat::make('Total SKU', number_format($summary['total_sku']))
                 ->description('item aktif di katalog')
-                ->descriptionIcon('heroicon-m-squares-2x2', IconPosition::Before)
-                ->icon('heroicon-m-squares-2x2')
+                ->descriptionIcon('heroicon-o-squares-2x2', IconPosition::Before)
+                ->icon('heroicon-o-squares-2x2')
                 ->extraAttributes(['class' => 'aksana-stat-card']),
             Stat::make('Total Unit Stok', number_format($summary['total_unit_stock']))
                 ->description('seluruh unit di sistem')
-                ->descriptionIcon('heroicon-m-archive-box', IconPosition::Before)
-                ->icon('heroicon-m-archive-box')
+                ->descriptionIcon('heroicon-o-archive-box', IconPosition::Before)
+                ->icon('heroicon-o-archive-box')
                 ->extraAttributes(['class' => 'aksana-stat-card']),
             Stat::make('Omzet Hari Ini', FormatHelper::price($summary['todays_sales']))
                 ->description($summary['todays_transactions'].' transaksi hari ini')
-                ->descriptionIcon('heroicon-m-banknotes', IconPosition::Before)
-                ->icon('heroicon-m-banknotes')
+                ->descriptionIcon('heroicon-o-banknotes', IconPosition::Before)
+                ->icon('heroicon-o-banknotes')
                 ->extraAttributes(['class' => 'aksana-stat-card']),
             Stat::make('Stok Kritis', number_format($summary['low_stock_count']))
                 ->description('item dengan stok ≤ 1 unit')
-                ->descriptionIcon('heroicon-m-exclamation-triangle', IconPosition::Before)
+                ->descriptionIcon('heroicon-o-exclamation-triangle', IconPosition::Before)
                 ->descriptionColor($lowStockCritical ? 'danger' : 'gray')
-                ->icon('heroicon-m-exclamation-triangle')
+                ->icon('heroicon-o-exclamation-triangle')
                 ->color($lowStockCritical ? 'danger' : 'gray')
                 ->extraAttributes([
                     'class' => $lowStockCritical ? 'aksana-stat-card aksana-stat-danger' : 'aksana-stat-card',

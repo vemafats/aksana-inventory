@@ -20,74 +20,63 @@
 @endphp
 
 <x-filament-panels::page>
-    <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <p class="text-sm text-[var(--aksana-muted)]">Kelola data referensi · 7 tabel master</p>
-        @if ($selectedTab === 'categories')
-            <a href="{{ CategoryResource::getUrl('create') }}" class="aksana-tab aksana-tab-active">+ TAMBAH KATEGORI</a>
-        @elseif ($selectedTab === 'brands')
-            <a href="{{ BrandResource::getUrl('create') }}" class="aksana-tab aksana-tab-active">+ TAMBAH MERK</a>
-        @elseif ($selectedTab === 'models')
-            <a href="{{ ProductModelResource::getUrl('create') }}" class="aksana-tab aksana-tab-active">+ TAMBAH MODEL</a>
-        @elseif ($selectedTab === 'colors')
-            <a href="{{ ColorResource::getUrl('create') }}" class="aksana-tab aksana-tab-active">+ TAMBAH WARNA</a>
-        @elseif ($selectedTab === 'sizes')
-            <a href="{{ SizeResource::getUrl('create') }}" class="aksana-tab aksana-tab-active">+ TAMBAH UKURAN</a>
-        @elseif ($selectedTab === 'employees')
-            <a href="{{ UserResource::getUrl('create') }}" class="aksana-tab aksana-tab-active">+ TAMBAH KARYAWAN</a>
-        @elseif ($selectedTab === 'locations')
-            <a href="{{ LocationResource::getUrl('create') }}" class="aksana-tab aksana-tab-active">+ TAMBAH LOKASI</a>
-        @endif
-    </div>
+    @php
+        $createUrls = [
+            'categories' => CategoryResource::getUrl('create'),
+            'brands' => BrandResource::getUrl('create'),
+            'models' => ProductModelResource::getUrl('create'),
+            'colors' => ColorResource::getUrl('create'),
+            'sizes' => SizeResource::getUrl('create'),
+            'employees' => UserResource::getUrl('create'),
+            'locations' => LocationResource::getUrl('create'),
+        ];
+        $createLabels = [
+            'categories' => '+ TAMBAH KATEGORI',
+            'brands' => '+ TAMBAH MERK',
+            'models' => '+ TAMBAH MODEL',
+            'colors' => '+ TAMBAH WARNA',
+            'sizes' => '+ TAMBAH UKURAN',
+            'employees' => '+ TAMBAH KARYAWAN',
+            'locations' => '+ TAMBAH LOKASI',
+        ];
+    @endphp
 
-    <div class="grid grid-cols-1 gap-4 lg:grid-cols-[240px_1fr]">
-        <aside class="rounded-lg border border-[var(--aksana-border)] bg-white p-2">
-            <p class="mb-2 px-2 text-[11px] font-bold uppercase tracking-[0.1em] text-[#3d4a5c]">
-                Tabel Master
-            </p>
-            <nav class="flex flex-col gap-1">
-                @foreach ($this->getTabs() as $key => $tab)
-                    <button
-                        type="button"
-                        wire:click="selectTab('{{ $key }}')"
-                        @class([
-                            'aksana-master-tab flex w-full items-center gap-2 rounded-md text-left transition',
-                            'aksana-master-tab-active bg-[var(--aksana-void)] text-white' => $selectedTab === $key,
-                            'text-[var(--aksana-void)] hover:bg-gray-100' => $selectedTab !== $key,
-                        ])
-                    >
-                        <x-dynamic-component :component="$tab['icon']" @class([
-                            'h-3.5 w-3.5 shrink-0',
-                            'text-white' => $selectedTab === $key,
-                        ]) />
-                        <span class="flex-1">{{ $tab['label'] }}</span>
-                        <span @class([
-                            'font-mono text-[11px]',
-                            'text-white/70' => $selectedTab === $key,
-                            'text-[var(--aksana-muted)]' => $selectedTab !== $key,
-                        ])>
-                            {{ str_pad((string) $this->getTabCount($key), 2, '0', STR_PAD_LEFT) }}
-                        </span>
-                    </button>
-                @endforeach
-            </nav>
-        </aside>
+    <div style="display:flex; gap:24px; align-items:flex-start;">
+        <div style="width:280px; flex-shrink:0; background:white; border-radius:12px; border:1px solid #e5e7eb; padding:16px;">
+            <h4 style="font-size:11px; font-weight:700; letter-spacing:1.5px; color:#6b7280; margin:0 0 12px; text-transform:uppercase;">Tabel Master</h4>
+            @foreach ($this->masterTabs as $key => $tab)
+                <button wire:click="selectTab('{{ $key }}')" type="button"
+                    style="display:flex; align-items:center; width:100%; padding:10px 12px; border:none; border-radius:8px; cursor:pointer; margin-bottom:4px; gap:10px; font-size:14px; font-weight:{{ $selectedTab === $key ? '600' : '500' }}; {{ $selectedTab === $key ? 'background:#1a1a2e; color:white;' : 'background:transparent; color:#374151;' }}">
+                    <x-dynamic-component :component="$tab['icon']" style="width:18px; height:18px; flex-shrink:0;" />
+                    <span style="flex:1; text-align:left;">{{ $tab['label'] }}</span>
+                    <span style="font-size:12px; font-weight:600; {{ $selectedTab === $key ? 'color:rgba(255,255,255,0.7);' : 'color:#9ca3af;' }}">
+                        {{ str_pad((string) $tab['count'], 2, '0', STR_PAD_LEFT) }}
+                    </span>
+                </button>
+            @endforeach
+        </div>
 
-        <section class="overflow-hidden rounded-lg border border-[var(--aksana-border)] bg-white">
-            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--aksana-border)] px-4 py-3">
-                <div class="flex items-center gap-2">
-                    <x-heroicon-o-table-cells class="h-4 w-4 text-[var(--aksana-muted)]" />
-                    <h2 class="text-base font-bold text-[var(--aksana-void)]">{{ $this->getActiveTabLabel() }}</h2>
-                    <span class="text-[13px] font-medium text-[#3d4a5c]">· {{ $this->getTabCount($selectedTab) }} entri</span>
+        <div style="flex:1; min-width:0; background:white; border-radius:12px; border:1px solid #e5e7eb; overflow:hidden;">
+            <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; padding:16px 20px; border-bottom:1px solid #e5e7eb;">
+                <div style="display:flex; align-items:center; gap:8px; min-width:0;">
+                    <x-heroicon-o-table-cells style="width:18px; height:18px; color:#9ca3af; flex-shrink:0;" />
+                    <h2 style="margin:0; font-size:16px; font-weight:700; color:#1a1a2e;">{{ $this->getActiveTabLabel() }}</h2>
+                    <span style="font-size:13px; color:#6b7280;">· {{ $this->getTabCount($selectedTab) }} entri</span>
                 </div>
-                <input
-                    type="search"
-                    wire:model.live.debounce.300ms="search"
-                    placeholder="Cari..."
-                    class="w-full max-w-xs rounded-md border border-[var(--aksana-border)] px-3 py-2 text-sm"
-                />
+                <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+                    <input
+                        type="search"
+                        wire:model.live.debounce.300ms="search"
+                        placeholder="Cari..."
+                        style="width:200px; padding:8px 12px; border:1px solid #e5e7eb; border-radius:8px; font-size:14px;"
+                    />
+                    <a href="{{ $createUrls[$selectedTab] ?? '#' }}" class="aksana-tab aksana-tab-active" style="white-space:nowrap;">
+                        {{ $createLabels[$selectedTab] ?? '+ TAMBAH' }}
+                    </a>
+                </div>
             </div>
 
-            <div class="overflow-x-auto p-4">
+            <div style="overflow-x:auto; padding:16px 20px;">
                 @if ($selectedTab === 'categories')
                     @php
                         $rows = Category::query()
@@ -111,7 +100,10 @@
                                     <td class="font-semibold">{{ $cat->name }}</td>
                                     <td class="text-[var(--aksana-muted)]">—</td>
                                     <td>
-                                        <a href="{{ CategoryResource::getUrl('edit', ['record' => $cat]) }}" class="text-[13px] font-semibold text-[var(--aksana-void)]">Edit</a>
+                                        <a href="{{ CategoryResource::getUrl('edit', ['record' => $cat]) }}" title="Edit"
+                                            style="display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border:1px solid #e5e7eb; border-radius:8px; background:#f9fafb;">
+                                            <x-heroicon-o-pencil style="width:16px; height:16px; color:#6b7280;" />
+                                        </a>
                                     </td>
                                 </tr>
                             @empty
@@ -142,7 +134,10 @@
                                     <td class="font-semibold">{{ $brand->name }}</td>
                                     <td class="text-[var(--aksana-muted)]">—</td>
                                     <td>
-                                        <a href="{{ BrandResource::getUrl('edit', ['record' => $brand]) }}" class="text-[13px] font-semibold text-[var(--aksana-void)]">Edit</a>
+                                        <a href="{{ BrandResource::getUrl('edit', ['record' => $brand]) }}" title="Edit"
+                                            style="display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border:1px solid #e5e7eb; border-radius:8px; background:#f9fafb;">
+                                            <x-heroicon-o-pencil style="width:16px; height:16px; color:#6b7280;" />
+                                        </a>
                                     </td>
                                 </tr>
                             @empty
@@ -174,7 +169,10 @@
                                     <td class="font-semibold">{{ $model->name }}</td>
                                     <td>{{ $model->category?->name ?? '—' }}</td>
                                     <td>
-                                        <a href="{{ ProductModelResource::getUrl('edit', ['record' => $model]) }}" class="text-[13px] font-semibold text-[var(--aksana-void)]">Edit</a>
+                                        <a href="{{ ProductModelResource::getUrl('edit', ['record' => $model]) }}" title="Edit"
+                                            style="display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border:1px solid #e5e7eb; border-radius:8px; background:#f9fafb;">
+                                            <x-heroicon-o-pencil style="width:16px; height:16px; color:#6b7280;" />
+                                        </a>
                                     </td>
                                 </tr>
                             @empty
@@ -211,7 +209,10 @@
                                         </span>
                                     </td>
                                     <td>
-                                        <a href="{{ ColorResource::getUrl('edit', ['record' => $color]) }}" class="text-[13px] font-semibold text-[var(--aksana-void)]">Edit</a>
+                                        <a href="{{ ColorResource::getUrl('edit', ['record' => $color]) }}" title="Edit"
+                                            style="display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border:1px solid #e5e7eb; border-radius:8px; background:#f9fafb;">
+                                            <x-heroicon-o-pencil style="width:16px; height:16px; color:#6b7280;" />
+                                        </a>
                                     </td>
                                 </tr>
                             @empty
@@ -242,7 +243,10 @@
                                     <td class="font-semibold">{{ $size->name }}</td>
                                     <td>{{ match ($size->size_type) { 'clothing' => 'Pakaian', 'shoes' => 'Sepatu', default => $size->size_type ?? '—' } }}</td>
                                     <td>
-                                        <a href="{{ SizeResource::getUrl('edit', ['record' => $size]) }}" class="text-[13px] font-semibold text-[var(--aksana-void)]">Edit</a>
+                                        <a href="{{ SizeResource::getUrl('edit', ['record' => $size]) }}" title="Edit"
+                                            style="display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border:1px solid #e5e7eb; border-radius:8px; background:#f9fafb;">
+                                            <x-heroicon-o-pencil style="width:16px; height:16px; color:#6b7280;" />
+                                        </a>
                                     </td>
                                 </tr>
                             @empty
@@ -275,7 +279,10 @@
                                     <td>{{ $staff->email }}</td>
                                     <td>{{ $staff->role->label() }}</td>
                                     <td>
-                                        <a href="{{ UserResource::getUrl('edit', ['record' => $staff]) }}" class="text-[13px] font-semibold text-[var(--aksana-void)]">Edit</a>
+                                        <a href="{{ UserResource::getUrl('edit', ['record' => $staff]) }}" title="Edit"
+                                            style="display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border:1px solid #e5e7eb; border-radius:8px; background:#f9fafb;">
+                                            <x-heroicon-o-pencil style="width:16px; height:16px; color:#6b7280;" />
+                                        </a>
                                     </td>
                                 </tr>
                             @empty
@@ -310,7 +317,10 @@
                                             : (LocationType::tryFrom((string) $location->location_type)?->label() ?? '—') }}
                                     </td>
                                     <td>
-                                        <a href="{{ LocationResource::getUrl('edit', ['record' => $location]) }}" class="text-[13px] font-semibold text-[var(--aksana-void)]">Edit</a>
+                                        <a href="{{ LocationResource::getUrl('edit', ['record' => $location]) }}" title="Edit"
+                                            style="display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border:1px solid #e5e7eb; border-radius:8px; background:#f9fafb;">
+                                            <x-heroicon-o-pencil style="width:16px; height:16px; color:#6b7280;" />
+                                        </a>
                                     </td>
                                 </tr>
                             @empty
@@ -320,7 +330,7 @@
                     </table>
                 @endif
             </div>
-        </section>
+        </div>
     </div>
 </x-filament-panels::page>
 

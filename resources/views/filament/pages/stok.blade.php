@@ -46,15 +46,14 @@
             'xl:grid-cols-3' => ! $this->isOwner(),
         ])>
             @foreach ($this->getRingkasanStatCards() as $card)
-                <div class="aksana-stat-panel">
-                    <p class="aksana-stat-label">{{ $card['label'] }}</p>
-                    <p @class([
-                        'aksana-stat-value',
-                        'text-[#F59100]' => ($card['warn'] ?? false) && ! ($card['danger'] ?? false),
-                        'text-[#F04040]' => ($card['danger'] ?? false) && ($card['warn'] ?? false),
-                    ])>{{ $card['value'] }}</p>
-                    <p class="aksana-stat-sub">{{ $card['sub'] }}</p>
-                </div>
+                <x-filament.components.aksana-stat-card
+                    :label="$card['label']"
+                    :value="$card['value']"
+                    :sub="$card['sub']"
+                    :icon="$card['icon']"
+                    :warn="$card['warn'] ?? false"
+                    :danger="$card['danger'] ?? false"
+                />
             @endforeach
         </div>
 

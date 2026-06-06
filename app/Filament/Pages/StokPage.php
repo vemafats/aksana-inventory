@@ -752,12 +752,14 @@ class StokPage extends Page
                 'label' => 'Total SKU',
                 'value' => number_format($this->totalSku),
                 'sub' => 'item aktif di katalog',
+                'icon' => 'heroicon-o-squares-2x2',
                 'warn' => false,
             ],
             [
                 'label' => 'Total Unit Stok',
                 'value' => number_format($this->totalUnits),
                 'sub' => 'unit available di seluruh lokasi',
+                'icon' => 'heroicon-o-archive-box',
                 'warn' => false,
             ],
         ];
@@ -767,6 +769,7 @@ class StokPage extends Page
                 'label' => 'Nilai Inventory',
                 'value' => \App\Helpers\FormatHelper::price($this->totalCapitalValue),
                 'sub' => 'total harga modal stok available',
+                'icon' => 'heroicon-o-banknotes',
                 'warn' => false,
             ];
         }
@@ -775,6 +778,7 @@ class StokPage extends Page
             'label' => 'Stok Kritis',
             'value' => number_format($this->lowStockCount),
             'sub' => 'item dengan stok ≤ 1 unit',
+            'icon' => 'heroicon-o-exclamation-triangle',
             'warn' => $this->lowStockCount > 0,
             'danger' => true,
         ];

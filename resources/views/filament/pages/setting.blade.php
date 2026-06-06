@@ -53,7 +53,7 @@
                                 <th>Role</th>
                                 <th>Status</th>
                                 <th>Last Login</th>
-                                <th class="pr-4">Aksi</th>
+                                <th class="pr-4" style="width:88px; text-align:right;">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -84,17 +84,17 @@
                                     </td>
                                     <td class="text-xs text-[var(--aksana-muted)]">{{ $this->lastLoginLabel($user) }}</td>
                                     <td class="pr-4">
-                                        <div class="flex gap-1">
-                                            <button type="button" wire:click="editUser('{{ $user->id }}')" class="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--aksana-border)] bg-gray-50 hover:bg-gray-100" title="Edit">
-                                                <x-heroicon-o-pencil class="h-3.5 w-3.5 text-[var(--aksana-muted)]" />
+                                        <div class="ml-auto flex shrink-0 items-center justify-end gap-2" style="min-width:72px;">
+                                            <button type="button" wire:click="editUser('{{ $user->id }}')" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[var(--aksana-border)] bg-gray-50 hover:bg-gray-100" title="Edit">
+                                                <x-heroicon-o-pencil class="h-4 w-4 shrink-0 text-[var(--aksana-muted)]" />
                                             </button>
                                             <button
                                                 type="button"
                                                 wire:click="confirmDeleteUser('{{ $user->id }}')"
-                                                class="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--aksana-border)] bg-gray-50 hover:border-red-300 hover:text-red-600"
+                                                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[var(--aksana-border)] bg-gray-50 hover:border-red-300 hover:text-red-600"
                                                 title="Hapus"
                                             >
-                                                <x-heroicon-o-trash class="h-3.5 w-3.5" />
+                                                <x-heroicon-o-trash class="h-4 w-4 shrink-0" />
                                             </button>
                                         </div>
                                     </td>
@@ -127,15 +127,15 @@
                         <div>
                             <label class="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[var(--aksana-muted)]">Username</label>
                             <div class="relative">
-                                <x-heroicon-o-user class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--aksana-muted)]" />
-                                <input type="text" wire:model="editUsername" class="w-full rounded-md border border-[var(--aksana-border)] py-2 pl-9 pr-3 text-sm" />
+                                <x-heroicon-o-user class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--aksana-muted)]" />
+                                <input type="text" wire:model="editUsername" class="w-full rounded-md border border-[var(--aksana-border)] py-2.5 pl-10 pr-3 text-sm" />
                             </div>
                         </div>
                         <div>
                             <label class="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[var(--aksana-muted)]">Email</label>
                             <div class="relative">
-                                <x-heroicon-o-envelope class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--aksana-muted)]" />
-                                <input type="email" wire:model="editEmail" class="w-full rounded-md border border-[var(--aksana-border)] py-2 pl-9 pr-3 text-sm" />
+                                <x-heroicon-o-envelope class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--aksana-muted)]" />
+                                <input type="email" wire:model="editEmail" class="w-full rounded-md border border-[var(--aksana-border)] py-2.5 pl-10 pr-3 text-sm" />
                             </div>
                         </div>
                         <div>
@@ -153,8 +153,8 @@
                         <div>
                             <label class="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[var(--aksana-muted)]">Password Baru</label>
                             <div class="relative">
-                                <x-heroicon-o-lock-closed class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--aksana-muted)]" />
-                                <input type="password" wire:model="editPassword" placeholder="Kosongkan jika tidak ingin mengubah password" class="w-full rounded-md border border-[var(--aksana-border)] py-2 pl-9 pr-3 text-sm" />
+                                <x-heroicon-o-lock-closed class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--aksana-muted)]" />
+                                <input type="password" wire:model="editPassword" placeholder="Kosongkan jika tidak ingin mengubah password" class="w-full rounded-md border border-[var(--aksana-border)] py-2.5 pl-10 pr-3 text-sm" />
                             </div>
                         </div>
                         <div class="flex items-center justify-between">
@@ -241,12 +241,12 @@
                                 <p class="text-xs text-[var(--aksana-muted)]">{{ $this->roleUserCount($roleKey) }} user</p>
                             </div>
                         </div>
-                        <div class="ml-2 flex shrink-0 items-center gap-2">
-                            <button type="button" wire:click="editRoleCard('{{ $roleKey }}')" class="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--aksana-border)] bg-gray-50 hover:bg-gray-100" title="Edit">
-                                <x-heroicon-o-pencil class="h-3.5 w-3.5 text-[var(--aksana-muted)]" />
+                        <div class="ml-auto flex shrink-0 items-center gap-2" style="min-width:72px;">
+                            <button type="button" wire:click="editRoleCard('{{ $roleKey }}')" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[var(--aksana-border)] bg-gray-50 hover:bg-gray-100" title="Edit">
+                                <x-heroicon-o-pencil class="h-4 w-4 shrink-0 text-[var(--aksana-muted)]" />
                             </button>
-                            <button type="button" wire:click="notifyRoleComingSoon" class="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--aksana-border)] bg-gray-50 hover:border-red-300" title="Hapus">
-                                <x-heroicon-o-trash class="h-3.5 w-3.5 text-[var(--aksana-muted)]" />
+                            <button type="button" wire:click="notifyRoleComingSoon" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[var(--aksana-border)] bg-gray-50 hover:border-red-300" title="Hapus">
+                                <x-heroicon-o-trash class="h-4 w-4 shrink-0 text-[var(--aksana-muted)]" />
                             </button>
                         </div>
                     </div>

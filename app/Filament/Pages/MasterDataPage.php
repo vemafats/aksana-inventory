@@ -38,33 +38,34 @@ class MasterDataPage extends Page
     }
 
     /**
+     * @return array<string, array{label: string, icon: string, count: int}>
+     */
+    public function getMasterTabsProperty(): array
+    {
+        return [
+            'categories' => ['icon' => 'heroicon-o-squares-2x2', 'label' => 'Kategori', 'count' => Category::query()->count()],
+            'brands' => ['icon' => 'heroicon-o-tag', 'label' => 'Merk', 'count' => Brand::query()->count()],
+            'models' => ['icon' => 'heroicon-o-cube', 'label' => 'Model', 'count' => ProductModel::query()->count()],
+            'colors' => ['icon' => 'heroicon-o-swatch', 'label' => 'Warna', 'count' => Color::query()->count()],
+            'sizes' => ['icon' => 'heroicon-o-arrows-pointing-out', 'label' => 'Ukuran', 'count' => Size::query()->count()],
+            'employees' => ['icon' => 'heroicon-o-users', 'label' => 'Karyawan', 'count' => User::query()->where('is_active', true)->count()],
+            'locations' => ['icon' => 'heroicon-o-map-pin', 'label' => 'Lokasi', 'count' => Location::query()->count()],
+        ];
+    }
+
+    /**
      * @return array<string, array{label: string, icon: string}>
      */
     public function getTabs(): array
     {
-        return [
-            'categories' => ['label' => 'Kategori', 'icon' => 'heroicon-o-tag'],
-            'brands' => ['label' => 'Merk', 'icon' => 'heroicon-o-building-storefront'],
-            'models' => ['label' => 'Model', 'icon' => 'heroicon-o-cube'],
-            'colors' => ['label' => 'Warna', 'icon' => 'heroicon-o-swatch'],
-            'sizes' => ['label' => 'Ukuran', 'icon' => 'heroicon-o-arrows-up-down'],
-            'employees' => ['label' => 'Karyawan', 'icon' => 'heroicon-o-user-group'],
-            'locations' => ['label' => 'Lokasi', 'icon' => 'heroicon-o-map-pin'],
-        ];
+        return collect($this->masterTabs)
+            ->map(fn (array $tab): array => ['label' => $tab['label'], 'icon' => $tab['icon']])
+            ->all();
     }
 
     public function getTabCount(string $tab): int
     {
-        return match ($tab) {
-            'categories' => Category::query()->count(),
-            'brands' => Brand::query()->count(),
-            'models' => ProductModel::query()->count(),
-            'colors' => Color::query()->count(),
-            'sizes' => Size::query()->count(),
-            'employees' => User::query()->count(),
-            'locations' => Location::query()->count(),
-            default => 0,
-        };
+        return $this->masterTabs[$tab]['count'] ?? 0;
     }
 
     public function getActiveTabLabel(): string
@@ -74,7 +75,7 @@ class MasterDataPage extends Page
 
     public function selectTab(string $tab): void
     {
-        if (! array_key_exists($tab, $this->getTabs())) {
+        if (! array_key_exists($tab, $this->masterTabs)) {
             return;
         }
 

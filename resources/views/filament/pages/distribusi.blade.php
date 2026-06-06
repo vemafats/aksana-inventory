@@ -6,20 +6,19 @@
 
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4 mb-6">
         @foreach ([
-            ['label' => 'Transfer Aktif', 'value' => number_format($stats['transfer_aktif']), 'sub' => 'outlet & bazar berjalan', 'warn' => false],
-            ['label' => 'Item Aktif', 'value' => number_format($stats['item_aktif']), 'sub' => 'unit di lokasi penjualan', 'warn' => false],
-            ['label' => 'Menunggu Retur', 'value' => number_format($stats['menunggu_retur']), 'sub' => 'lokasi menjelang berakhir', 'warn' => $stats['menunggu_retur'] > 0],
-            ['label' => 'Retur Damaged (30D)', 'value' => number_format($stats['retur_damaged']), 'sub' => 'perlu inspeksi', 'warn' => $stats['retur_damaged'] > 0, 'danger' => true],
+            ['label' => 'Transfer Aktif', 'value' => number_format($stats['transfer_aktif']), 'sub' => 'outlet & bazar berjalan', 'icon' => 'heroicon-o-arrow-right-circle', 'warn' => false],
+            ['label' => 'Item Aktif', 'value' => number_format($stats['item_aktif']), 'sub' => 'unit di lokasi penjualan', 'icon' => 'heroicon-o-cube', 'warn' => false],
+            ['label' => 'Menunggu Retur', 'value' => number_format($stats['menunggu_retur']), 'sub' => 'lokasi menjelang berakhir', 'icon' => 'heroicon-o-clock', 'warn' => $stats['menunggu_retur'] > 0],
+            ['label' => 'Retur Damaged (30D)', 'value' => number_format($stats['retur_damaged']), 'sub' => 'perlu inspeksi', 'icon' => 'heroicon-o-exclamation-triangle', 'warn' => $stats['retur_damaged'] > 0, 'danger' => true],
         ] as $card)
-            <div class="aksana-stat-panel">
-                <p class="aksana-stat-label">{{ $card['label'] }}</p>
-                <p @class([
-                    'aksana-stat-value',
-                    'text-[#F59100]' => ($card['warn'] ?? false) && ! ($card['danger'] ?? false),
-                    'text-[#F04040]' => ($card['danger'] ?? false) && ($card['warn'] ?? false),
-                ])>{{ $card['value'] }}</p>
-                <p class="aksana-stat-sub">{{ $card['sub'] }}</p>
-            </div>
+            <x-filament.components.aksana-stat-card
+                :label="$card['label']"
+                :value="$card['value']"
+                :sub="$card['sub']"
+                :icon="$card['icon']"
+                :warn="$card['warn'] ?? false"
+                :danger="$card['danger'] ?? false"
+            />
         @endforeach
     </div>
 

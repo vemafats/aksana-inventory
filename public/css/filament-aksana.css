@@ -115,7 +115,19 @@
 }
 
 .fi-wi-stats-overview-stat-icon {
-    color: var(--aksana-muted) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 12px !important;
+    background: #f3f4f6 !important;
+    color: #374151 !important;
+}
+
+.fi-wi-stats-overview-stat-icon svg {
+    width: 28px !important;
+    height: 28px !important;
 }
 
 .fi-wi-stats-overview-stat.aksana-stat-danger .fi-wi-stats-overview-stat-value {
@@ -276,6 +288,23 @@
     border: 1px solid var(--aksana-border);
     border-radius: 12px;
     padding: 1rem 1.25rem;
+}
+
+.aksana-stat-icon-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: #f3f4f6;
+    flex-shrink: 0;
+}
+
+.aksana-stat-icon {
+    width: 28px;
+    height: 28px;
+    color: #374151;
 }
 
 .aksana-stat-label,
