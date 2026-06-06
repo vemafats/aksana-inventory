@@ -237,7 +237,7 @@
         </p>
     </div>
     @else
-    <div style="background:white; border:1px solid #D1DAE5; border-radius:10px; padding:16px; margin-bottom:16px; display:flex; gap:12px; align-items:flex-end;">
+    <div style="background:white; border:1px solid #D1DAE5; border-radius:10px; padding:16px; margin-bottom:16px; display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
         <div>
             <label style="font-size:11px; font-weight:700; color:#3d4a5c; text-transform:uppercase; letter-spacing:0.1em; display:block; margin-bottom:6px;">DARI TANGGAL</label>
             <input type="date" wire:model.live="dateFrom" style="padding:8px 12px; border:1px solid #D1DAE5; border-radius:8px; font-size:13px;">
@@ -246,6 +246,10 @@
             <label style="font-size:11px; font-weight:700; color:#3d4a5c; text-transform:uppercase; letter-spacing:0.1em; display:block; margin-bottom:6px;">SAMPAI TANGGAL</label>
             <input type="date" wire:model.live="dateTo" style="padding:8px 12px; border:1px solid #D1DAE5; border-radius:8px; font-size:13px;">
         </div>
+        @include('filament.partials.gross-profit-export-button', [
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
+        ])
     </div>
 
     <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:12px; margin-bottom:16px;">

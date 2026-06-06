@@ -6,6 +6,7 @@ use App\Enums\LocationStatus;
 use App\Enums\LocationType;
 use App\Enums\StockStatus;
 use App\Enums\UserRole;
+use App\Models\EventExpense;
 use App\Models\Item;
 use App\Models\Location;
 use App\Models\SalesItem;
@@ -352,6 +353,65 @@ class ReportService
                     'margin' => round($margin, 1),
                 ];
             });
+    }
+
+    public function totalEventExpenses(?string $dateFrom = null, ?string $dateTo = null): float
+    {
+        $query = EventExpense::query();
+
+        if ($dateFrom) {
+            TimezoneQuery::whereDateColumnFrom($query, 'expense_date', $dateFrom);
+        }
+
+        if ($dateTo) {
+            TimezoneQuery::whereDateColumnTo($query, 'expense_date', $dateTo);
+        }
+
+        return (float) $query->sum('amount');
+    }
+
+    /**
+     * @return Collection<int, object>
+     */
+    public function eventExpensesByEvent(?string $dateFrom = null, ?string $dateTo = null): Collection
+    {
+        $query = EventExpense::query()
+            ->join('events', 'event_expenses.event_id', '=', 'events.id')
+            ->join('locations', 'events.location_id', '=', 'locations.id');
+
+        if ($dateFrom) {
+            TimezoneQuery::whereDateColumnFrom($query, 'event_expenses.expense_date', $dateFrom);
+        }
+
+        if ($dateTo) {
+            TimezoneQuery::whereDateColumnTo($query, 'event_expenses.expense_date', $dateTo);
+        }
+
+        return $query
+            ->selectRaw('
+                events.name as event_name,
+                locations.location_name,
+                SUM(event_expenses.amount) as total_amount,
+                COUNT(event_expenses.id) as expense_count
+            ')
+            ->groupBy('events.id', 'events.name', 'locations.location_name')
+            ->orderByDesc('total_amount')
+            ->get();
+    }
+
+    public function totalTransactionDiscount(?string $dateFrom = null, ?string $dateTo = null): float
+    {
+        $query = SalesTransaction::query();
+
+        if ($dateFrom) {
+            TimezoneQuery::whereTimestampFrom($query, 'transaction_date', $dateFrom);
+        }
+
+        if ($dateTo) {
+            TimezoneQuery::whereTimestampTo($query, 'transaction_date', $dateTo);
+        }
+
+        return (float) $query->sum('transaction_discount_amount');
     }
 
     /**

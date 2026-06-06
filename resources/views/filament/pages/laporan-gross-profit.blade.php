@@ -15,6 +15,12 @@
             <input type="date" wire:model.live="dateFrom" class="rounded-md border border-[var(--aksana-border)] px-2 py-1.5 text-sm" />
             <span class="text-[var(--aksana-muted)]">—</span>
             <input type="date" wire:model.live="dateTo" class="rounded-md border border-[var(--aksana-border)] px-2 py-1.5 text-sm" />
+            @if($this->isOwner())
+                @include('filament.partials.gross-profit-export-button', [
+                    'dateFrom' => $dateFrom,
+                    'dateTo' => $dateTo,
+                ])
+            @endif
         </div>
     </div>
 

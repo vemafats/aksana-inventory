@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Enums\UserRole;
 use App\Filament\Concerns\InteractsWithEventExpenseReports;
 use App\Helpers\FormatHelper;
 use App\Services\ReportService;
@@ -34,6 +35,11 @@ class LaporanGrossProfitPage extends Page
         $user = auth()->user();
 
         return $user !== null && $user->role->canViewFullReport();
+    }
+
+    public function isOwner(): bool
+    {
+        return auth()->user()?->role === UserRole::OWNER;
     }
 
     /**
