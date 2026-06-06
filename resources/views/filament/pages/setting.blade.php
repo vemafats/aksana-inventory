@@ -126,17 +126,11 @@
                     <div class="space-y-4">
                         <div>
                             <label class="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[var(--aksana-muted)]">Username</label>
-                            <div class="relative">
-                                <x-heroicon-o-user class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--aksana-muted)]" />
-                                <input type="text" wire:model="editUsername" class="w-full rounded-md border border-[var(--aksana-border)] py-2.5 pl-10 pr-3 text-sm" />
-                            </div>
+                            <input type="text" wire:model="editUsername" class="w-full rounded-md border border-[var(--aksana-border)] px-3 py-2 text-sm" />
                         </div>
                         <div>
                             <label class="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[var(--aksana-muted)]">Email</label>
-                            <div class="relative">
-                                <x-heroicon-o-envelope class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--aksana-muted)]" />
-                                <input type="email" wire:model="editEmail" class="w-full rounded-md border border-[var(--aksana-border)] py-2.5 pl-10 pr-3 text-sm" />
-                            </div>
+                            <input type="email" wire:model="editEmail" class="w-full rounded-md border border-[var(--aksana-border)] px-3 py-2 text-sm" />
                         </div>
                         <div>
                             <label class="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[var(--aksana-muted)]">Nama Lengkap</label>
@@ -152,10 +146,7 @@
                         </div>
                         <div>
                             <label class="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[var(--aksana-muted)]">Password Baru</label>
-                            <div class="relative">
-                                <x-heroicon-o-lock-closed class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--aksana-muted)]" />
-                                <input type="password" wire:model="editPassword" placeholder="Kosongkan jika tidak ingin mengubah password" class="w-full rounded-md border border-[var(--aksana-border)] py-2.5 pl-10 pr-3 text-sm" />
-                            </div>
+                            <input type="password" wire:model="editPassword" placeholder="Kosongkan jika tidak ingin mengubah password" class="w-full rounded-md border border-[var(--aksana-border)] px-3 py-2 text-sm" />
                         </div>
                         <div class="flex items-center justify-between">
                             <span class="text-xs font-semibold uppercase text-[var(--aksana-muted)]">Status Akun</span>
