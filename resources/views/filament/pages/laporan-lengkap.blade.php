@@ -103,12 +103,16 @@
             </thead>
             <tbody>
                 @forelse($allStockItems ?? [] as $item)
-                @php($totalAvail = (int) ($item->total_available ?? 0))
+                @php
+                    $totalAvail = (int) ($item->total_available ?? 0);
+                @endphp
                 <tr style="border-bottom:1px solid #F3F4F6;">
                     <td style="padding:10px 16px; font-weight:600; color:#070D1E;">{{ $item->item_name }}</td>
                     <td style="padding:10px 16px; font-family:monospace; font-size:12px; font-weight:500; color:#3d4a5c;">{{ $item->barcode }}</td>
                     @foreach($allLocations ?? [] as $loc)
-                    @php($locQty = $this->itemLocationQty($item, $loc->id))
+                    @php
+                        $locQty = $this->itemLocationQty($item, $loc->id);
+                    @endphp
                     <td style="padding:10px 12px; text-align:right; font-family:monospace; color:{{ $locQty > 0 ? '#070D1E' : '#D1DAE5' }}; font-weight:{{ $locQty > 0 ? '700' : '400' }};">
                         {{ $locQty > 0 ? $locQty : '—' }}
                     </td>
