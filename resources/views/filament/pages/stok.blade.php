@@ -760,7 +760,7 @@
 </div>
 </div>
 
-<script src="{{ asset('js/zebra-print-label.js') }}?v=5"></script>
+<script src="{{ asset('js/zebra-print-label.js') }}?v=6"></script>
 
 @if ($showPrintModal)
     <div
