@@ -280,6 +280,66 @@ class ReportService
     }
 
     /**
+     * @return Collection<int, object{
+     *   item_name: string,
+     *   barcode: string,
+     *   total_qty: int,
+     *   total_revenue: float,
+     *   total_cost: float,
+     *   profit: float,
+     *   margin: float
+     * }>
+     */
+    public function grossProfitPerItem(?string $dateFrom = null, ?string $dateTo = null): Collection
+    {
+        $query = DB::table('sales_items')
+            ->join('items', 'sales_items.item_id', '=', 'items.id')
+            ->join('sales_transactions', 'sales_items.sales_transaction_id', '=', 'sales_transactions.id');
+
+        if ($dateFrom) {
+            if (DB::connection()->getDriverName() === 'pgsql') {
+                $query->whereRaw("DATE(sales_transactions.transaction_date AT TIME ZONE 'Asia/Jakarta') >= ?", [$dateFrom]);
+            } else {
+                $query->whereDate('sales_transactions.transaction_date', '>=', $dateFrom);
+            }
+        }
+
+        if ($dateTo) {
+            if (DB::connection()->getDriverName() === 'pgsql') {
+                $query->whereRaw("DATE(sales_transactions.transaction_date AT TIME ZONE 'Asia/Jakarta') <= ?", [$dateTo]);
+            } else {
+                $query->whereDate('sales_transactions.transaction_date', '<=', $dateTo);
+            }
+        }
+
+        return $query
+            ->selectRaw('
+                items.item_name,
+                items.barcode,
+                SUM(sales_items.qty) as total_qty,
+                SUM(sales_items.selling_price * sales_items.qty) as total_revenue,
+                SUM(sales_items.supplier_cost_snapshot * sales_items.qty) as total_cost
+            ')
+            ->groupBy('items.id', 'items.item_name', 'items.barcode')
+            ->orderByDesc('total_revenue')
+            ->get()
+            ->map(function ($row) {
+                $profit = $row->total_revenue - $row->total_cost;
+                $margin = $row->total_revenue > 0 ? ($profit / $row->total_revenue) * 100 : 0;
+
+                return (object) [
+                    'item_name' => $row->item_name,
+                    'barcode' => $row->barcode,
+                    'total_qty' => (int) $row->total_qty,
+                    'total_revenue' => (float) $row->total_revenue,
+                    'total_cost' => (float) $row->total_cost,
+                    'profit' => $profit,
+                    'margin' => round($margin, 1),
+                ];
+            });
+    }
+
+    /**
      * @param  array<string, mixed>  $filters
      */
     public function bestSellingProducts(User $user, array $filters = []): Collection

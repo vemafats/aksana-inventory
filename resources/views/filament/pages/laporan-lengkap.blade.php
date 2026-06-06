@@ -271,6 +271,8 @@
         </div>
     </div>
 
+    @include('filament.partials.per-item-profit-table', ['perItemProfit' => $perItemProfit ?? collect()])
+
     <div style="background:white; border:1px solid #D1DAE5; border-radius:12px; overflow:hidden;">
         <div style="padding:14px 16px; border-bottom:1px solid #D1DAE5;">
             <span style="font-size:16px; font-weight:700; color:#070D1E;">Top 10 Produk Terlaris</span>

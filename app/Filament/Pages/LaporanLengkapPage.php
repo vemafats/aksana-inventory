@@ -182,6 +182,7 @@ class LaporanLengkapPage extends Page
             'bestSelling' => $user !== null
                 ? $reportService->bestSellingProducts($user, array_merge($filters, ['limit' => 10]))
                 : Collection::make(),
+            'perItemProfit' => $reportService->grossProfitPerItem($this->dateFrom, $this->dateTo),
         ];
     }
 }
