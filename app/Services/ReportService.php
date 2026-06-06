@@ -284,6 +284,8 @@ class ReportService
      *   item_name: string,
      *   barcode: string,
      *   total_qty: int,
+     *   total_revenue_before_discount: float,
+     *   total_discount: float,
      *   total_revenue: float,
      *   total_cost: float,
      *   profit: float,
@@ -317,22 +319,35 @@ class ReportService
                 items.item_name,
                 items.barcode,
                 SUM(sales_items.qty) as total_qty,
-                SUM(sales_items.selling_price * sales_items.qty) as total_revenue,
+                SUM(sales_items.selling_price * sales_items.qty) as total_revenue_before_discount,
+                SUM(
+                    CASE
+                        WHEN sales_transactions.subtotal_amount > 0 THEN
+                            (sales_items.selling_price * sales_items.qty / sales_transactions.subtotal_amount) * sales_transactions.transaction_discount_amount
+                        ELSE 0
+                    END
+                ) as total_discount,
                 SUM(sales_items.supplier_cost_snapshot * sales_items.qty) as total_cost
             ')
             ->groupBy('items.id', 'items.item_name', 'items.barcode')
-            ->orderByDesc('total_revenue')
+            ->orderByDesc('total_revenue_before_discount')
             ->get()
             ->map(function ($row) {
-                $profit = $row->total_revenue - $row->total_cost;
-                $margin = $row->total_revenue > 0 ? ($profit / $row->total_revenue) * 100 : 0;
+                $revenueBeforeDiscount = (float) $row->total_revenue_before_discount;
+                $discount = (float) $row->total_discount;
+                $revenueAfterDiscount = $revenueBeforeDiscount - $discount;
+                $cost = (float) $row->total_cost;
+                $profit = $revenueAfterDiscount - $cost;
+                $margin = $revenueAfterDiscount > 0 ? ($profit / $revenueAfterDiscount) * 100 : 0;
 
                 return (object) [
                     'item_name' => $row->item_name,
                     'barcode' => $row->barcode,
                     'total_qty' => (int) $row->total_qty,
-                    'total_revenue' => (float) $row->total_revenue,
-                    'total_cost' => (float) $row->total_cost,
+                    'total_revenue_before_discount' => $revenueBeforeDiscount,
+                    'total_discount' => $discount,
+                    'total_revenue' => $revenueAfterDiscount,
+                    'total_cost' => $cost,
                     'profit' => $profit,
                     'margin' => round($margin, 1),
                 ];
