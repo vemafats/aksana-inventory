@@ -415,6 +415,50 @@ class ReportService
     }
 
     /**
+     * @return array{
+     *   items: Collection<int, Item>,
+     *   locations: Collection<int, Location>,
+     *   totalUnits: int,
+     *   totalDamaged: int,
+     *   lowCount: int
+     * }
+     */
+    public function stockReportMatrix(): array
+    {
+        $items = Item::query()
+            ->where('is_active', true)
+            ->with(['stockBalances.location'])
+            ->withSum(['stockBalances as total_available' => fn ($q) => $q->where('stock_status', 'available')], 'qty')
+            ->withSum(['stockBalances as total_damaged' => fn ($q) => $q->where('stock_status', 'damaged')], 'qty')
+            ->orderBy('item_name')
+            ->get();
+
+        $locations = Location::query()
+            ->where('status', LocationStatus::ACTIVE->value)
+            ->orderBy('location_type')
+            ->orderBy('location_name')
+            ->get();
+
+        return [
+            'items' => $items,
+            'locations' => $locations,
+            'totalUnits' => (int) $items->sum('total_available'),
+            'totalDamaged' => (int) $items->sum('total_damaged'),
+            'lowCount' => $items->filter(
+                fn (Item $item): bool => (int) ($item->total_available ?? 0) <= 1
+            )->count(),
+        ];
+    }
+
+    public function itemAvailableQtyAtLocation(Item $item, string $locationId): int
+    {
+        return (int) $item->stockBalances
+            ->where('location_id', $locationId)
+            ->where('stock_status', StockStatus::AVAILABLE->value)
+            ->sum('qty');
+    }
+
+    /**
      * @param  array<string, mixed>  $filters
      */
     public function bestSellingProducts(User $user, array $filters = []): Collection

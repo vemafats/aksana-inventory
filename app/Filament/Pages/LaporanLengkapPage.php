@@ -89,10 +89,7 @@ class LaporanLengkapPage extends Page
 
     public function itemLocationQty(Item $item, string $locationId): int
     {
-        return (int) $item->stockBalances
-            ->where('location_id', $locationId)
-            ->where('stock_status', 'available')
-            ->sum('qty');
+        return app(ReportService::class)->itemAvailableQtyAtLocation($item, $locationId);
     }
 
     /**
@@ -122,28 +119,14 @@ class LaporanLengkapPage extends Page
      */
     private function stockReportData(): array
     {
-        $allStockItems = Item::query()
-            ->where('is_active', true)
-            ->with(['stockBalances.location'])
-            ->withSum(['stockBalances as total_available' => fn ($q) => $q->where('stock_status', 'available')], 'qty')
-            ->withSum(['stockBalances as total_damaged' => fn ($q) => $q->where('stock_status', 'damaged')], 'qty')
-            ->orderBy('item_name')
-            ->get();
-
-        $allLocations = Location::query()
-            ->where('status', 'active')
-            ->orderBy('location_type')
-            ->orderBy('location_name')
-            ->get();
+        $report = app(ReportService::class)->stockReportMatrix();
 
         return [
-            'allStockItems' => $allStockItems,
-            'allLocations' => $allLocations,
-            'stockTotalUnits' => (int) $allStockItems->sum('total_available'),
-            'stockTotalDamaged' => (int) $allStockItems->sum('total_damaged'),
-            'stockLowCount' => $allStockItems->filter(
-                fn (Item $item): bool => (int) ($item->total_available ?? 0) <= 1
-            )->count(),
+            'allStockItems' => $report['items'],
+            'allLocations' => $report['locations'],
+            'stockTotalUnits' => $report['totalUnits'],
+            'stockTotalDamaged' => $report['totalDamaged'],
+            'stockLowCount' => $report['lowCount'],
         ];
     }
 

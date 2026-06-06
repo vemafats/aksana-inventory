@@ -2,7 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\Item;
+use App\Models\Location;
 use Illuminate\Support\Collection;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Color;
@@ -180,6 +183,222 @@ class ReportExportService
 
         $filename = "laporan-gross-profit-{$dateFrom}-{$dateTo}.xlsx";
 
+        return $this->streamSpreadsheet($spreadsheet, $filename);
+    }
+
+    /**
+     * @param  array{
+     *   items: Collection<int, Item>,
+     *   locations: Collection<int, Location>,
+     *   totalUnits: int,
+     *   totalDamaged: int,
+     *   lowCount: int
+     * }  $report
+     */
+    public function exportStock(array $report, ReportService $reportService): StreamedResponse
+    {
+        $spreadsheet = new Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Stok');
+
+        $items = $report['items'];
+        $locations = $report['locations'];
+        $lastCol = $this->columnLetter(3 + $locations->count());
+
+        $sheet->setCellValue('A1', 'LAPORAN STOK');
+        $sheet->setCellValue('A2', 'Snapshot: '.now()->format('d M Y H:i'));
+        $sheet->mergeCells("A1:{$lastCol}1");
+        $sheet->mergeCells("A2:{$lastCol}2");
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+        $sheet->getStyle('A2')->getFont()->setSize(11)->setColor(new Color('666666'));
+
+        $row = 4;
+        $summaryLabels = ['Total SKU', 'Total Unit', 'Rusak', 'Stok Kritis'];
+        $summaryValues = [
+            $items->count(),
+            $report['totalUnits'],
+            $report['totalDamaged'],
+            $report['lowCount'],
+        ];
+
+        foreach ($summaryLabels as $i => $label) {
+            $col = $this->columnLetter($i);
+            $sheet->setCellValue("{$col}{$row}", $label);
+            $sheet->getStyle("{$col}{$row}")->getFont()->setBold(true)->setSize(10);
+            $sheet->setCellValue("{$col}".($row + 1), $summaryValues[$i]);
+            $sheet->getStyle("{$col}".($row + 1))->getFont()->setBold(true)->setSize(12);
+            $sheet->getStyle("{$col}".($row + 1))->getNumberFormat()->setFormatCode('#,##0');
+        }
+
+        $row = 8;
+        $sheet->setCellValue("A{$row}", 'STOK PER ITEM PER LOKASI');
+        $sheet->getStyle("A{$row}")->getFont()->setBold(true)->setSize(12);
+        $row++;
+
+        $headers = ['Item', 'Barcode'];
+        foreach ($locations as $location) {
+            $headers[] = $location->location_name;
+        }
+        $headers[] = 'Total';
+        $headers[] = 'Status';
+
+        foreach ($headers as $i => $header) {
+            $col = $this->columnLetter($i);
+            $sheet->setCellValue("{$col}{$row}", $header);
+        }
+
+        $headerStyle = $this->headerStyleArray();
+        $sheet->getStyle("A{$row}:{$lastCol}{$row}")->applyFromArray($headerStyle);
+        $row++;
+
+        foreach ($items as $item) {
+            $totalAvail = (int) ($item->total_available ?? 0);
+            $sheet->setCellValue("A{$row}", $item->item_name);
+            $sheet->setCellValue("B{$row}", $item->barcode);
+
+            $colIndex = 2;
+            foreach ($locations as $location) {
+                $col = $this->columnLetter($colIndex);
+                $qty = $reportService->itemAvailableQtyAtLocation($item, $location->id);
+                $sheet->setCellValue("{$col}{$row}", $qty > 0 ? $qty : 0);
+                $colIndex++;
+            }
+
+            $totalCol = $this->columnLetter($colIndex);
+            $statusCol = $this->columnLetter($colIndex + 1);
+            $sheet->setCellValue("{$totalCol}{$row}", $totalAvail);
+            $sheet->setCellValue("{$statusCol}{$row}", $this->stockStatusLabel($totalAvail));
+            $row++;
+        }
+
+        foreach (range(1, Coordinate::columnIndexFromString($lastCol)) as $colIndex) {
+            $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($colIndex))->setAutoSize(true);
+        }
+
+        $filename = 'laporan-stok-'.now()->format('Y-m-d').'.xlsx';
+
+        return $this->streamSpreadsheet($spreadsheet, $filename);
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $salesByLocation
+     */
+    public function exportSales(
+        Collection $salesByLocation,
+        float $totalSales,
+        int $totalTransactions,
+        string $dateFrom,
+        string $dateTo,
+    ): StreamedResponse {
+        $spreadsheet = new Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Penjualan');
+
+        $sheet->setCellValue('A1', 'LAPORAN PENJUALAN');
+        $sheet->setCellValue('A2', "Periode: {$dateFrom} s/d {$dateTo}");
+        $sheet->mergeCells('A1:D1');
+        $sheet->mergeCells('A2:D2');
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+        $sheet->getStyle('A2')->getFont()->setSize(11)->setColor(new Color('666666'));
+
+        $row = 4;
+        $summaryLabels = ['Total Omzet', 'Total Transaksi'];
+        $summaryValues = [$totalSales, $totalTransactions];
+
+        foreach ($summaryLabels as $i => $label) {
+            $col = $this->columnLetter($i);
+            $sheet->setCellValue("{$col}{$row}", $label);
+            $sheet->getStyle("{$col}{$row}")->getFont()->setBold(true)->setSize(10);
+            $valCol = "{$col}".($row + 1);
+            $sheet->setCellValue($valCol, $summaryValues[$i]);
+            $sheet->getStyle($valCol)->getFont()->setBold(true)->setSize(12);
+
+            if ($i === 0) {
+                $sheet->getStyle($valCol)->getNumberFormat()->setFormatCode('#,##0');
+            } else {
+                $sheet->getStyle($valCol)->getNumberFormat()->setFormatCode('#,##0');
+            }
+        }
+
+        $row = 8;
+        $sheet->setCellValue("A{$row}", 'PENJUALAN PER LOKASI');
+        $sheet->getStyle("A{$row}")->getFont()->setBold(true)->setSize(12);
+        $row++;
+
+        $headers = ['Lokasi', 'Omzet', 'Transaksi', '% Kontribusi'];
+        foreach ($headers as $i => $header) {
+            $col = $this->columnLetter($i);
+            $sheet->setCellValue("{$col}{$row}", $header);
+        }
+
+        $headerStyle = $this->headerStyleArray();
+        $sheet->getStyle("A{$row}:D{$row}")->applyFromArray($headerStyle);
+        $row++;
+
+        foreach ($salesByLocation as $loc) {
+            $locSales = (float) ($loc['total_sales'] ?? 0);
+            $contribution = $totalSales > 0
+                ? round(($locSales / $totalSales) * 100, 1)
+                : (float) ($loc['sales_pct'] ?? 0);
+
+            $sheet->setCellValue("A{$row}", $loc['location_name'] ?? '-');
+            $sheet->setCellValue("B{$row}", $locSales);
+            $sheet->setCellValue("C{$row}", (int) ($loc['transaction_count'] ?? 0));
+            $sheet->setCellValue("D{$row}", $contribution.'%');
+            $sheet->getStyle("B{$row}")->getNumberFormat()->setFormatCode('#,##0');
+            $row++;
+        }
+
+        if ($salesByLocation->isNotEmpty()) {
+            $sheet->setCellValue('A'.$row, 'TOTAL');
+            $sheet->setCellValue('B'.$row, $totalSales);
+            $sheet->setCellValue('C'.$row, $totalTransactions);
+            $sheet->setCellValue('D'.$row, $totalSales > 0 ? '100%' : '0%');
+            $sheet->getStyle("A{$row}:D{$row}")->getFont()->setBold(true);
+            $sheet->getStyle('B'.$row)->getNumberFormat()->setFormatCode('#,##0');
+        }
+
+        foreach (range('A', 'D') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $filename = "laporan-penjualan-{$dateFrom}-{$dateTo}.xlsx";
+
+        return $this->streamSpreadsheet($spreadsheet, $filename);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function headerStyleArray(): array
+    {
+        return [
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 10],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1a1a2e']],
+            'borders' => ['bottom' => ['borderStyle' => Border::BORDER_THIN]],
+        ];
+    }
+
+    private function columnLetter(int $zeroBasedIndex): string
+    {
+        return Coordinate::stringFromColumnIndex($zeroBasedIndex + 1);
+    }
+
+    private function stockStatusLabel(int $qty): string
+    {
+        if ($qty === 0) {
+            return 'HABIS';
+        }
+
+        if ($qty <= 1) {
+            return 'KRITIS';
+        }
+
+        return 'AMAN';
+    }
+
+    private function streamSpreadsheet(Spreadsheet $spreadsheet, string $filename): StreamedResponse
+    {
         return response()->streamDownload(function () use ($spreadsheet): void {
             $writer = new Xlsx($spreadsheet);
             $writer->save('php://output');
