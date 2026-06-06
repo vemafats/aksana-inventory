@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\CatalogController;
 use App\Http\Controllers\Api\CatalogQrCodeController;
 use App\Http\Controllers\Api\EmployeeController;
 use App\Http\Controllers\Api\EventController;
+use App\Http\Controllers\Api\EventExpenseController;
 use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\PhotoController;
 use App\Http\Controllers\Api\ReportController;
@@ -52,6 +53,10 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function (): void {
     Route::get('/events/{event}', [EventController::class, 'show']);
     Route::put('/events/{event}', [EventController::class, 'update']);
     Route::post('/events/{event}/end', [EventController::class, 'end']);
+    Route::get('/events/{event}/expenses', [EventExpenseController::class, 'index']);
+    Route::post('/events/{event}/expenses', [EventExpenseController::class, 'store']);
+    Route::put('/events/{event}/expenses/{expense}', [EventExpenseController::class, 'update']);
+    Route::delete('/events/{event}/expenses/{expense}', [EventExpenseController::class, 'destroy']);
 
     Route::get('/stock-opnames/active', [StockOpnameController::class, 'getActive']);
     Route::post('/stock-opnames', [StockOpnameController::class, 'store']);

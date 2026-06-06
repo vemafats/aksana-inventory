@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Enums\LocationType;
 use App\Filament\Resources\EventResource\Pages;
+use App\Helpers\FormatHelper;
 use App\Models\Event;
 use App\Models\Location;
 use App\Models\User;
@@ -143,6 +144,9 @@ class EventResource extends Resource
                         'cancelled' => 'danger',
                         default => 'gray',
                     }),
+                Tables\Columns\TextColumn::make('total_expenses')
+                    ->label('Biaya')
+                    ->state(fn (Event $record): string => FormatHelper::price($record->totalExpenses())),
                 Tables\Columns\TextColumn::make('users')
                     ->label('Petugas')
                     ->html()

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Support\TimezoneQuery;
 
 class Event extends Model
@@ -52,6 +53,16 @@ class Event extends Model
         return $this->belongsToMany(User::class, 'event_user')
             ->withPivot('role_in_event')
             ->withTimestamps();
+    }
+
+    public function expenses(): HasMany
+    {
+        return $this->hasMany(EventExpense::class);
+    }
+
+    public function totalExpenses(): float
+    {
+        return (float) $this->expenses()->sum('amount');
     }
 
     /**

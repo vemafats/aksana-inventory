@@ -162,6 +162,9 @@ class EventController extends Controller
             $data['role_in_event'] = $assignment?->pivot->role_in_event;
         }
 
+        $data['total_expenses'] = $event->totalExpenses();
+        $data['expenses_count'] = $event->expenses()->count();
+
         return $data;
     }
 }
