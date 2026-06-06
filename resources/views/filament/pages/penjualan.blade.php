@@ -44,12 +44,13 @@
             $maxLocationSales = max($locations->max('total_sales') ?: 1, 1);
         @endphp
 
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4 mb-6">
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 mb-6">
             @foreach ([
                 ['label' => 'Penjualan Hari Ini', 'value' => \App\Filament\Pages\PenjualanPage::formatRupiah($stats['today_sales']), 'sub' => 'hari ini', 'icon' => 'heroicon-o-banknotes'],
                 ['label' => 'Penjualan 7 Hari', 'value' => \App\Filament\Pages\PenjualanPage::formatRupiah($stats['seven_day_sales']), 'sub' => '7 hari terakhir', 'icon' => 'heroicon-o-calendar-days'],
                 ['label' => 'Item Terjual (24H)', 'value' => number_format($stats['items_sold_24h']), 'sub' => 'unit terjual', 'icon' => 'heroicon-o-shopping-bag'],
                 ['label' => 'Rata-rata Nota', 'value' => \App\Filament\Pages\PenjualanPage::formatRupiah($stats['avg_basket']), 'sub' => 'per transaksi hari ini', 'icon' => 'heroicon-o-receipt-percent'],
+                ['label' => 'Total Biaya Event', 'value' => \App\Filament\Pages\PenjualanPage::formatRupiah($stats['today_expenses']), 'sub' => 'biaya hari ini', 'icon' => 'heroicon-o-receipt-percent', 'warn' => true],
             ] as $card)
                 @include('filament.components.aksana-stat-card', [
                     'label' => $card['label'],

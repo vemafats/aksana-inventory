@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Concerns\InteractsWithEventExpenseReports;
 use App\Helpers\FormatHelper;
 use App\Services\ReportService;
 use Filament\Pages\Page;
@@ -9,6 +10,7 @@ use Illuminate\Support\Collection;
 
 class LaporanGrossProfitPage extends Page
 {
+    use InteractsWithEventExpenseReports;
     protected static bool $shouldRegisterNavigation = false;
 
     protected static ?string $title = 'Laporan Gross Profit';
@@ -60,6 +62,9 @@ class LaporanGrossProfitPage extends Page
     {
         return [
             'perItemProfit' => $this->getPerItemProfit(),
+            'totalExpenses' => $this->getTotalExpenses(),
+            'expensesByEvent' => $this->getExpensesByEvent(),
+            'totalDiscount' => $this->getTotalDiscount(),
         ];
     }
 

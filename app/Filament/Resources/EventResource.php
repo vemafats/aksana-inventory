@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Enums\LocationType;
 use App\Filament\Resources\EventResource\Pages;
+use App\Filament\Resources\EventResource\RelationManagers;
 use App\Helpers\FormatHelper;
 use App\Models\Event;
 use App\Models\Location;
@@ -88,6 +89,12 @@ class EventResource extends Resource
                 Forms\Components\Textarea::make('notes')
                     ->label('Catatan')
                     ->columnSpanFull(),
+                Forms\Components\Placeholder::make('total_expenses_display')
+                    ->label('Total Biaya Event')
+                    ->content(fn (?Event $record): string => $record
+                        ? FormatHelper::price($record->totalExpenses())
+                        : FormatHelper::price(0))
+                    ->visibleOn('edit'),
                 Forms\Components\Repeater::make('assignments')
                     ->label('Petugas')
                     ->schema([
@@ -210,6 +217,13 @@ class EventResource extends Resource
             'active' => 'Aktif',
             'ended' => 'Berakhir',
             'cancelled' => 'Dibatalkan',
+        ];
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            RelationManagers\ExpensesRelationManager::class,
         ];
     }
 

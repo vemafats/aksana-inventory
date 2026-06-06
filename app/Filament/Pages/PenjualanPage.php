@@ -5,6 +5,7 @@ namespace App\Filament\Pages;
 use App\Helpers\FormatHelper;
 
 use App\Enums\PaymentMethod;
+use App\Models\EventExpense;
 use App\Models\SalesItem;
 use App\Models\SalesTransaction;
 use App\Services\ReportService;
@@ -74,11 +75,15 @@ class PenjualanPage extends Page implements HasTable
 
         $avgBasket = $transactionCount > 0 ? $todaySales / $transactionCount : 0.0;
 
+        $todayExpensesQuery = EventExpense::query();
+        TimezoneQuery::whereDateColumnEquals($todayExpensesQuery, 'expense_date', $today);
+
         return [
             'today_sales' => $todaySales,
             'seven_day_sales' => $sevenDaySales,
             'items_sold_24h' => $itemsSold24h,
             'avg_basket' => $avgBasket,
+            'today_expenses' => (float) $todayExpensesQuery->sum('amount'),
         ];
     }
 

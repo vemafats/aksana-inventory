@@ -244,7 +244,7 @@
         </div>
     </div>
 
-    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px;">
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:12px; margin-bottom:16px;">
         <div style="background:#070D1E; border-radius:10px; padding:16px;">
             <p style="font-size:11px; font-weight:700; color:rgba(255,255,255,0.75); text-transform:uppercase; letter-spacing:0.1em; margin:0 0 6px;">TOTAL PENJUALAN</p>
             <p style="font-size:28px; font-weight:700; font-family:monospace; color:white; margin:0;">
@@ -264,14 +264,40 @@
             </p>
         </div>
         <div style="background:white; border:1px solid #D1DAE5; border-radius:10px; padding:16px;">
-            <p style="font-size:11px; font-weight:700; color:#3d4a5c; text-transform:uppercase; letter-spacing:0.1em; margin:0 0 6px;">MARGIN %</p>
-            <p style="font-size:28px; font-weight:700; font-family:monospace; color:{{ data_get($profitData ?? [], 'gross_margin_pct', 0) >= 20 ? '#29A85A' : '#F59100' }}; margin:0;">
-                ↗ {{ number_format((float) data_get($profitData ?? [], 'gross_margin_pct', 0), 1) }}%
+            <p style="font-size:11px; font-weight:700; color:#3d4a5c; text-transform:uppercase; letter-spacing:0.1em; margin:0 0 6px;">TOTAL BIAYA</p>
+            <p style="font-size:28px; font-weight:700; font-family:monospace; color:#F59100; margin:0;">
+                {{ \App\Filament\Pages\LaporanLengkapPage::formatRupiah((float) ($totalExpenses ?? 0)) }}
+            </p>
+        </div>
+        <div style="background:white; border:1px solid #D1DAE5; border-radius:10px; padding:16px;">
+            <p style="font-size:11px; font-weight:700; color:#3d4a5c; text-transform:uppercase; letter-spacing:0.1em; margin:0 0 6px;">TOTAL DISKON</p>
+            <p style="font-size:28px; font-weight:700; font-family:monospace; color:#070D1E; margin:0;">
+                {{ \App\Filament\Pages\LaporanLengkapPage::formatRupiah((float) ($totalDiscount ?? 0)) }}
+            </p>
+        </div>
+        @php
+            $profitGross = (float) data_get($profitData ?? [], 'gross_profit', 0);
+            $profitNet = $profitGross - (float) ($totalExpenses ?? 0);
+            $profitSales = (float) data_get($profitData ?? [], 'total_sales', 0);
+            $profitNetMargin = $profitSales > 0 ? ($profitNet / $profitSales) * 100 : 0;
+        @endphp
+        <div style="background:white; border:1px solid #D1DAE5; border-radius:10px; padding:16px;">
+            <p style="font-size:11px; font-weight:700; color:#3d4a5c; text-transform:uppercase; letter-spacing:0.1em; margin:0 0 6px;">NET PROFIT</p>
+            <p style="font-size:28px; font-weight:700; font-family:monospace; color:{{ $profitNet >= 0 ? '#29A85A' : '#F04040' }}; margin:0;">
+                {{ \App\Filament\Pages\LaporanLengkapPage::formatRupiah($profitNet) }}
+            </p>
+        </div>
+        <div style="background:white; border:1px solid #D1DAE5; border-radius:10px; padding:16px;">
+            <p style="font-size:11px; font-weight:700; color:#3d4a5c; text-transform:uppercase; letter-spacing:0.1em; margin:0 0 6px;">NET MARGIN %</p>
+            <p style="font-size:28px; font-weight:700; font-family:monospace; color:{{ $profitNetMargin >= 20 ? '#29A85A' : ($profitNetMargin >= 0 ? '#F59100' : '#F04040') }}; margin:0;">
+                ↗ {{ number_format($profitNetMargin, 1) }}%
             </p>
         </div>
     </div>
 
     @include('filament.partials.per-item-profit-table', ['perItemProfit' => $perItemProfit ?? collect()])
+
+    @include('filament.partials.expenses-by-event-table', ['expensesByEvent' => $expensesByEvent ?? collect()])
 
     <div style="background:white; border:1px solid #D1DAE5; border-radius:12px; overflow:hidden;">
         <div style="padding:14px 16px; border-bottom:1px solid #D1DAE5;">

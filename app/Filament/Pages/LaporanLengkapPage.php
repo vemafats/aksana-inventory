@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Concerns\InteractsWithEventExpenseReports;
 use App\Enums\UserRole;
 use App\Helpers\FormatHelper;
 use App\Models\Item;
@@ -12,6 +13,8 @@ use Illuminate\Support\Collection;
 
 class LaporanLengkapPage extends Page
 {
+    use InteractsWithEventExpenseReports;
+
     protected static ?string $navigationIcon = 'heroicon-o-chart-bar';
 
     protected static ?string $navigationLabel = 'Laporan Lengkap';
@@ -183,6 +186,9 @@ class LaporanLengkapPage extends Page
                 ? $reportService->bestSellingProducts($user, array_merge($filters, ['limit' => 10]))
                 : Collection::make(),
             'perItemProfit' => $reportService->grossProfitPerItem($this->dateFrom, $this->dateTo),
+            'totalExpenses' => $this->getTotalExpenses(),
+            'expensesByEvent' => $this->getExpensesByEvent(),
+            'totalDiscount' => $this->getTotalDiscount(),
         ];
     }
 }
