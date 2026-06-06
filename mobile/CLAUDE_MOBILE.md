@@ -11,68 +11,100 @@ SOURCE OF TRUTH: Global business rules, API contracts, roles, database rules, an
 static const String baseUrl = 'https://app.ftrhijab.id/api';
 ```
 
+### Version
+- **Current:** v1.4.0+16 (`pubspec.yaml`)
+- **APK naming:** `aksana-v{version}+{build}.apk` (e.g. `aksana-v1.4.0+16.apk`)
+- Build number auto-increment via `build_apk.ps1`
+
 ### Tab Bar (5 tab)
 ```
 SCAN | JUAL | STOK | STAT | AKUN
 ```
+**Default tab setelah login:** `/stock` (STOK) — bukan SCAN.
 
 ### Format Angka
-- Juta: **JT** (bukan M)
-- Ribu: **RB** (bukan K)
-- Misal: Rp 1.4 JT, Rp 550 RB
-- Implementasi: `lib/core/utils/price_format.dart`, `lib/core/utils/format_utils.dart`
-- Aturan global juga di root `CLAUDE.md` Coding Rules #11
+- **Selalu format lengkap:** `Rp 2.200.000`
+- **TIDAK BOLEH** JT/RB/M/K
+- Implementasi: `lib/core/utils/format_utils.dart` (`FormatUtils.formatPrice`)
+- Legacy alias: `lib/core/utils/price_format.dart` → delegates ke `FormatUtils`
+- Aturan global: root `CLAUDE.md` Coding Rules #11
 
-### Employee Detection
-Employee = User yang sedang login.
+### Employee / User Detection
+User yang sedang login = operator transaksi.
 `employee_id` di API = null (deprecated).
 `user_id` = user id dari token Sanctum / `auth_provider`.
 
-### APK Versioning
-Current production: `aksana-v1.2.0.apk` (v1.2.0+14)
-Format: `aksana-v{version}.apk`
+### Event-Based Location
+- Lokasi penjualan dari **Event aktif** yang di-assign ke user
+- Provider: `lib/core/event/active_event_provider.dart`, model `active_event.dart`
+- API: `GET /api/events/my-active`
+- Auto-select jika user hanya punya 1 event aktif (`MainScaffold`)
 
 ---
 
 ## Alur UI Mobile
 
-### Transaksi Jual — Flow Screen
+### Transaksi Jual
 ```
-Login → auto-detect lokasi dari user_id →
-scan QR → JUAL → cart + stepper qty →
-BAYAR → pilih metode (TUNAI/QRIS/TRANSFER) →
+Login → fetch event aktif → pilih/auto-select event →
+scan QR → JUAL → cart + stepper qty + foto per item →
+diskon nominal per item (opsional) →
+BAYAR → Tunai / QRIS / Transfer Bank →
 backend recalculate → simpan → stok berkurang
 ```
 - Feature: `lib/features/sales/`, `lib/features/scan/`
+- Foto item: `lib/features/sales/data/photo_service.dart`
 - Provider: `sales_provider.dart`, `scan_provider.dart`
+- Format harga di cart: selalu lengkap (`FormatUtils.formatPrice`)
 
-### Stok Opname — Flow Scan
+### Browse Item
 ```
-1. Buat sesi → WAJIB pilih lokasi
-2. Scan QR Code item
-3. Input QTY FISIK (qty yang dihitung secara fisik)
-4. Input QTY RUSAK (opsional)
-5. Lihat sistem qty vs fisik qty + selisih
-6. SIMPAN ITEM → lanjut scan item berikutnya
-7. Setelah semua item: SUBMIT UNTUK VALIDASI
-8. Sesi status: draft → pending_validation
+STOK → Browse Item → list katalog + foto + search →
+tap item → detail / cek stok
+```
+- `lib/features/stock_check/presentation/browse_items_screen.dart`
+- `lib/features/stock_check/data/browse_items_service.dart`
+- `lib/features/stock_check/presentation/browse_items_provider.dart`
+
+### Return Sisa
+```
+STOK menu → Return Sisa → pilih Event →
+scan barcode → input qty good + damaged → KIRIM RETURN
+```
+- `lib/features/return_stock/` — event picker + `POST /api/returns`
+- Provider: `return_stock_provider.dart`
+
+### Stok Opname
+```
+SELALU Gudang Pusat (location_id gudang pusat hardcoded/auto)
+1. Buat sesi
+2. Session screen → tombol + SCAN ITEM
+3. Scan QR → input QTY FISIK + QTY RUSAK
+4. SIMPAN ITEM → lanjut scan
+5. SUBMIT UNTUK VALIDASI → pending_validation
 ```
 - Feature: `lib/features/stock_opname/`
 - API: lihat root `CLAUDE.md` → API Stok Opname
 
-### Stok Opname Mobile — Status Fix Needed
-**Masalah saat ini:** Setelah buat sesi, tidak ada tombol scan item.
-**File yang perlu difix:**
-- `lib/features/stock_opname/presentation/` (cek semua file di folder ini)
-- Screen setelah session dibuat harus punya tombol "+ SCAN ITEM"
-- Flow: tap scan → kamera → scan QR → form qty → SIMPAN ITEM
-- API: POST /api/stock-opnames/{id}/items
+### Cek Stok
+```
+STOK → Cek Stok → scan / browse →
+card item + foto catalog di bawah card
+```
+- `lib/features/stock_check/presentation/stock_check_screen.dart`
+
+### Opname Blocking (saat sesi aktif)
+- Backend memblokir jual/barang masuk/transfer
+- Mobile: `lib/core/opname/active_opname_provider.dart`
+- Widget banner: `lib/core/widgets/opname_blocking_banner.dart`
+- Guard submit: `isActiveOpnameBlocking()` sebelum sales/stock-in
+- ⚠️ Banner belum ditampilkan global di semua tab (lihat Pending P002)
 
 ---
 
 ## Struktur Folder Flutter
 
-**Stack:** Riverpod (`StateNotifier` / providers), GoRouter (`lib/core/router/app_router.dart`), Dio (`lib/core/api/api_client.dart`), `mobile_scanner` untuk QR.
+**Stack:** Riverpod, GoRouter (`lib/core/router/app_router.dart`), Dio (`lib/core/api/api_client.dart`), `mobile_scanner` untuk QR.
 
 ```
 lib/
@@ -80,55 +112,63 @@ lib/
 ├── core/
 │   ├── api/           → Dio client, interceptors, base URL
 │   ├── auth/          → auth_provider, session/token
+│   ├── event/         → active_event.dart, active_event_provider.dart
 │   ├── opname/        → active_opname_provider (sesi opname aktif)
-│   ├── router/        → GoRouter routes & shell
+│   ├── router/        → GoRouter routes & shell (initialLocation: /stock)
 │   ├── theme/         → app_colors, app_text_styles, app_theme
-│   ├── utils/         → price_format, format_utils, location_helpers
+│   ├── utils/         → format_utils, price_format, location_helpers
 │   └── widgets/       → main_scaffold, screen_header, opname_blocking_banner
 └── features/
-    ├── auth/          → login (data/ + presentation/)
+    ├── auth/          → login
     ├── profile/       → akun / profil user
     ├── reports/       → STAT tab, laporan ringkas mobile
-    ├── return_stock/  → retur barang sisa ke gudang
-    ├── sales/         → JUAL tab, cart, checkout
+    ├── return_stock/  → retur barang sisa ke gudang (event-based)
+    ├── sales/         → JUAL tab, cart, checkout, photo_service
     ├── scan/          → SCAN tab, QR lookup katalog
-    ├── stock_check/   → cek stok per lokasi (menu di STOK tab)
-    ├── stock_in/      → barang masuk dari mobile (Admin Gudang)
+    ├── stock_check/   → cek stok, browse items + foto catalog
+    ├── stock_in/      → barang masuk (Admin Gudang)
     └── stock_opname/  → sesi opname, scan item, submit validasi
 ```
 
-**Pola per feature:** `data/` (service + API calls) + `presentation/` (screens, providers, widgets).
+**Pola per feature:** `data/` (service + API) + `presentation/` (screens, providers, widgets).
 
 | Feature | data/ | presentation/ |
 |---|---|---|
 | auth | auth API | `login_screen.dart` |
-| sales | `sales_service.dart` | `sales_screen.dart`, `sales_provider.dart`, widgets |
+| sales | `sales_service.dart`, `photo_service.dart` | `sales_screen.dart`, `sales_provider.dart` |
 | scan | `scan_service.dart` | `scan_screen.dart`, `scan_provider.dart` |
 | stock_in | `stock_in_service.dart` | `stock_in_screen.dart`, `stock_in_provider.dart` |
-| stock_opname | `stock_opname_service.dart` | `stock_opname_screen.dart`, `opname_session_screen.dart`, providers |
-| stock_check | (placeholder) | `stock_check_screen.dart`, `stock_menu_screen.dart` |
-| return_stock | `return_stock_service.dart` | `return_stock_screen.dart`, provider |
+| stock_opname | `stock_opname_service.dart` | `stock_opname_screen.dart`, `opname_session_screen.dart` |
+| stock_check | `browse_items_service.dart` | `browse_items_screen.dart`, `stock_check_screen.dart`, `stock_menu_screen.dart` |
+| return_stock | `return_stock_service.dart` | `return_stock_screen.dart`, `return_stock_provider.dart` |
 | reports | `reports_service.dart` | `reports_screen.dart`, `reports_provider.dart` |
 | profile | — | `profile_screen.dart` |
 
 ---
 
+## Build & Versioning
+
+### build_apk.ps1
+- Auto-increment **build number** (`+N`) setiap build
+- Semver (`x.y.z`) di-edit manual di `pubspec.yaml`
+- Output: `build/app/outputs/flutter-apk/aksana-v{version}+{build}.apk`
+
+### bump_version.ps1
+- Manual semver bump (major/minor/patch)
+- Setelah bump, jalankan `build_apk.ps1` untuk build
+
+### Pattern
+```
+pubspec.yaml:  version: 1.4.0+16
+APK file:      aksana-v1.4.0+16.apk
+```
+
+---
+
 ## Pending (Belum Selesai) — Mobile
 
-### P001 — Stok Opname Mobile: Tombol Scan Item
-**Masalah:** Setelah buat sesi opname, tidak ada tombol "+ SCAN ITEM"
-**File:** `lib/features/stock_opname/presentation/` (cek semua file)
-**Yang dibutuhkan:**
-1. Tombol "+ SCAN ITEM" di session detail screen
-2. Flow: tap → kamera → scan QR → form qty fisik + rusak → SIMPAN
-3. API: POST /api/stock-opnames/{id}/items
-4. Setelah save: kembali ke session screen, item muncul di list
-5. SUBMIT UNTUK VALIDASI → status jadi pending_validation
+| ID | Item | Status |
+|---|---|---|
+| P002 | Opname blocking banner global + disable tab saat sesi aktif | ⚠️ Partial — `OpnameBlockingBanner` + submit guard ada; belum refresh global di startup / semua screen |
 
-### P002 — Stok Opname: Block Semua Transaksi saat Sesi Aktif
-**Status Laravel:** ✅ Sudah diimplementasi di SalesService, StockInService, TransferService (lihat root `CLAUDE.md`)
-**Status Mobile:** 🔲 Perlu tambah warning banner + disable tab saat opname aktif
-- Check GET /api/stock-opnames/active saat app startup
-- Simpan di `activeOpnameProvider` (`lib/core/opname/active_opname_provider.dart`)
-- Tampilkan banner amber di semua screen transaksi (`lib/core/widgets/opname_blocking_banner.dart`)
-- Disable JUAL tab dan Barang Masuk
+*(P001 Stok Opname scan item: ✅ Fixed — tombol + SCAN ITEM di `opname_session_screen.dart`)*
