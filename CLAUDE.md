@@ -1,5 +1,5 @@
 # CLAUDE.md — Aksana Inventory
-# Last Updated: 2026-06-02 (v1.4.0 development cycle)
+# Last Updated: 2026-06-09 (v1.4.0 — F025 cetak QR katalog + label 30×20mm)
 # Baca seluruh file ini sebelum mengerjakan tugas apapun.
 
 > Mobile-specific (Flutter UI, folder structure, APK) lives in `mobile/CLAUDE_MOBILE.md`. This file is the source of truth for all global business rules, API, roles, database, and web admin.
@@ -347,6 +347,11 @@ Lokasi: tanpa tanggal mulai/selesai di form
 User: tanpa assignment lokasi langsung
 ```
 
+### Katalog
+```
+tombol "Cetak QR Code" di header → modal ZPL Zebra GC420 (sama seperti Stok)
+```
+
 ### Sub-tab Stok
 ```
 RINGKASAN         → stat cards (Total SKU, Total Unit, Inventory, Stok Kritis)
@@ -355,7 +360,7 @@ RINGKASAN         → stat cards (Total SKU, Total Unit, Inventory, Stok Kritis)
 RIWAYAT PERGERAKAN → movement table
 HARGA JUAL DASAR  → harga + margin (modal & margin butuh password)
 UPDATE HARGA STOK → Owner only, edit harga transaksi dari mobile
-Cetak QR Code     → modal ZPL, Zebra GC420 (Browser Print localhost:9100)
+Cetak QR Code     → modal ZPL, Zebra GC420 (Browser Print localhost:9100), ukuran: 30×20 mm (default), 40×30 mm, 50×25 mm
 ```
 
 ### Sub-tab Distribusi
@@ -497,6 +502,7 @@ php artisan optimize:clear && php artisan view:clear
 | F022 | Browse Item di mobile | ✅ Implemented |
 | F023 | Foto catalog di browse/cek stok | ✅ Implemented |
 | F024 | Foto per item di cart penjualan | ✅ Implemented |
+| F025 | Cetak QR Code di halaman Katalog (tombol header + modal ZPL) | ✅ Implemented |
 
 ---
 
