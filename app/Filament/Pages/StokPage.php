@@ -110,7 +110,7 @@ class StokPage extends Page
 
     public string $printItemBarcode = '';
 
-    public string $printLabelSize = '40x30';
+    public string $printLabelSize = '30x20';
 
     public int $printQty = 1;
 

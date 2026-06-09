@@ -145,7 +145,7 @@
         return {
             open: false,
             selectedBarcode: '',
-            labelSize: '40x30',
+            labelSize: '30x20',
             qty: 1,
             printing: false,
             statusMsg: '',
