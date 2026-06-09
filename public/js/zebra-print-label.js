@@ -14,6 +14,9 @@
     const ZPL_TEMPLATE_50x25 =
         '^XA\n^CI28\n^PW400\n^LL200\n^LH0,0\n^FO10,10^A0N,32,32^FD{CODE}^FS\n^FO10,55^BQN,2,4^FDMA,{CODE}^FS\n^PQ{QTY}\n^XZ';
 
+    const ZPL_TEMPLATE_30x20 =
+        '^XA\n^CI28\n^PW240\n^LL160\n^LH0,0\n^FO20,140^A0N,18,18^FD{CODE}^FS\n^FO50,10^BQN,2,5^FDMA,{CODE}^FS\n^PQ{QTY}\n^XZ';
+
     function zplStorageKey(size) {
         return 'aksana_zpl_' + size;
     }
@@ -155,6 +158,10 @@
             getDefaultZpl(size) {
                 if (size === '40x30') {
                     return ZPL_TEMPLATE_40x30;
+                }
+
+                if (size === '30x20') {
+                    return ZPL_TEMPLATE_30x20;
                 }
 
                 return ZPL_TEMPLATE_50x25;
