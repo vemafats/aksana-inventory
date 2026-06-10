@@ -8,6 +8,7 @@ use App\Helpers\SupplierCostHelper;
 use App\Models\Category;
 use App\Models\Item;
 use App\Models\Location;
+use App\Models\SalesItem;
 use App\Models\StockBalance;
 use App\Models\StockInItem;
 use App\Models\StockInTransaction;
@@ -660,6 +661,71 @@ class StokPage extends Page
         return $transaction->stockInItems->contains(
             fn (StockInItem $row): bool => SupplierCostHelper::isUnset($row->supplier_cost)
         );
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, array{rank: int, item_name: string, barcode: string, qty: int}>
+     */
+    public function getTopStockItems(): \Illuminate\Support\Collection
+    {
+        return StockBalance::query()
+            ->where('stock_status', 'available')
+            ->selectRaw('item_id, SUM(qty) as total_qty')
+            ->groupBy('item_id')
+            ->orderByDesc('total_qty')
+            ->limit(5)
+            ->with('item')
+            ->get()
+            ->map(fn ($row, $i) => [
+                'rank' => $i + 1,
+                'item_name' => $row->item?->item_name ?? '-',
+                'barcode' => $row->item?->barcode ?? '-',
+                'qty' => (int) $row->total_qty,
+            ]);
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, array{rank: int, item_name: string, barcode: string, qty: int, min_stock: int}>
+     */
+    public function getLowStockItems(): \Illuminate\Support\Collection
+    {
+        return StockBalance::query()
+            ->where('stock_status', 'available')
+            ->selectRaw('item_id, SUM(qty) as total_qty')
+            ->groupBy('item_id')
+            ->havingRaw('SUM(qty) > 0')
+            ->orderBy('total_qty')
+            ->limit(5)
+            ->with('item')
+            ->get()
+            ->map(fn ($row, $i) => [
+                'rank' => $i + 1,
+                'item_name' => $row->item?->item_name ?? '-',
+                'barcode' => $row->item?->barcode ?? '-',
+                'qty' => (int) $row->total_qty,
+                'min_stock' => 10,
+            ]);
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, array{rank: int, item_name: string, barcode: string, qty_sold: int}>
+     */
+    public function getBestSellingItems(): \Illuminate\Support\Collection
+    {
+        return SalesItem::query()
+            ->selectRaw('item_id, SUM(qty) as total_sold')
+            ->whereHas('salesTransaction', fn ($q) => $q->where('created_at', '>=', now()->subDays(30)))
+            ->groupBy('item_id')
+            ->orderByDesc('total_sold')
+            ->limit(5)
+            ->with('item')
+            ->get()
+            ->map(fn ($row, $i) => [
+                'rank' => $i + 1,
+                'item_name' => $row->item?->item_name ?? '-',
+                'barcode' => $row->item?->barcode ?? '-',
+                'qty_sold' => (int) $row->total_sold,
+            ]);
     }
 
     protected function getViewData(): array

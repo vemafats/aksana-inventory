@@ -57,6 +57,87 @@
             @endforeach
         </div>
 
+        {{-- 3 Info Widgets --}}
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+            {{-- Stok Terbanyak --}}
+            <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                        <h3 class="text-xs font-bold uppercase tracking-wide text-gray-700">Stok Terbanyak</h3>
+                    </div>
+                    <span class="text-xs text-gray-400">qty tertinggi</span>
+                </div>
+                <div class="divide-y divide-gray-50">
+                    @forelse($this->getTopStockItems() as $row)
+                    <div class="px-4 py-2.5 flex items-center gap-3">
+                        <span class="text-xs font-bold text-gray-300 w-4">{{ str_pad($row['rank'], 2, '0', STR_PAD_LEFT) }}</span>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs font-semibold text-gray-900 truncate">{{ $row['item_name'] }}</p>
+                            <p class="text-[10px] font-mono text-gray-400">{{ $row['barcode'] }}</p>
+                        </div>
+                        <span class="text-sm font-bold text-gray-900">{{ number_format($row['qty']) }}</span>
+                    </div>
+                    @empty
+                    <div class="px-4 py-4 text-xs text-gray-400 text-center">Belum ada data stok.</div>
+                    @endforelse
+                </div>
+            </div>
+
+            {{-- Stok Paling Sedikit --}}
+            <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                        <h3 class="text-xs font-bold uppercase tracking-wide text-gray-700">Stok Paling Sedikit</h3>
+                    </div>
+                    <span class="text-xs text-gray-400">butuh restock</span>
+                </div>
+                <div class="divide-y divide-gray-50">
+                    @forelse($this->getLowStockItems() as $row)
+                    <div class="px-4 py-2.5 flex items-center gap-3">
+                        <span class="text-xs font-bold text-gray-300 w-4">{{ str_pad($row['rank'], 2, '0', STR_PAD_LEFT) }}</span>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs font-semibold text-gray-900 truncate">{{ $row['item_name'] }}</p>
+                            <p class="text-[10px] font-mono text-gray-400">{{ $row['barcode'] }}</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-sm font-bold text-orange-600">{{ number_format($row['qty']) }}</span>
+                            <p class="text-[10px] text-gray-400">min {{ $row['min_stock'] }}</p>
+                        </div>
+                    </div>
+                    @empty
+                    <div class="px-4 py-4 text-xs text-gray-400 text-center">Semua stok aman.</div>
+                    @endforelse
+                </div>
+            </div>
+
+            {{-- Paling Laku 30 Hari --}}
+            <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                        <h3 class="text-xs font-bold uppercase tracking-wide text-gray-700">Paling Laku (30H)</h3>
+                    </div>
+                    <span class="text-xs text-gray-400">best seller</span>
+                </div>
+                <div class="divide-y divide-gray-50">
+                    @forelse($this->getBestSellingItems() as $row)
+                    <div class="px-4 py-2.5 flex items-center gap-3">
+                        <span class="text-xs font-bold text-gray-300 w-4">{{ str_pad($row['rank'], 2, '0', STR_PAD_LEFT) }}</span>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs font-semibold text-gray-900 truncate">{{ $row['item_name'] }}</p>
+                            <p class="text-[10px] font-mono text-gray-400">{{ $row['barcode'] }}</p>
+                        </div>
+                        <span class="text-sm font-bold text-blue-600">{{ number_format($row['qty_sold']) }}</span>
+                    </div>
+                    @empty
+                    <div class="px-4 py-4 text-xs text-gray-400 text-center">Belum ada penjualan 30 hari terakhir.</div>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+
         <div class="flex flex-wrap items-center justify-between gap-3">
             <p class="text-xs text-[#3d4a5c]">Cetak label QR langsung ke printer Zebra GC420 (ZPL).</p>
             <button
@@ -69,39 +150,42 @@
             </button>
         </div>
 
-        {{-- Total Semua Stok per Item --}}
+        {{-- Total Semua Stok per Item — Collapsible --}}
         <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
             <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                 <h3 class="text-sm font-semibold">Total Semua Stok per Item</h3>
-                <span class="text-xs text-gray-400">{{ $totalSku ?? 0 }} item · {{ ($allLocations ?? collect())->count() }} lokasi</span>
+                <span class="text-xs text-gray-400">{{ $totalSku ?? 0 }} item · klik baris untuk detail lokasi</span>
             </div>
             <div class="overflow-x-auto">
-                <table class="w-full text-sm min-w-max">
+                <table class="w-full text-sm">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th class="px-4 py-2 text-left text-xs font-bold uppercase tracking-wide text-gray-400 sticky left-0 bg-gray-50">ITEM</th>
+                            <th class="px-4 py-2 text-left text-xs font-bold uppercase tracking-wide text-gray-400 w-6"></th>
+                            <th class="px-4 py-2 text-left text-xs font-bold uppercase tracking-wide text-gray-400">ITEM</th>
                             <th class="px-4 py-2 text-left text-xs font-bold uppercase tracking-wide text-gray-400">BARCODE</th>
-                            @foreach($allLocations ?? [] as $location)
-                            <th class="px-3 py-2 text-right text-xs font-bold uppercase tracking-wide text-gray-400 whitespace-nowrap">
-                                {{ \Illuminate\Support\Str::limit(strtoupper($location->location_name), 12, '') }}
-                            </th>
-                            @endforeach
-                            <th class="px-4 py-2 text-right text-xs font-bold uppercase tracking-wide text-gray-400">TOTAL</th>
+                            <th class="px-4 py-2 text-right text-xs font-bold uppercase tracking-wide text-gray-400">TOTAL STOK</th>
+                            <th class="px-4 py-2 text-right text-xs font-bold uppercase tracking-wide text-gray-400">RUSAK</th>
                             <th class="px-4 py-2 text-center text-xs font-bold uppercase tracking-wide text-gray-400">STATUS</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100">
-                        @forelse($stockItems ?? [] as $item)
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-4 py-3 font-medium sticky left-0 bg-white">{{ $item->item_name }}</td>
-                            <td class="px-4 py-3 font-mono text-xs text-gray-500">{{ $item->barcode }}</td>
-                            @foreach($allLocations ?? [] as $location)
-                            @php($locQty = $this->locationQtyFor($item, $location->id))
-                            <td class="px-3 py-3 text-right font-mono text-xs {{ $locQty > 0 ? 'font-bold text-gray-900' : 'text-gray-300' }}">
-                                {{ $locQty > 0 ? $locQty : '—' }}
+                    @forelse($stockItems ?? [] as $item)
+                    <tbody x-data="{ open: false }" class="border-t border-gray-100">
+                        <tr
+                            @click="open = !open"
+                            class="cursor-pointer hover:bg-gray-50 transition-colors"
+                            :class="open ? 'bg-blue-50' : ''"
+                        >
+                            <td class="px-4 py-3 w-6">
+                                <svg class="w-3.5 h-3.5 text-gray-400 transition-transform" :class="open ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                </svg>
                             </td>
-                            @endforeach
-                            <td class="px-4 py-3 text-right font-mono font-bold">{{ (int) ($item->total_available ?? 0) }}</td>
+                            <td class="px-4 py-3 font-medium text-sm text-gray-900">{{ $item->item_name }}</td>
+                            <td class="px-4 py-3 font-mono text-xs text-gray-500">{{ $item->barcode }}</td>
+                            <td class="px-4 py-3 text-right font-mono font-bold text-gray-900">{{ (int) ($item->total_available ?? 0) }}</td>
+                            <td class="px-4 py-3 text-right font-mono text-xs {{ ($item->total_damaged ?? 0) > 0 ? 'text-orange-600 font-bold' : 'text-gray-300' }}">
+                                {{ ($item->total_damaged ?? 0) > 0 ? (int) $item->total_damaged : '—' }}
+                            </td>
                             <td class="px-4 py-3 text-center">
                                 @if(($item->total_available ?? 0) == 0)
                                     <span class="px-2 py-1 text-xs font-bold rounded-full bg-red-100 text-red-600">HABIS</span>
@@ -112,10 +196,36 @@
                                 @endif
                             </td>
                         </tr>
-                        @empty
-                        <tr><td colspan="{{ 4 + ($allLocations ?? collect())->count() }}" class="px-4 py-8 text-center text-gray-400 text-sm">Belum ada stok. Lakukan barang masuk terlebih dahulu.</td></tr>
-                        @endforelse
+                        <tr x-show="open" x-transition class="bg-blue-50/50">
+                            <td colspan="6" class="px-0 py-0">
+                                <div class="px-8 py-3 border-t border-blue-100">
+                                    <p class="text-xs font-bold uppercase tracking-wide text-blue-600 mb-2">Distribusi per Lokasi</p>
+                                    <div class="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4">
+                                        @foreach($item->per_location ?? [] as $loc)
+                                        @if($loc['qty'] > 0)
+                                        <div class="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-blue-100">
+                                            <span class="text-xs text-gray-600 truncate">{{ $loc['location_name'] }}</span>
+                                            <span class="text-xs font-bold text-gray-900 ml-2">{{ $loc['qty'] }}</span>
+                                        </div>
+                                        @endif
+                                        @endforeach
+                                        @if(collect($item->per_location ?? [])->where('qty', '>', 0)->isEmpty())
+                                        <div class="col-span-4 text-xs text-gray-400">Tidak ada stok di lokasi manapun.</div>
+                                        @endif
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
                     </tbody>
+                    @empty
+                    <tbody>
+                        <tr>
+                            <td colspan="6" class="px-4 py-8 text-center text-gray-400 text-sm">
+                                Belum ada stok. Lakukan barang masuk terlebih dahulu.
+                            </td>
+                        </tr>
+                    </tbody>
+                    @endforelse
                 </table>
             </div>
         </div>
