@@ -199,7 +199,7 @@ class StockMovementServiceTest extends TestCase
             ->where('brand_id', $brand->id)
             ->firstOrFail();
         $color = Color::where('name', 'Hitam')->firstOrFail();
-        $size = Size::where('name', '40')->where('size_type', 'shoes')->firstOrFail();
+        $size = Size::where('name', '40')->where('category_id', $category->id)->firstOrFail();
 
         return app(CatalogService::class)->createCatalogItem([
             'category_id' => $category->id,

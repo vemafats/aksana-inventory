@@ -158,7 +158,8 @@ class StockController extends Controller
             'item.category:id,name,code',
             'item.brand:id,name',
             'item.color:id,name,code',
-            'item.size:id,name,size_type',
+            'item.size:id,name,category_id',
+            'item.size.category:id,name',
             'location:id,location_code,location_name,location_type,status',
         ];
     }

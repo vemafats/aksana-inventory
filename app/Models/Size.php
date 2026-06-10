@@ -21,9 +21,12 @@ class Size extends Model
         'name',
         'code',
         'category_id',
-        'size_type',
         'sort_order',
         'is_active',
+    ];
+
+    protected $hidden = [
+        'size_type',
     ];
 
     protected function casts(): array

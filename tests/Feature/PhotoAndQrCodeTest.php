@@ -124,7 +124,7 @@ class PhotoAndQrCodeTest extends TestCase
             ->where('brand_id', $brand->id)
             ->firstOrFail();
         $color = Color::where('name', 'Hitam')->firstOrFail();
-        $size = Size::where('name', '40')->where('size_type', 'shoes')->firstOrFail();
+        $size = Size::where('name', '40')->where('category_id', $category->id)->firstOrFail();
 
         return [
             'category_id' => $category->id,
@@ -143,8 +143,9 @@ class PhotoAndQrCodeTest extends TestCase
     private function createCatalogItemWithSize(string $sizeName): Item
     {
         $payload = $this->catalogPayload();
+        $category = Category::where('code', 'SEP')->firstOrFail();
         $payload['size_id'] = Size::where('name', $sizeName)
-            ->where('size_type', 'shoes')
+            ->where('category_id', $category->id)
             ->firstOrFail()
             ->id;
 

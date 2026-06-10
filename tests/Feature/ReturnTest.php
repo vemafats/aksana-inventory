@@ -214,7 +214,7 @@ class ReturnTest extends TestCase
             ->where('brand_id', $brand->id)
             ->firstOrFail();
         $color = \App\Models\Color::where('name', 'Hitam')->firstOrFail();
-        $size = \App\Models\Size::where('name', '40')->where('size_type', 'shoes')->firstOrFail();
+        $size = \App\Models\Size::where('name', '40')->where('category_id', $category->id)->firstOrFail();
 
         return app(CatalogService::class)->createCatalogItem([
             'category_id' => $category->id,

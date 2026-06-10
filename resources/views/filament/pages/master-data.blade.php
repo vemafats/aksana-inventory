@@ -130,7 +130,7 @@
                         <tbody>
                             @forelse ($rows as $brand)
                                 <tr>
-                                    <td class="aksana-mono text-[var(--aksana-muted)]">{{ $this->displayCode($brand->name) }}</td>
+                                    <td class="aksana-mono text-[var(--aksana-muted)]">{{ $brand->code ?? '—' }}</td>
                                     <td class="font-semibold">{{ $brand->name }}</td>
                                     <td class="text-[var(--aksana-muted)]">—</td>
                                     <td>
@@ -165,7 +165,7 @@
                         <tbody>
                             @forelse ($rows as $model)
                                 <tr>
-                                    <td class="aksana-mono text-[var(--aksana-muted)]">{{ $this->displayCode($model->name) }}</td>
+                                    <td class="aksana-mono text-[var(--aksana-muted)]">{{ $model->code ?? '—' }}</td>
                                     <td class="font-semibold">{{ $model->name }}</td>
                                     <td>{{ $model->category?->name ?? '—' }}</td>
                                     <td>
@@ -200,7 +200,7 @@
                             @forelse ($rows as $color)
                                 @php $hex = $color->code ?? '#CCCCCC'; @endphp
                                 <tr>
-                                    <td class="aksana-mono text-[var(--aksana-muted)]">{{ $this->displayCode($color->name) }}</td>
+                                    <td class="aksana-mono text-[var(--aksana-muted)]">{{ $color->item_code ?? '—' }}</td>
                                     <td class="font-semibold">{{ $color->name }}</td>
                                     <td>
                                         <span class="inline-flex items-center gap-2 font-mono text-xs">
@@ -223,6 +223,7 @@
                 @elseif ($selectedTab === 'sizes')
                     @php
                         $rows = Size::query()
+                            ->with('category')
                             ->when($like, fn ($q) => $q->where('name', 'like', $like))
                             ->orderBy('sort_order')
                             ->get();
@@ -232,16 +233,16 @@
                             <tr>
                                 <th>Kode</th>
                                 <th>Label</th>
-                                <th>Sistem</th>
+                                <th>Kategori</th>
                                 <th>Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse ($rows as $size)
                                 <tr>
-                                    <td class="aksana-mono text-[var(--aksana-muted)]">{{ str_pad((string) $size->sort_order, 2, '0', STR_PAD_LEFT) }}</td>
+                                    <td class="aksana-mono text-[var(--aksana-muted)]">{{ $size->code ?? '—' }}</td>
                                     <td class="font-semibold">{{ $size->name }}</td>
-                                    <td>{{ match ($size->size_type) { 'clothing' => 'Pakaian', 'shoes' => 'Sepatu', default => $size->size_type ?? '—' } }}</td>
+                                    <td>{{ $size->category?->name ?? '—' }}</td>
                                     <td>
                                         <a href="{{ SizeResource::getUrl('edit', ['record' => $size]) }}" title="Edit"
                                             style="display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border:1px solid #e5e7eb; border-radius:8px; background:#f9fafb;">

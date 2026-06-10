@@ -42,7 +42,7 @@ class CatalogController extends Controller
                 'brand',
                 'productModel',
                 'color',
-                'size',
+                'size.category',
                 'stockBalances' => fn ($query) => $query->select([
                     'id',
                     'item_id',
@@ -92,7 +92,7 @@ class CatalogController extends Controller
             'brand',
             'productModel',
             'color',
-            'size',
+            'size.category',
             'stockBalances.location',
         ]);
 
@@ -112,7 +112,7 @@ class CatalogController extends Controller
             $request->user(),
         );
 
-        $item->load(['category', 'brand', 'productModel', 'color', 'size']);
+        $item->load(['category', 'brand', 'productModel', 'color', 'size.category']);
 
         return response()->json([
             'success' => true,
@@ -124,7 +124,7 @@ class CatalogController extends Controller
     public function update(UpdateCatalogRequest $request, Item $item): JsonResponse
     {
         $item = $this->catalogService->updateCatalogItem($item, $request->validated());
-        $item->load(['category', 'brand', 'productModel', 'color', 'size']);
+        $item->load(['category', 'brand', 'productModel', 'color', 'size.category']);
 
         return response()->json([
             'success' => true,
@@ -142,7 +142,7 @@ class CatalogController extends Controller
                 'brand',
                 'productModel',
                 'color',
-                'size',
+                'size.category',
                 'stockBalances.location',
             ])
             ->first();
