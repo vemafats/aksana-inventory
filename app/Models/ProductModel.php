@@ -23,6 +23,7 @@ class ProductModel extends Model
         'category_id',
         'brand_id',
         'name',
+        'code',
         'is_active',
     ];
 

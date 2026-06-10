@@ -31,6 +31,11 @@ class ColorResource extends Resource
                     ->required()
                     ->maxLength(255)
                     ->unique(ignoreRecord: true),
+                Forms\Components\TextInput::make('item_code')
+                    ->label('Kode')
+                    ->nullable()
+                    ->maxLength(50)
+                    ->helperText('Diisi manual oleh user'),
                 Forms\Components\ColorPicker::make('code')
                     ->label('Kode Warna'),
                 Forms\Components\Toggle::make('is_active')
@@ -47,6 +52,10 @@ class ColorResource extends Resource
                     ->label('Nama')
                     ->searchable()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('item_code')
+                    ->label('Kode')
+                    ->searchable()
+                    ->fontFamily(\Filament\Support\Enums\FontFamily::Mono),
                 Tables\Columns\TextColumn::make('swatch')
                     ->label('Sampel')
                     ->state(fn (Color $record): string => $record->code ?? '#cccccc')
@@ -55,9 +64,6 @@ class ColorResource extends Resource
                         e($state)
                     ))
                     ->html(),
-                Tables\Columns\TextColumn::make('code')
-                    ->label('Kode')
-                    ->searchable(),
                 Tables\Columns\ToggleColumn::make('is_active')
                     ->label('Aktif'),
             ])

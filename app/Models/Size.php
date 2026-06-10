@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Size extends Model
@@ -18,6 +19,8 @@ class Size extends Model
 
     protected $fillable = [
         'name',
+        'code',
+        'category_id',
         'size_type',
         'sort_order',
         'is_active',
@@ -29,6 +32,11 @@ class Size extends Model
             'is_active' => 'boolean',
             'sort_order' => 'integer',
         ];
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
     }
 
     public function items(): HasMany

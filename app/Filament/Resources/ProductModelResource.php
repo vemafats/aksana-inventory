@@ -42,6 +42,11 @@ class ProductModelResource extends Resource
                     ->label('Nama Model')
                     ->required()
                     ->maxLength(255),
+                Forms\Components\TextInput::make('code')
+                    ->label('Kode')
+                    ->nullable()
+                    ->maxLength(50)
+                    ->helperText('Diisi manual oleh user'),
                 Forms\Components\Toggle::make('is_active')
                     ->label('Aktif')
                     ->default(true),
@@ -64,6 +69,10 @@ class ProductModelResource extends Resource
                     ->label('Nama Model')
                     ->searchable()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('code')
+                    ->label('Kode')
+                    ->searchable()
+                    ->fontFamily(\Filament\Support\Enums\FontFamily::Mono),
                 Tables\Columns\IconColumn::make('is_active')
                     ->label('Aktif')
                     ->boolean(),

@@ -30,12 +30,16 @@ class SizeResource extends Resource
                     ->label('Nama')
                     ->required()
                     ->maxLength(255),
-                Forms\Components\Select::make('size_type')
-                    ->label('Tipe Ukuran')
-                    ->options([
-                        'clothing' => 'Pakaian',
-                        'shoes' => 'Sepatu',
-                    ])
+                Forms\Components\TextInput::make('code')
+                    ->label('Kode')
+                    ->nullable()
+                    ->maxLength(50)
+                    ->helperText('Diisi manual oleh user'),
+                Forms\Components\Select::make('category_id')
+                    ->label('Kategori')
+                    ->relationship('category', 'name', fn ($query) => $query->where('is_active', true))
+                    ->searchable()
+                    ->preload()
                     ->nullable(),
                 Forms\Components\TextInput::make('sort_order')
                     ->label('Urutan')
@@ -57,13 +61,14 @@ class SizeResource extends Resource
                     ->label('Nama')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('size_type')
-                    ->label('Tipe')
-                    ->formatStateUsing(fn (?string $state): string => match ($state) {
-                        'clothing' => 'Pakaian',
-                        'shoes' => 'Sepatu',
-                        default => $state ?? '-',
-                    }),
+                Tables\Columns\TextColumn::make('code')
+                    ->label('Kode')
+                    ->searchable()
+                    ->fontFamily(\Filament\Support\Enums\FontFamily::Mono),
+                Tables\Columns\TextColumn::make('category.name')
+                    ->label('Kategori')
+                    ->sortable()
+                    ->searchable(),
                 Tables\Columns\TextColumn::make('sort_order')
                     ->label('Urutan')
                     ->sortable(),
@@ -71,12 +76,9 @@ class SizeResource extends Resource
                     ->label('Aktif'),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('size_type')
-                    ->label('Tipe Ukuran')
-                    ->options([
-                        'clothing' => 'Pakaian',
-                        'shoes' => 'Sepatu',
-                    ]),
+                Tables\Filters\SelectFilter::make('category_id')
+                    ->label('Kategori')
+                    ->relationship('category', 'name'),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
