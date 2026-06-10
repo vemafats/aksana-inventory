@@ -30,6 +30,15 @@ class MasterDataPage extends Page
 
     public string $search = '';
 
+    public function mount(): void
+    {
+        $tab = request()->query('tab', 'categories');
+
+        if (array_key_exists($tab, $this->masterTabs)) {
+            $this->selectedTab = $tab;
+        }
+    }
+
     public static function canAccess(): bool
     {
         $user = auth()->user();

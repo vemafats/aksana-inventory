@@ -19,6 +19,6 @@ class EditBrand extends EditRecord
 
     protected function getRedirectUrl(): string
     {
-        return '/admin/master-data';
+        return '/admin/master-data?tab=brands';
     }
 }

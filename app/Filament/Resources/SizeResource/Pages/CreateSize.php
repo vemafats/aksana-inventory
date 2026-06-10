@@ -11,6 +11,6 @@ class CreateSize extends CreateRecord
 
     protected function getRedirectUrl(): string
     {
-        return '/admin/master-data';
+        return '/admin/master-data?tab=sizes';
     }
 }
