@@ -148,7 +148,7 @@
                 @elseif ($selectedTab === 'models')
                     @php
                         $rows = ProductModel::query()
-                            ->with('category')
+                            ->with(['category', 'brand'])
                             ->when($like, fn ($q) => $q->where('name', 'like', $like))
                             ->orderBy('name')
                             ->get();
@@ -159,6 +159,7 @@
                                 <th>Kode</th>
                                 <th>Nama Model</th>
                                 <th>Kategori</th>
+                                <th>Merk</th>
                                 <th>Aksi</th>
                             </tr>
                         </thead>
@@ -168,6 +169,7 @@
                                     <td class="aksana-mono text-[var(--aksana-muted)]">{{ $model->code ?? '—' }}</td>
                                     <td class="font-semibold">{{ $model->name }}</td>
                                     <td>{{ $model->category?->name ?? '—' }}</td>
+                                    <td>{{ $model->brand?->name ?? '—' }}</td>
                                     <td>
                                         <a href="{{ ProductModelResource::getUrl('edit', ['record' => $model]) }}" title="Edit"
                                             style="display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border:1px solid #e5e7eb; border-radius:8px; background:#f9fafb;">
@@ -176,7 +178,7 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="4" class="py-6 text-center text-[var(--aksana-muted)]">Tidak ada data.</td></tr>
+                                <tr><td colspan="5" class="py-6 text-center text-[var(--aksana-muted)]">Tidak ada data.</td></tr>
                             @endforelse
                         </tbody>
                     </table>
