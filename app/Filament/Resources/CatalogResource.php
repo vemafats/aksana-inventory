@@ -205,6 +205,50 @@ class CatalogResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make()
+                    ->visible(fn (): bool => in_array(auth()->user()?->role, [\App\Enums\UserRole::OWNER, \App\Enums\UserRole::ADMIN], true))
+                    ->modalHeading('Hapus Item Katalog')
+                    ->modalDescription(fn (Item $record): string => "Apakah Anda yakin ingin menghapus \"{$record->item_name}\" ({$record->barcode})? Tindakan ini tidak dapat dibatalkan.")
+                    ->modalSubmitActionLabel('Ya, Hapus')
+                    ->before(function (Tables\Actions\DeleteAction $action, Item $record) {
+                        $totalStock = (int) $record->stockBalances()->sum('qty');
+
+                        if ($totalStock > 0) {
+                            \Filament\Notifications\Notification::make()
+                                ->title('Tidak dapat menghapus item')
+                                ->body("Item \"{$record->item_name}\" masih memiliki stok ({$totalStock} unit) di satu atau lebih lokasi. Pastikan stok item ini sudah 0 (kosongkan via retur/transfer/penjualan) sebelum menghapus.")
+                                ->danger()
+                                ->send();
+
+                            $action->cancel();
+
+                            return;
+                        }
+
+                        $hasHistory = $record->stockMovements()->exists()
+                            || $record->stockInItems()->exists()
+                            || $record->transferItems()->exists()
+                            || $record->salesItems()->exists()
+                            || $record->stockOpnameItems()->exists();
+
+                        if ($hasHistory) {
+                            \Filament\Notifications\Notification::make()
+                                ->title('Tidak dapat menghapus item')
+                                ->body("Item \"{$record->item_name}\" memiliki riwayat transaksi (barang masuk, transfer, penjualan, atau opname) dan tidak dapat dihapus untuk menjaga integritas data.")
+                                ->danger()
+                                ->send();
+
+                            $action->cancel();
+
+                            return;
+                        }
+                    })
+                    ->after(function (Item $record) {
+                        \Filament\Notifications\Notification::make()
+                            ->title('Item katalog berhasil dihapus')
+                            ->success()
+                            ->send();
+                    }),
                 Tables\Actions\Action::make('printQrCode')
                     ->label('Cetak QR Code')
                     ->icon('heroicon-o-printer')
