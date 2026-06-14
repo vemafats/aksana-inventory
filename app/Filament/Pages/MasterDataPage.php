@@ -30,6 +30,10 @@ class MasterDataPage extends Page
 
     public string $search = '';
 
+    public string $sortColumn = '';
+
+    public string $sortDirection = 'asc';
+
     public function mount(): void
     {
         $tab = request()->query('tab', 'categories');
@@ -90,6 +94,27 @@ class MasterDataPage extends Page
 
         $this->selectedTab = $tab;
         $this->search = '';
+        $this->sortColumn = '';
+        $this->sortDirection = 'asc';
+    }
+
+    public function toggleSort(string $column): void
+    {
+        if ($this->sortColumn === $column) {
+            $this->sortDirection = $this->sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            $this->sortColumn = $column;
+            $this->sortDirection = 'asc';
+        }
+    }
+
+    public function sortIcon(string $column): string
+    {
+        if ($this->sortColumn !== $column) {
+            return 'heroicon-o-chevron-up-down';
+        }
+
+        return $this->sortDirection === 'asc' ? 'heroicon-o-chevron-up' : 'heroicon-o-chevron-down';
     }
 
     public function displayCode(string $name): string
