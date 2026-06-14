@@ -175,13 +175,16 @@
                     </table>
                 @elseif ($selectedTab === 'models')
                     @php
-                        $sortMap = ['code' => 'code', 'name' => 'name'];
-                        $sortCol = $sortMap[$this->sortColumn] ?? 'name';
+                        $sortMap = ['code' => 'product_models.code', 'name' => 'product_models.name', 'kategori' => 'categories.name', 'merk' => 'brands.name'];
+                        $sortCol = $sortMap[$this->sortColumn] ?? 'product_models.name';
                         $sortDir = in_array($this->sortDirection, ['asc', 'desc']) ? $this->sortDirection : 'asc';
 
                         $rows = ProductModel::query()
+                            ->select('product_models.*')
                             ->with(['category', 'brand'])
-                            ->when($like, fn ($q) => $q->where('name', 'like', $like))
+                            ->leftJoin('categories', 'categories.id', '=', 'product_models.category_id')
+                            ->leftJoin('brands', 'brands.id', '=', 'product_models.brand_id')
+                            ->when($like, fn ($q) => $q->where('product_models.name', 'like', $like))
                             ->orderBy($sortCol, $sortDir)
                             ->get();
                     @endphp
@@ -200,8 +203,18 @@
                                         <x-dynamic-component :component="$this->sortIcon('name')" style="width:14px; height:14px;" />
                                     </button>
                                 </th>
-                                <th>Kategori</th>
-                                <th>Merk</th>
+                                <th>
+                                    <button wire:click="toggleSort('kategori')" type="button" style="display:flex; align-items:center; gap:4px; background:none; border:none; cursor:pointer; font:inherit; color:inherit; padding:0;">
+                                        Kategori
+                                        <x-dynamic-component :component="$this->sortIcon('kategori')" style="width:14px; height:14px;" />
+                                    </button>
+                                </th>
+                                <th>
+                                    <button wire:click="toggleSort('merk')" type="button" style="display:flex; align-items:center; gap:4px; background:none; border:none; cursor:pointer; font:inherit; color:inherit; padding:0;">
+                                        Merk
+                                        <x-dynamic-component :component="$this->sortIcon('merk')" style="width:14px; height:14px;" />
+                                    </button>
+                                </th>
                                 <th>Aksi</th>
                             </tr>
                         </thead>
@@ -280,20 +293,23 @@
                     </table>
                 @elseif ($selectedTab === 'sizes')
                     @php
-                        $sortMap = ['code' => 'code', 'name' => 'name'];
-                        if ($this->sortColumn === '') {
-                            $sortCol = 'sort_order';
-                            $sortDir = 'asc';
+                        $sortMap = ['code' => 'sizes.code', 'name' => 'sizes.name', 'kategori' => 'categories.name'];
+                        $sortCol = $sortMap[$this->sortColumn] ?? null;
+                        $sortDir = in_array($this->sortDirection, ['asc', 'desc']) ? $this->sortDirection : 'asc';
+
+                        $query = Size::query()
+                            ->select('sizes.*')
+                            ->with('category')
+                            ->leftJoin('categories', 'categories.id', '=', 'sizes.category_id')
+                            ->when($like, fn ($q) => $q->where('sizes.name', 'like', $like));
+
+                        if ($sortCol !== null) {
+                            $query->orderBy($sortCol, $sortDir);
                         } else {
-                            $sortCol = $sortMap[$this->sortColumn] ?? 'name';
-                            $sortDir = in_array($this->sortDirection, ['asc', 'desc']) ? $this->sortDirection : 'asc';
+                            $query->orderBy('sizes.sort_order');
                         }
 
-                        $rows = Size::query()
-                            ->with('category')
-                            ->when($like, fn ($q) => $q->where('name', 'like', $like))
-                            ->orderBy($sortCol, $sortDir)
-                            ->get();
+                        $rows = $query->get();
                     @endphp
                     <table class="aksana-table w-full">
                         <thead>
@@ -310,7 +326,12 @@
                                         <x-dynamic-component :component="$this->sortIcon('name')" style="width:14px; height:14px;" />
                                     </button>
                                 </th>
-                                <th>Kategori</th>
+                                <th>
+                                    <button wire:click="toggleSort('kategori')" type="button" style="display:flex; align-items:center; gap:4px; background:none; border:none; cursor:pointer; font:inherit; color:inherit; padding:0;">
+                                        Kategori
+                                        <x-dynamic-component :component="$this->sortIcon('kategori')" style="width:14px; height:14px;" />
+                                    </button>
+                                </th>
                                 <th>Aksi</th>
                             </tr>
                         </thead>
